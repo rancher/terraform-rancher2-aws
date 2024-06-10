@@ -178,6 +178,7 @@ Core Modules should only call resources.
 
 These independent modules represent groups of core modules, they should not call resources.
 Primary Modules should only call Core Modules.
+I make some exceptions for local file, random, and null resources/tf data which may be necessary for configuration.
 
 ### Secondary Modules
 

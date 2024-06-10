@@ -1,61 +1,94 @@
 {
-  # validate a flake with 'nix flake check .'
-  # alias the use of flakes with: "alias nix='nix --extra-experimental-features nix-command --extra-experimental-features flakes'"
-  #  you can also set a config file at ~/.config/nix/nix.conf or /etc/nix.conf, but I wanted to remove that dependency
-
   description = "A reliable testing environment";
 
-  # https://status.nixos.org/ has the latest channels, it is recommended to use a commit hash
-  # https://nixos.org/manual/nix/unstable/command-ref/new-cli/nix3-flake.html
-  # to find: go to github/NixOS/nixpkgs repo
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    flake-utils.url = "github:numtide/flake-utils";
+  };
 
-  # select a commit hash or "revision"
-  #inputs.nixpkgs.url = "nixpkgs/92fe622fdfe477a85662bb77678e39fa70373f13";
+  outputs = { self, nixpkgs, flake-utils, ... }:
+    flake-utils.lib.eachSystem [ "x86_64-darwin" "aarch64-darwin" "x86_64-linux" ]
+      (system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
 
-  # select a tag
-  #inputs.nixpkgs.url = "github:NixOS/nixpkgs/21.11";
+          leftovers-version = {
+            "selected" = "v0.70.0";
+          };
+          leftovers-prep = {
+            "x86_64-darwin" = {
+              "url" = "https://github.com/genevieve/leftovers/releases/download/${leftovers-version.selected}/leftovers-${leftovers-version.selected}-darwin-amd64";
+              "sha" = "sha256-HV12kHqB14lGDm1rh9nD1n7Jvw0rCnxmjC9gusw7jfo=";
+            };
+            "aarch64-darwin" = {
+              "url" = "https://github.com/genevieve/leftovers/releases/download/${leftovers-version.selected}/leftovers-${leftovers-version.selected}-darwin-arm64";
+              "sha" = "sha256-Tw7G538RYZrwIauN7kI68u6aKS4d/0Efh+dirL/kzoM=";
+            };
+            "x86_64-linux" = {
+              "url" = "https://github.com/genevieve/leftovers/releases/download/${leftovers-version.selected}/leftovers-${leftovers-version.selected}-linux-amd64";
+              "sha" = "sha256-D2OPjLlV5xR3f+dVHu0ld6bQajD5Rv9GLCMCk9hXlu8=";
+            };
+          };
+          leftovers = pkgs.stdenv.mkDerivation {
+            name = "leftovers-${leftovers-version.selected}";
+            src = pkgs.fetchurl {
+              url = leftovers-prep."${system}".url;
+              sha256 = leftovers-prep."${system}".sha;
+            };
+            phases = [ "installPhase" ];
+            installPhase = ''
+              mkdir -p $out/bin
+              cp $src $out/bin/leftovers
+              chmod +x $out/bin/leftovers
+            '';
+          };
+          aspellWithDicts = pkgs.aspellWithDicts (d: [d.en d.en-computers]);
 
-  # select HEAD on a branch
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+          devShellPackage = pkgs.symlinkJoin {
+            name = "dev-shell-package";
+            paths = with pkgs; [
+              actionlint
+              aspellWithDicts
+              awscli2
+              bashInteractive
+              curl
+              dig
+              gh
+              git
+              gitleaks
+              gnupg
+              go
+              gotestfmt
+              gotestsum
+              jq
+              kubectl
+              leftovers
+              less
+              openssh
+              shellcheck
+              tflint
+              tfsec
+              tfswitch
+              updatecli
+              vim
+              which
+            ];
+          };
 
-  # follows allows idempotent loading of nixpkgs in dependent flakes
-  #inputs.nixpkgs.follows = "nixpkgs/0228346f7b58f1a284fdb1b72df6298b06677495";
+        in
+        {
+          packages.default = devShellPackage;
 
-  # install flake utils
-  inputs.flake-utils.url = "github:numtide/flake-utils";
-
-  outputs = { self, nixpkgs, flake-utils }:
-    flake-utils.lib.eachDefaultSystem (system:
-      # 'legacy' is not bad, it looks for previously imported nixpkgs
-      #  this allows idempotent loading of nixpkgs in dependent flakes
-      # https://discourse.nixos.org/t/using-nixpkgs-legacypackages-system-vs-import/17462/8
-      let pkgs = nixpkgs.legacyPackages.${system};
-      in
-      {
-        # ignore deprecated warning for devShell until we figure out how to fix
-        devShell = pkgs.mkShell {
-          buildInputs = with pkgs; [
-            bashInteractive
-            curl
-            file
-            git
-            unixtools.watch
-            jq
-            kubectl
-            kubernetes-helm
-            nettools
-            openssl
-            shellcheck
-            shfmt
-            sops
-            terraform
-            wget
-            yq
-          ];
-          shellHook = ''
-            source .envrc
-          '';
-        };
-      }
-    );
+          devShells.default = pkgs.mkShell {
+            buildInputs = [ devShellPackage ];
+            shellHook = ''
+              homebin=$HOME/bin;
+              install -d $homebin;
+              tfswitch -b $homebin/terraform 1.5.7 &>/dev/null;
+              export PATH="$homebin:$PATH";
+              export PS1="nix:# ";
+            '';
+          };
+        }
+      );
 }
