@@ -1,3 +1,9 @@
+variable "project_name" {
+  type        = string
+  description = <<-EOT
+    A name for the project, used as a prefix for resource names.
+  EOT
+}
 variable "key_name" {
   type        = string
   description = <<-EOT
@@ -12,11 +18,18 @@ variable "key" {
     This is necessary for installing rke2 on the nodes and will be removed after installation.
   EOT
 }
-variable "identifier" {
+variable "username" {
   type        = string
   description = <<-EOT
-    A unique identifier for the project, this helps when generating names for infrastrucutre items."
+    The username to use for SSH access to the instance.
   EOT
+}
+variable "vpc_cidr" {
+  type        = string
+  description = <<-EOT
+    An internal IP CIDR to use for the project.
+  EOT
+  default     = "10.0.0.0/16"
 }
 variable "zone" {
   type        = string
@@ -38,16 +51,46 @@ variable "os" {
     The operating system to use for the nodes.
   EOT
 }
-variable "file_path" {
+variable "local_file_path" {
   type        = string
   description = <<-EOT
-    The path to the file containing the rke2 install script.
+    A local path to store files related to the install.
+    Needs to an empty directory, isolated from the terraform files and state.
   EOT
+  default     = "./rke2"
+}
+variable "workfolder" {
+  type        = string
+  description = <<-EOT
+    The directory on the remote nodes which will be used for staging files and executing scripts.
+  EOT
+  default     = ""
 }
 variable "install_method" {
   type        = string
   description = <<-EOT
     The method to use for installing rke2 on the nodes.
     Can be either 'rpm' or 'tar'.
+  EOT
+}
+variable "cni" {
+  type        = string
+  description = <<-EOT
+    The CNI plugin to use for the cluster.
+  EOT
+}
+variable "cluster_size" {
+  type        = number
+  description = <<-EOT
+    The number of nodes to create.
+    These will automatically be placed in different availability zones in the region.
+    Make sure the region you are using has multiple availability zones to ensure high availability.
+  EOT
+  default     = 3
+}
+variable "admin_ip" {
+  type        = string
+  description = <<-EOT
+    The IP address of the server running Terraform.
   EOT
 }

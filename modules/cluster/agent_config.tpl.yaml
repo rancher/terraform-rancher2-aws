@@ -1,6 +1,0 @@
-node-external-ip: ${node_external_ip}
-node-ip: ${node_ip}
-
-server: ${server}
-token: ${token}
-

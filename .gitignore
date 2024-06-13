@@ -23,3 +23,5 @@ examples/**/51-*
 *.DS_*
 tests/test/data/*
 examples/*/data/*
+examples/*/kubeconfig
+tests/data/*

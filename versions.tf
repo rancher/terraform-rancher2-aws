@@ -1,5 +1,5 @@
 terraform {
-  required_version = ">= 1.5.7, < 1.6"
+  required_version = ">= 1.5.0, < 1.6"
   required_providers {
     local = {
       source  = "hashicorp/local"
@@ -20,6 +20,22 @@ terraform {
     http = {
       source  = "hashicorp/http"
       version = ">= 3.4"
+    }
+    null = {
+      source  = "hashicorp/null"
+      version = ">=3"
+    }
+    tls = {
+      source  = "hashicorp/tls"
+      version = ">= 4.0"
+    }
+    acme = {
+      source  = "vancluever/acme"
+      version = ">= 2.0"
+    }
+    cloudinit = {
+      source  = "hashicorp/cloudinit"
+      version = ">= 2.3.3"
     }
   }
 }
