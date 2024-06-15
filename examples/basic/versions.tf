@@ -37,6 +37,18 @@ terraform {
       source  = "hashicorp/cloudinit"
       version = ">= 2.3.3"
     }
+    helm = {
+      source  = "hashicorp/helm"
+      version = ">= 2.14"
+    }
+    rancher2 = {
+      source  = "rancher/rancher2"
+      version = ">= 4.1.0, < 5.0"
+    }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = ">= 2.31.0"
+    }
   }
 }
 provider "acme" {

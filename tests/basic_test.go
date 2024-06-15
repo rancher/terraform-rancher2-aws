@@ -1,11 +1,15 @@
 package test
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -18,6 +22,7 @@ import (
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/oauth2"
 )
 
 func TestBasic(t *testing.T) {
@@ -43,6 +48,11 @@ func TestBasic(t *testing.T) {
 	sshAgent := ssh.SshAgentWithKeyPair(t, keyPair.KeyPair)
 	defer sshAgent.Stop()
 	t.Logf("Key %s created and added to agent", keyPair.Name)
+	_, _, rke2Version, err := GetRke2Releases()
+	if err != nil {
+		teardown(t, dataDir, nil, keyPair)
+		t.Fatalf("Error creating cluster: %s", err)
+	}
 
 	terraformOptions := terraform.WithDefaultRetryableErrors(t, &terraform.Options{
 		TerraformDir: exampleDir,
@@ -53,7 +63,7 @@ func TestBasic(t *testing.T) {
 			"identifier":   id,
 			"owner":        owner,
 			"zone":         os.Getenv("ZONE"),
-			"rke2_version": getLatestRelease(t, "rancher", "rke2"),
+			"rke2_version": rke2Version,
 			"file_path":    installDir,
 		},
 		// Environment variables to set when running Terraform
@@ -72,12 +82,10 @@ func TestBasic(t *testing.T) {
 		SshAgent:                 sshAgent,
 		Upgrade:                  true,
 	})
-	defer teardown(t, dataDir, keyPair)
-	defer terraform.Destroy(t, terraformOptions)
+	defer teardown(t, dataDir, terraformOptions, keyPair)
 	_, err = terraform.InitAndApplyE(t, terraformOptions)
 	if err != nil {
-		terraform.Destroy(t, terraformOptions)
-		teardown(t, dataDir, keyPair)
+		teardown(t, dataDir, terraformOptions, keyPair)
 		t.Fatalf("Error creating cluster: %s", err)
 	}
 	output := terraform.OutputJson(t, terraformOptions, "")
@@ -91,15 +99,13 @@ func TestBasic(t *testing.T) {
 	var data OutputData
 	err = json.Unmarshal([]byte(output), &data)
 	if err != nil {
-		terraform.Destroy(t, terraformOptions)
-		teardown(t, dataDir, keyPair)
+		teardown(t, dataDir, terraformOptions, keyPair)
 		t.Fatalf("Error unmarshalling Json: %v", err)
 	}
 	kubeconfig := data.Kubeconfig.Value
 	assert.NotEmpty(t, kubeconfig)
 	if kubeconfig == "{}" {
-		terraform.Destroy(t, terraformOptions)
-		teardown(t, dataDir, keyPair)
+		teardown(t, dataDir, terraformOptions, keyPair)
 		t.Fatal("Kubeconfig not found")
 	}
 	kubeconfigPath := dataDir + "/kubeconfig"
@@ -200,16 +206,9 @@ func getRetryableTerraformErrors() map[string]string {
 		".*connection reset by peer.*":                      "Failed due to transient network error.",
 		".*TLS handshake timeout.*":                         "Failed due to transient network error.",
 		".*Error: disassociating EC2 EIP.*does not exist.*": "Failed to delete EIP because interface is already gone",
+		".*context deadline exceeded.*":                     "Failed due to inability to set timeouts properly.",
 	}
 	return retryableTerraformErrors
-}
-
-func getLatestRelease(t *testing.T, owner string, repo string) string {
-	ghClient := github.NewClient(nil)
-	release, _, err := ghClient.Repositories.GetLatestRelease(context.Background(), owner, repo)
-	require.NoError(t, err)
-	version := *release.TagName
-	return version
 }
 
 func setAcmeServer() string {
@@ -269,8 +268,128 @@ func createTestDirectories(t *testing.T, id string) error {
 	return nil
 }
 
-func teardown(t *testing.T, directory string, keyPair *aws.Ec2Keypair) {
-	err := os.RemoveAll(directory)
-	require.NoError(t, err)
+func teardown(t *testing.T, directory string, options *terraform.Options, keyPair *aws.Ec2Keypair) {
+	directoryExists := true
+	_, err := os.Stat(directory)
+	if err != nil {
+		if os.IsNotExist(err) {
+			directoryExists = false
+		}
+	}
+	if options != nil && directoryExists {
+		terraform.Destroy(t, options)
+		err := os.RemoveAll(directory)
+		require.NoError(t, err)
+	}
 	aws.DeleteEC2KeyPair(t, keyPair)
+}
+
+func GetRke2Releases() (string, string, string, error) {
+	releases, err := getRke2Releases()
+	if err != nil {
+		return "", "", "", err
+	}
+	versions := filterPrerelease(releases)
+	if len(versions) == 0 {
+		return "", "", "", errors.New("no eligible versions found")
+	}
+	sortVersions(&versions)
+	v := filterDuplicateMinors(versions)
+	latest := v[0]
+	stable := latest
+	lts := stable
+	if len(v) > 1 {
+		stable = v[1]
+	}
+	if len(v) > 2 {
+		lts = v[2]
+	}
+	return latest, stable, lts, nil
+}
+
+func getRke2Releases() ([]*github.RepositoryRelease, error) {
+
+	githubToken := os.Getenv("GITHUB_TOKEN")
+	if githubToken == "" {
+		fmt.Println("GITHUB_TOKEN environment variable not set")
+		return nil, errors.New("GITHUB_TOKEN environment variable not set")
+	}
+
+	// Create a new OAuth2 token using the GitHub token
+	tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: githubToken})
+	tokenClient := oauth2.NewClient(context.Background(), tokenSource)
+
+	// Create a new GitHub client using the authenticated HTTP client
+	client := github.NewClient(tokenClient)
+
+	var releases []*github.RepositoryRelease
+	releases, _, err := client.Repositories.ListReleases(context.Background(), "rancher", "rke2", &github.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	return releases, nil
+}
+func filterPrerelease(r []*github.RepositoryRelease) []string {
+	var versions []string
+	for _, release := range r {
+		version := release.GetTagName()
+		if !release.GetPrerelease() {
+			versions = append(versions, version)
+			// [
+			//    "v1.28.14+rke2r1",
+			//    "v1.30.1+rke2r3",
+			//   "v1.29.4+rke2r1",
+			//   "v1.30.1+rke2r2",
+			//   "v1.29.5+rke2r2",
+			//   "v1.30.1+rke2r1",
+			//   "v1.27.20+rke2r1",
+			//   "v1.30.0+rke2r1",
+			//   "v1.29.5+rke2r1",
+			//   "v1.28.17+rke2r1",
+			// ]
+		}
+	}
+	return versions
+}
+func sortVersions(v *[]string) {
+	slices.SortFunc(*v, func(a, b string) int {
+		return cmp.Compare(b, a)
+		//[
+		//  v1.30.1+rke2r3,
+		//  v1.30.1+rke2r2,
+		//  v1.30.1+rke2r1,
+		//  v1.30.0+rke2r1,
+		//  v1.29.5+rke2r2,
+		//  v1.29.5+rke2r1,
+		//  v1.29.4+rke2r1,
+		//  v1.28.17+rke2r1,
+		//  v1.28.14+rke2r1,
+		//  v1.27.20+rke2r1,
+		//]
+	})
+}
+func filterDuplicateMinors(vers []string) []string {
+	var fv []string
+	fv = append(fv, vers[0])
+	for i := 1; i < len(vers); i++ {
+		p := vers[i-1]
+		v := vers[i]
+		vp := strings.Split(v[1:], "+") //["1.30.1","rke2r3"]
+		pp := strings.Split(p[1:], "+") //["1.30.1","rke2r2"]
+		if vp[0] != pp[0] {
+			vpp := strings.Split(vp[0], ".") //["1","30","1]
+			ppp := strings.Split(pp[0], ".") //["1","30","1]
+			if vpp[1] != ppp[1] {
+				fv = append(fv, v)
+				//[
+				//  v1.30.1+rke2r3,
+				//  v1.29.5+rke2r2,
+				//  v1.28.17+rke2r1,
+				//  v1.27.20+rke2r1,
+				//]
+			}
+		}
+	}
+	return fv
 }

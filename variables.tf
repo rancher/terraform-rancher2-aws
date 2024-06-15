@@ -4,6 +4,24 @@ variable "project_name" {
     A name for the project, used as a prefix for resource names.
   EOT
 }
+variable "project_domain" {
+  type        = string
+  description = <<-EOT
+    The host for this project, should not include the zone.
+    The zone for this domain must already exist in AWS and should be specified in the 'zone' variable.
+    If left empty this will default to the project name.
+  EOT
+  default     = ""
+}
+variable "zone" {
+  type        = string
+  description = <<-EOT
+    The Route53 DNS zone to deploy the cluster into.
+    This is used to generate the DNS name for the cluster.
+    The zone must already exist.
+  EOT
+}
+
 variable "key_name" {
   type        = string
   description = <<-EOT
@@ -30,14 +48,6 @@ variable "vpc_cidr" {
     An internal IP CIDR to use for the project.
   EOT
   default     = "10.0.0.0/16"
-}
-variable "zone" {
-  type        = string
-  description = <<-EOT
-    The Route53 DNS zone to deploy the cluster into.
-    This is used to generate the DNS name for the cluster.
-    The zone must already exist.
-  EOT
 }
 variable "rke2_version" {
   type        = string
@@ -93,4 +103,28 @@ variable "admin_ip" {
   description = <<-EOT
     The IP address of the server running Terraform.
   EOT
+}
+
+variable "rancher_version" {
+  type        = string
+  description = <<-EOT
+    The version of Rancher to install.
+  EOT
+  default     = "2.8.4"
+}
+
+variable "rancher_helm_repository" {
+  type        = string
+  description = <<-EOT
+    The Helm repository to use for Rancher.
+  EOT
+  default     = "https://releases.rancher.com/server-charts/stable"
+}
+
+variable "cert_manager_version" {
+  type        = string
+  description = <<-EOT
+    The version of cert-manager to install.
+  EOT
+  default     = "v1.11.0"
 }

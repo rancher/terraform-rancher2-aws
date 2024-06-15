@@ -18,6 +18,10 @@ variable "vpc_cidr" {
   type        = string
   description = "The CIDR block for the VPC."
 }
+variable "domain" {
+  type        = string
+  description = "The domain to use for the project."
+}
 variable "zone" {
   type        = string
   description = "The dns zone to add domains under, must already exist in AWS Route53."

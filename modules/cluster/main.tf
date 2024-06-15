@@ -6,6 +6,8 @@ locals {
   username        = var.username
   vpc_cidr        = var.vpc_cidr
   zone            = var.zone
+  domain          = var.domain
+  fqdn            = lower("${local.domain}.${local.zone}")
   rke2_version    = var.rke2_version
   image           = var.os
   local_file_path = var.local_file_path
@@ -91,17 +93,22 @@ module "initial" {
   project_load_balancer_use_strategy  = "create"
   project_load_balancer_name          = "${local.project_name}-lb"
   project_domain_use_strategy         = "create"
-  project_domain                      = "${local.project_name}.${local.zone}"
+  project_domain                      = local.fqdn
   project_load_balancer_access_cidrs = {
-    ping = {
+    rancherGui = {
       port     = "443"
+      protocol = "tcp"
+      cidrs    = ["${local.runner_ip}/32"] # allow access to ping service from this CIDR only
+    }
+    rancherApi = {
+      port     = "6443"
       protocol = "tcp"
       cidrs    = ["${local.runner_ip}/32"] # allow access to ping service from this CIDR only
     }
   }
   server_use_strategy                 = "create"
   server_name                         = local.initial_server_info["name"]
-  server_type                         = "small" # smallest viable control plane node (actually t3.medium)
+  server_type                         = "medium"
   server_subnet_name                  = local.initial_server_info["subnet"]
   server_security_group_name          = "${local.project_name}-sg"
   server_private_ip                   = local.initial_server_info["ip"]
@@ -109,9 +116,9 @@ module "initial" {
   server_image_type                   = local.image
   server_cloudinit_use_strategy       = "skip" # cloud-init not available for sle-micro
   server_indirect_access_use_strategy = "enable"
-  server_load_balancer_target_groups  = ["${local.project_name}-lb-ping"] # this will always be <load balancer name>-<load balancer access cidrs key>
-  server_direct_access_use_strategy   = "ssh"                             # configure the servers for direct ssh access
-  server_access_addresses = {                                             # you must include ssh access here to enable setup
+  server_load_balancer_target_groups  = ["${local.project_name}-lb-rancherGui", "${local.project_name}-lb-rancherApi"] # this will always be <load balancer name>-<load balancer access cidrs key>
+  server_direct_access_use_strategy   = "ssh"                                                                          # configure the servers for direct ssh access
+  server_access_addresses = {                                                                                          # you must include ssh access here to enable setup
     runnerSsh = {
       port     = 22 # allow access on ssh port only
       protocol = "tcp"
@@ -168,16 +175,16 @@ module "additional" {
   server_image_type                   = local.image
   server_cloudinit_use_strategy       = "skip" # cloud-init not available for sle-micro
   server_indirect_access_use_strategy = "enable"
-  server_load_balancer_target_groups  = ["${local.project_name}-lb-ping"] # this will always be <load balancer name>-<load balancer access cidrs key>
-  server_direct_access_use_strategy   = "ssh"                             # configure the servers for direct ssh access
-  server_access_addresses = {                                             # you must include ssh access here to enable setup
+  server_load_balancer_target_groups  = ["${local.project_name}-lb-rancherGui", "${local.project_name}-lb-rancherApi"] # this will always be <load balancer name>-<load balancer access cidrs key>
+  server_direct_access_use_strategy   = "ssh"                                                                          # configure the servers for direct ssh access
+  server_access_addresses = {                                                                                          # you must include ssh access here to enable setup
     runnerSsh = {
-      port     = 22 # allow access on ssh port only
+      port     = 22
       protocol = "tcp"
       cidrs    = ["${local.runner_ip}/32"] # allow access to this CIDR only
     }
     runnerKubectl = {
-      port     = 6443 # allow access on this port only
+      port     = 6443
       protocol = "tcp"
       cidrs    = ["${local.runner_ip}/32"] # allow access to this CIDR only
     }
@@ -212,4 +219,10 @@ module "additional" {
   config_join_url          = module.initial.join_url
   config_join_token        = module.initial.join_token
   retrieve_kubeconfig      = false
+}
+
+resource "local_sensitive_file" "kubeconfig" {
+  depends_on = [module.initial]
+  content    = module.initial.kubeconfig
+  filename   = "${local.local_file_path}/kubeconfig"
 }
