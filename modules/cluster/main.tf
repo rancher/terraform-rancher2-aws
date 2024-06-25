@@ -119,13 +119,18 @@ module "initial" {
   server_load_balancer_target_groups  = ["${local.project_name}-lb-rancherGui", "${local.project_name}-lb-rancherApi"] # this will always be <load balancer name>-<load balancer access cidrs key>
   server_direct_access_use_strategy   = "ssh"                                                                          # configure the servers for direct ssh access
   server_access_addresses = {                                                                                          # you must include ssh access here to enable setup
-    runnerSsh = {
+    runner-ssh = {
       port     = 22 # allow access on ssh port only
       protocol = "tcp"
       cidrs    = ["${local.runner_ip}/32"] # allow access to this CIDR only
     }
-    runnerKubectl = {
+    runner-kubectl = {
       port     = 6443 # allow access on this port only
+      protocol = "tcp"
+      cidrs    = ["${local.runner_ip}/32"] # allow access to this CIDR only
+    }
+    runner-rancher-gui = {
+      port     = 443 # allow access on this port only
       protocol = "tcp"
       cidrs    = ["${local.runner_ip}/32"] # allow access to this CIDR only
     }
