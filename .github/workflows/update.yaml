@@ -1,0 +1,40 @@
+name: update
+
+on:
+  schedule:
+    # Runs at 06 PM UTC
+    - cron: '0 18 * * *'
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+permissions: write-all
+
+jobs:
+  updatecli:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: matttrach/nix-installer-action@main
+      - name: Updatecli
+        shell: 'nix develop --ignore-environment --extra-experimental-features nix-command --extra-experimental-features flakes --keep HOME --keep SSH_AUTH_SOCK --keep IDENTIFIER --keep GITHUB_OWNER --keep GITHUB_TOKEN --keep ZONE --keep AWS_ROLE --keep AWS_REGION --keep AWS_DEFAULT_REGION --keep AWS_ACCESS_KEY_ID --keep AWS_SECRET_ACCESS_KEY --keep AWS_SESSION_TOKEN --keep UPDATECLI_GPGTOKEN --keep UPDATECLI_GITHUB_TOKEN --keep UPDATECLI_GITHUB_ACTOR --keep GPG_SIGNING_KEY --keep NIX_ENV_LOADED --keep TERM --command bash -e {0}'
+        # Never use '--debug' option, because it might leak the access tokens.
+        run: |
+          gpg --openpgp --batch --pinentry-mode=loopback --passphrase="" --textmode --armor --quick-generate-key noreply@github.com -
+          gpg --list-secret-keys --keyid-format=long
+          gpgconf --kill all
+          gpg --list-secret-keys --keyid-format=long
+
+          GPGTOKEN="$(gpg -q --list-secret-keys --keyid-format=long | grep 'no-reply@github.com>$' -B2 | grep '^sec'| awk '{print $2}' | awk -F '/' '{print $2}')"
+          #GPGKEY="$(gpg --armor --export no-reply@github.com)"
+
+          git config --global user.name 'automation'
+          git config --global user.email 'automation@users.noreply.github.com'
+          git config --global user.signingkey "$GPGTOKEN"
+          git config --global commit.gpgsign true
+
+          updatecli apply --clean --config ./updatecli/updatecli.d/ --values ./updatecli/values.yaml
+
+        env:
+          UPDATECLI_GITHUB_ACTOR: ${{ github.actor }}
+          UPDATECLI_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

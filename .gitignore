@@ -2,6 +2,7 @@
 *.terraform.*
 *.terraform
 terraform*
+!.terraform.lock.hcl
 override.*
 *_override.tf
 !terraform.md
@@ -9,4 +10,18 @@ rke2*
 *.gz
 examples/*/installer.sh
 examples/*/sha256sum.txt
+examples/*/rke2
+examples/*/tmp
+examples/*/kubeconfig.yaml
+examples/*/kubeconfig*.yaml
+examples/*/tf-*
+examples/*/50-*
+examples/**/50-*
+examples/*/51-*
+examples/**/51-*
 *.lock
+*.DS_*
+tests/test/data/*
+examples/*/data/*
+examples/*/kubeconfig
+tests/data/*

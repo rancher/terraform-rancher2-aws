@@ -1,46 +1,75 @@
-# Terraform Module Skeleton
+# Terraform Rancher Module
 
-This module skeleton provides a base to start developing a new module using the same paradigms as other modules.
-WARNING! Change the tests/go.mod to the new module name!
-
-This is an "Independent" module, please see [terraform.md](./terraform.md) for more information.
+This module deploys infrastructure in AWS, installs rke2, then uses the rancher2 provider to install and configure rancher.
+This module combines other modules that we provide to give holistic control of the lifecycle of the rancher cluster.
 
 ## Requirements
 
-### Nix
+#### Provider Setup
 
-These modules use Nix the OS agnostic package manager to install and manage local package dependencies,
- install Nix and source the .envrc to enter the environment.
-The .envrc will load a Nix development environment (a Nix shell), using the flake.nix file.
-You can easily add or remove dependencies by updating that file, the flake.lock is a lock file to cache dependencies.
-After loading the Nix shell, Nix will source the .envrc, setting all of the environment variables as necessary.
-This is a way to resolve "works on my machine" issues, if you would prefer to install the local requirements on your machine, this module will work without modification.
-Simply install the same requirements in the flake.nix and everything will work.
+Only two of the providers require setup:
 
-## Other Requirement
+- [AWS Provider](https://registry.terraform.io/providers/hashicorp/aws/latest/docs) : [Config Reference](https://registry.terraform.io/providers/hashicorp/aws/latest/docs#aws-configuration-reference)
+- [GitHub Provider](https://registry.terraform.io/providers/integrations/github/latest/docs) : [Config Reference](https://registry.terraform.io/providers/integrations/github/latest/docs#argument-reference)
 
-This is usually not a software requirement, but an account or a config file expected to exist on the local machine.
+We recommend setting the following environment variables for quick personal use:
 
-## Local State
+```shell
+GITHUB_TOKEN
+AWS_REGION
+AWS_SECRET_ACCESS_KEY
+AWS_ACCESS_KEY_ID
+```
 
-The specific use case for the example modules here is temporary infrastructure for testing purposes.
-With that in mind it is not expected that the user will manage the resources as a team, therefore the state files are all stored locally.
-If you would like to store the state files remotely, add a terraform backend file (`*.name.tfbackend`) to your implementation module.
+#### Curl
+
+You will need Curl available on the server running Terraform.
+
+#### Local Filesystem Write Access
+
+You will need write access to the filesystem on the server running Terraform.
+If downloading the files from GitHub, then you will need about 2GB storage space available in the 'local_file_path' location (defaults to ./rke2).
+
+#### Terraform Version
+
+We specify the Terraform version < 1.6 to avoid potential license issues and version > 1.5.7 to enable custom variable validations.
+
+## Examples
+
+We have a few example implementations to get you started, these examples are tested in our CI before release.
+When you use them, update the source and version to use the Terraform registry.
+
+#### Local State
+
+The specific use case for the example modules is temporary infrastructure for testing purposes.
+With that in mind, it is not expected that we manage the resources as a team, therefore the state files are all stored locally.
+If you would like to store the state files remotely, add a terraform backend file (`*.name.tfbackend`) to your root module.
 https://www.terraform.io/language/settings/backends/configuration#file
 
-## Override Tests
+## Development and Testing
 
-You may want to test this code with slightly different parameters for your environment.
-Check out [Terraform override files](https://developer.hashicorp.com/terraform/language/files/override) as a clean way to modify the inputs without accidentally committing any personalized code.
+#### Paradigms and Expectations
 
-## Testing
+Please make sure to read [terraform.md](./terraform.md) to understand the paradigms and expectations that this module has for development.
 
-I test manually on a 2019 MacBook Pro with Intel i7 on Ventura.
+#### Environment
 
-- I use nix that I have installed using brew
-- I use direnv that I have installed using brew
-- I simply use `direnv allow` to enter the environment
-- I navigate to the `test` directory and run `go test .`
-- I use `override.tf` files to change the values of `examples` to personalized data so that I can run them
+It is important to us that all collaborators have the ability to develop in similar environments, so we use tools which enable this as much as possible.
+These tools are not necessary, but they can make it much simpler to collaborate.
 
-Our continuous integration tests in a NixOS container and manually sources the `.envrc` to provide a very similar environment.
+* I use [nix](https://nixos.org/) that I have installed using [their recommended script](https://nixos.org/download.html#nix-install-macos)
+* I source the .envrc to get started
+  * it sets up all needed dependencies and gives me a set of tools that I can use to test and write the Terraform module.
+* I use the run_tests.sh script in this directory to run the tests, along with the alias 'tt'
+  * eg. `tt -run=TestBasic`
+  * eg. `tt ./basic_test.go`
+* I store my credentials in a local files and generate a symlink to them
+  * eg. `~/.config/github/default/rc`
+  * this will be automatically sourced when you enter the nix environment (and unloaded when you leave)
+  * see the `.envrc` and `.rcs` file for the implementation
+
+#### Automated Tests
+
+Our continuous integration tests using the GitHub [ubuntu-latest runner](https://github.com/actions/runner-images/blob/main/images/linux/Ubuntu2204-Readme.md) which has many different things installed and does not rely on Nix.
+
+It also has special integrations with AWS to allow secure authentication, see https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services for more information.
