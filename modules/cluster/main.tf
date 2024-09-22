@@ -80,7 +80,7 @@ data "aws_availability_zones" "available" {
 
 module "initial" {
   source                              = "rancher/rke2/aws"
-  version                             = "1.0.0"
+  version                             = "1.1.7"
   project_use_strategy                = "create"
   project_vpc_use_strategy            = "create"
   project_vpc_name                    = "${local.project_name}-vpc"
@@ -168,7 +168,7 @@ module "additional" {
   for_each                            = local.additional_server_info
   depends_on                          = [module.initial]
   source                              = "rancher/rke2/aws"
-  version                             = "1.0.0"
+  version                             = "1.1.7"
   project_use_strategy                = "skip"
   server_use_strategy                 = "create"
   server_name                         = each.value["name"]
