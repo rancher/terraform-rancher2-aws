@@ -28,6 +28,7 @@ run_tests() {
   fi
 
   echo "" > "/tmp/${IDENTIFIER}_test.log"
+  rm -f "/tmp/${IDENTIFIER}_failed_tests.txt"
   cat <<'EOF'> "/tmp/${IDENTIFIER}_test-processor"
 echo "Passed: "
 export PASS="$(jq -r '. | select(.Action == "pass") | select(.Test != null).Test' "/tmp/${IDENTIFIER}_test.log")"
@@ -121,4 +122,10 @@ if [ -n "$IDENTIFIER" ]; then
   fi
 fi
 
-echo "done"
+if [ -f "/tmp/${IDENTIFIER}_failed_tests.txt" ]; then
+  echo "done, test failed"
+  exit 1
+else
+  echo "done, test passed"
+  exit 0
+fi
