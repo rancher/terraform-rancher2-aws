@@ -66,8 +66,8 @@ These tools are not necessary, but they can make it much simpler to collaborate.
 * I source the .envrc to get started
   * it sets up all needed dependencies and gives me a set of tools that I can use to test and write the Terraform module.
 * I use the run_tests.sh script in this directory to run the tests, along with the alias 'tt'
-  * eg. `tt -run=TestBasic`
-  * eg. `tt ./basic_test.go`
+  * eg. `tt -r` will rerun failed tests (once only)
+  * eg. `tt -f=BasicTest` will run only the BasicTest
 * I store my credentials in a local files and generate a symlink to them
   * eg. `~/.config/github/default/rc`
   * this will be automatically sourced when you enter the nix environment (and unloaded when you leave)
