@@ -23,7 +23,7 @@ terraform {
     }
     github = {
       source  = "integrations/github"
-      version = ">= 6.2"
+      version = ">= 6.3"
     }
   }
 }
