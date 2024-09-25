@@ -143,10 +143,6 @@ locals {
   }
 }
 
-data "http" "myip" {
-  url = "https://ipinfo.io/ip"
-}
-
 data "aws_availability_zones" "available" {
   state = "available"
 }

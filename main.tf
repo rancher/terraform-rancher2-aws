@@ -9,7 +9,6 @@ locals {
   os                      = var.os
   size                    = var.size
   local_file_path         = var.local_file_path
-  workfolder              = var.workfolder
   install_method          = var.install_method
   cni                     = var.cni
   admin_ip                = var.admin_ip

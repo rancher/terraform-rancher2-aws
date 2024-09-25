@@ -89,13 +89,6 @@ variable "size" {
   }
   default = "small"
 }
-variable "workfolder" {
-  type        = string
-  description = <<-EOT
-    The directory on the remote nodes which will be used for staging files and executing scripts.
-  EOT
-  default     = ""
-}
 variable "install_method" {
   type        = string
   description = <<-EOT
