@@ -60,8 +60,10 @@
               go
               gotestfmt
               gotestsum
+              kubernetes-helm
               jq
               kubectl
+              k8sgpt
               leftovers
               less
               openssh

@@ -1,15 +1,3 @@
-variable "identifier" {
-  type        = string
-  description = <<-EOT
-    A unique identifier for the project, this helps when generating names for infrastructure items."
-  EOT
-}
-variable "owner" {
-  type        = string
-  description = <<-EOT
-    The owner of the project, this helps when generating names for infrastructure items."
-  EOT
-}
 variable "key_name" {
   type        = string
   description = <<-EOT
@@ -22,6 +10,18 @@ variable "key" {
   description = <<-EOT
     The contents of an AWS key pair to use for SSH access to the instance.
     This is necessary for installing rke2 on the nodes and will be removed after installation.
+  EOT
+}
+variable "identifier" {
+  type        = string
+  description = <<-EOT
+    A unique identifier for the project, this helps when generating names for infrastructure items."
+  EOT
+}
+variable "owner" {
+  type        = string
+  description = <<-EOT
+    The owner of the project, this helps when generating names for infrastructure items."
   EOT
 }
 variable "zone" {

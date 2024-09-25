@@ -29,8 +29,7 @@ terraform {
 # provider "rancher2" {
 #   alias = "bootstrap"
 #   api_url  = "https://${var.rancher_server_dns}"
-#   insecure = true
-#   # ca_certs  = data.kubernetes_secret.rancher_cert.data["ca.crt"]
+#   insecure = false
 #   bootstrap = true
 # }
 

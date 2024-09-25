@@ -23,12 +23,7 @@ terraform {
     }
     github = {
       source  = "integrations/github"
-      version = "6.2.2"
+      version = ">= 6.2"
     }
   }
 }
-
-# provider "acme" {
-#   server_url = "https://acme-staging-v02.api.letsencrypt.org/directory"
-# }
-# provider "github" {}

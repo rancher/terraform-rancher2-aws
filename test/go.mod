@@ -1,12 +1,13 @@
-module github.com/rancher/terraform-module-skel
+module github.com/rancher/terraform-rancher2-aws
 
-go 1.20
+go 1.22
 
 require (
 	github.com/aws/aws-sdk-go v1.44.122
 	github.com/google/go-github/v53 v53.2.0
 	github.com/gruntwork-io/terratest v0.43.8
 	github.com/stretchr/testify v1.8.1
+	golang.org/x/oauth2 v0.8.0
 )
 
 require (
@@ -58,7 +59,6 @@ require (
 	go.opencensus.io v0.24.0 // indirect
 	golang.org/x/crypto v0.7.0 // indirect
 	golang.org/x/net v0.10.0 // indirect
-	golang.org/x/oauth2 v0.8.0 // indirect
 	golang.org/x/sys v0.8.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
