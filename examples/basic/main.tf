@@ -55,7 +55,6 @@ module "this" {
   rke2_version            = local.rke2_version
   local_file_path         = local.local_file_path
   os                      = "sle-micro-55"
-  workfolder              = "/home/${local.username}"
   install_method          = "rpm" # rpm only for now, need to figure out local helm chart installs otherwise
   cni                     = "canal"
   api_nodes               = local.cluster_size
