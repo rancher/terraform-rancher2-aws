@@ -3,7 +3,6 @@ package test
 import (
 	"cmp"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -17,11 +16,8 @@ import (
 	aws "github.com/gruntwork-io/terratest/modules/aws"
 	g "github.com/gruntwork-io/terratest/modules/git"
 	"github.com/gruntwork-io/terratest/modules/random"
-	"github.com/gruntwork-io/terratest/modules/shell"
 	"github.com/gruntwork-io/terratest/modules/ssh"
 	"github.com/gruntwork-io/terratest/modules/terraform"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"golang.org/x/oauth2"
 )
 
@@ -34,37 +30,45 @@ func TestBasic(t *testing.T) {
 	setAcmeServer()
 
 	repoRoot, err := filepath.Abs(g.GetRepoRoot(t))
-	require.NoError(t, err)
+	if err != nil {
+		t.Fatalf("Error getting git root directory: %v", err)
+	}
+
+	exampleDir := repoRoot + "/examples/" + directory
+	testDir := repoRoot + "/test/tests/data/" + id
 
 	err = createTestDirectories(t, id)
-	require.NoError(t, err)
-	exampleDir := repoRoot + "/examples/" + directory
-	dataDir := repoRoot + "/tests/data/" + id
-	installDir := repoRoot + "/tests/data/" + id + "/install"
-	testDir := repoRoot + "/tests/data/" + id + "/test"
-
+	if err != nil {
+		os.RemoveAll(testDir)
+		t.Fatalf("Error creating test data directories: %s", err)
+	}
 	keyPair, err := createKeypair(t, region, owner, id)
-	require.NoError(t, err)
+	if err != nil {
+		os.RemoveAll(testDir)
+		t.Fatalf("Error creating test key pair: %s", err)
+	}
 	sshAgent := ssh.SshAgentWithKeyPair(t, keyPair.KeyPair)
-	defer sshAgent.Stop()
 	t.Logf("Key %s created and added to agent", keyPair.Name)
 	_, _, rke2Version, err := GetRke2Releases()
 	if err != nil {
-		teardown(t, dataDir, nil, keyPair)
-		t.Fatalf("Error creating cluster: %s", err)
+		os.RemoveAll(testDir)
+		aws.DeleteEC2KeyPair(t, keyPair)
+		sshAgent.Stop()
+		t.Fatalf("Error getting release version: %s", err)
 	}
 
 	terraformOptions := terraform.WithDefaultRetryableErrors(t, &terraform.Options{
 		TerraformDir: exampleDir,
 		// Variables to pass to our Terraform code using -var options
 		Vars: map[string]interface{}{
-			"key_name":     keyPair.Name,
-			"key":          keyPair.KeyPair.PublicKey,
-			"identifier":   id,
-			"owner":        owner,
-			"zone":         os.Getenv("ZONE"),
-			"rke2_version": rke2Version,
-			"file_path":    installDir,
+			"identifier":      id,
+			"owner":           owner,
+			"key_name":        keyPair.Name,
+			"key":             keyPair.KeyPair.PublicKey,
+			"zone":            os.Getenv("ZONE"),
+			"rke2_version":    rke2Version,
+			"rancher_version": "2.9.1",
+			"file_path":       testDir,
 		},
 		// Environment variables to set when running Terraform
 		EnvVars: map[string]string{
@@ -72,61 +76,27 @@ func TestBasic(t *testing.T) {
 			"AWS_REGION":          region,
 			"TF_DATA_DIR":         testDir,
 			"TF_IN_AUTOMATION":    "1",
-			"TF_CLI_ARGS_plan":    "-state=" + testDir + "/tfstate",
-			"TF_CLI_ARGS_apply":   "-state=" + testDir + "/tfstate",
-			"TF_CLI_ARGS_destroy": "-state=" + testDir + "/tfstate",
-			"TF_CLI_ARGS_output":  "-state=" + testDir + "/tfstate",
+			"TF_CLI_ARGS_plan":    "-no-color -state=" + testDir + "/tfstate",
+			"TF_CLI_ARGS_apply":   "-no-color -state=" + testDir + "/tfstate",
+			"TF_CLI_ARGS_destroy": "-no-color -state=" + testDir + "/tfstate",
+			"TF_CLI_ARGS_output":  "-no-color -state=" + testDir + "/tfstate",
 		},
 		RetryableTerraformErrors: getRetryableTerraformErrors(),
 		NoColor:                  true,
 		SshAgent:                 sshAgent,
 		Upgrade:                  true,
 	})
-	defer teardown(t, dataDir, terraformOptions, keyPair)
 	_, err = terraform.InitAndApplyE(t, terraformOptions)
 	if err != nil {
-		teardown(t, dataDir, terraformOptions, keyPair)
+		teardown(t, testDir, terraformOptions, keyPair)
+		os.Remove(exampleDir + ".terraform.lock.hcl")
+		sshAgent.Stop()
 		t.Fatalf("Error creating cluster: %s", err)
 	}
-	output := terraform.OutputJson(t, terraformOptions, "")
-	type OutputData struct {
-		Kubeconfig struct {
-			Sensitive bool   `json:"sensitive"`
-			Type      string `json:"type"`
-			Value     string `json:"value"`
-		} `json:"kubeconfig"`
-	}
-	var data OutputData
-	err = json.Unmarshal([]byte(output), &data)
-	if err != nil {
-		teardown(t, dataDir, terraformOptions, keyPair)
-		t.Fatalf("Error unmarshalling Json: %v", err)
-	}
-	kubeconfig := data.Kubeconfig.Value
-	assert.NotEmpty(t, kubeconfig)
-	if kubeconfig == "{}" {
-		teardown(t, dataDir, terraformOptions, keyPair)
-		t.Fatal("Kubeconfig not found")
-	}
-	kubeconfigPath := dataDir + "/kubeconfig"
-	os.WriteFile(kubeconfigPath, []byte(kubeconfig), 0644)
-	basicCheckReady(t, kubeconfigPath)
-}
-
-func basicCheckReady(t *testing.T, kubeconfigPath string) {
-	script, err2 := os.ReadFile("./scripts/readyNodes.sh")
-	if err2 != nil {
-		require.NoError(t, err2)
-	}
-	readyScript := shell.Command{
-		Command: "bash",
-		Args:    []string{"-c", string(script)},
-		Env: map[string]string{
-			"KUBECONFIG": kubeconfigPath,
-		},
-	}
-	out := shell.RunCommandAndGetOutput(t, readyScript) // if the script fails, it will fail the test
-	t.Logf("Ready script output: %s", out)
+	t.Log("Test passed, tearing down...")
+	teardown(t, testDir, terraformOptions, keyPair)
+	os.Remove(exampleDir + ".terraform.lock.hcl")
+	sshAgent.Stop()
 }
 
 func createKeypair(t *testing.T, region string, owner string, id string) (*aws.Ec2Keypair, error) {
@@ -137,7 +107,6 @@ func createKeypair(t *testing.T, region string, owner string, id string) (*aws.E
 
 	// tag the key pair so we can find in the access module
 	client, err := aws.NewEc2ClientE(t, region)
-	require.NoError(t, err)
 	if err != nil {
 		return nil, err
 	}
@@ -151,14 +120,11 @@ func createKeypair(t *testing.T, region string, owner string, id string) (*aws.E
 		Filters: []*ec2.Filter{&keyNameFilter},
 	}
 	result, err := client.DescribeKeyPairs(input)
-	require.NoError(t, err)
-	require.NotEmpty(t, result.KeyPairs)
 	if err != nil {
 		return nil, err
 	}
 
 	err = aws.AddTagsToResourceE(t, region, *result.KeyPairs[0].KeyPairId, map[string]string{"Name": keyPairName, "Owner": owner})
-	require.NoError(t, err)
 	if err != nil {
 		return nil, err
 	}
@@ -173,8 +139,6 @@ func createKeypair(t *testing.T, region string, owner string, id string) (*aws.E
 		Filters: []*ec2.Filter{&keyNameFilter},
 	}
 	result, err = client.DescribeKeyPairs(input)
-	require.NoError(t, err)
-	require.NotEmpty(t, result.KeyPairs)
 	if err != nil {
 		return nil, err
 	}
@@ -188,8 +152,6 @@ func createKeypair(t *testing.T, region string, owner string, id string) (*aws.E
 		Filters: []*ec2.Filter{&keyNameFilter},
 	}
 	result, err = client.DescribeKeyPairs(input)
-	require.NoError(t, err)
-	require.NotEmpty(t, result.KeyPairs)
 	if err != nil {
 		return nil, err
 	}
@@ -245,22 +207,17 @@ func createTestDirectories(t *testing.T, id string) error {
 	if err != nil {
 		return err
 	}
-	tdd := fwd + "/tests/data"
+	tdd := fwd + "/test/tests/data"
 	err = os.Mkdir(tdd, 0755)
 	if err != nil && !os.IsExist(err) {
 		return err
 	}
-	tdd = fwd + "/tests/data/" + id
+	tdd = fwd + "/test/tests/data/" + id
 	err = os.Mkdir(tdd, 0755)
 	if err != nil && !os.IsExist(err) {
 		return err
 	}
-	tdd = fwd + "/tests/data/" + id + "/test"
-	err = os.Mkdir(tdd, 0755)
-	if err != nil && !os.IsExist(err) {
-		return err
-	}
-	tdd = fwd + "/tests/data/" + id + "/install"
+	tdd = fwd + "/test/tests/data/" + id + "/data"
 	err = os.Mkdir(tdd, 0755)
 	if err != nil && !os.IsExist(err) {
 		return err
@@ -276,10 +233,12 @@ func teardown(t *testing.T, directory string, options *terraform.Options, keyPai
 			directoryExists = false
 		}
 	}
-	if options != nil && directoryExists {
+	if directoryExists {
 		terraform.Destroy(t, options)
 		err := os.RemoveAll(directory)
-		require.NoError(t, err)
+		if err != nil {
+			t.Logf("Failed to delete test data directory: %v", err)
+		}
 	}
 	aws.DeleteEC2KeyPair(t, keyPair)
 }

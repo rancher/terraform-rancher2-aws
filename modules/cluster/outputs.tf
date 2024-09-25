@@ -1,21 +1,13 @@
 output "kubeconfig" {
   value       = module.initial.kubeconfig
-  description = <<-EOT
-    The kubeconfig for the server.
-  EOT
+  description = "Kubernetes config file contents for the cluster."
   sensitive   = true
 }
-output "join_url" {
-  value       = module.initial.join_url
-  description = <<-EOT
-    The URL to join this cluster.
-  EOT
-}
-output "join_token" {
-  value       = module.initial.join_token
-  description = <<-EOT
-    The token for a server to join this cluster.
-  EOT
+output "api" {
+  value       = yamldecode(module.initial.kubeconfig).clusters[0].cluster.server
+  description = "Address to use to connect to the cluster's API service."
   sensitive   = true
 }
-
+output "cert" {
+  value = module.initial.project_domain_tls_certificate
+}

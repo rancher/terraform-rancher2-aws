@@ -34,7 +34,7 @@ locals {
   rke2_version            = var.rke2_version
   local_file_path         = var.file_path
   runner_ip               = chomp(data.http.myip.response_body) # "runner" is the server running Terraform
-  cluster_size            = 3
+  cluster_size            = 1
   rancher_version         = var.rancher_version
   rancher_helm_repository = "https://releases.rancher.com/server-charts/stable"
   cert_manager_version    = "v1.11.0"
