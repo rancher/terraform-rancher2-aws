@@ -100,6 +100,7 @@ sleep 60
 
 if [ -n "$IDENTIFIER" ]; then
   attempts=0
+  # shellcheck disable=SC2143
   while [ -n "$(leftovers -d --iaas=aws --aws-region="$AWS_REGION" --filter="Id:$IDENTIFIER" | grep -v 'AccessDenied')" ] && [ $attempts -lt 3 ]; do
     leftovers --iaas=aws --aws-region="$AWS_REGION" --filter="Id:$IDENTIFIER" --no-confirm || true
     sleep 10
@@ -111,6 +112,7 @@ if [ -n "$IDENTIFIER" ]; then
   fi
 
   attempts=0
+  # shellcheck disable=SC2143
   while [ -n "$(leftovers -d --iaas=aws --aws-region="$AWS_REGION" --type="ec2-key-pair" --filter="tf-$IDENTIFIER" | grep -v 'AccessDenied')" ] && [ $attempts -lt 3 ]; do
     leftovers --iaas=aws --aws-region="$AWS_REGION" --type="ec2-key-pair" --filter="tf-$IDENTIFIER" --no-confirm || true
     sleep 10
