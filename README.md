@@ -19,11 +19,16 @@ GITHUB_TOKEN
 AWS_REGION
 AWS_SECRET_ACCESS_KEY
 AWS_ACCESS_KEY_ID
+ZONE
 ```
 
-#### Curl
+#### Tools
 
-You will need Curl available on the server running Terraform.
+These tools will need to be installed on the machine running Terraform:
+- curl
+- jq
+- kubectl
+- terraform
 
 #### Local Filesystem Write Access
 
