@@ -26,3 +26,4 @@ examples/*/data/*
 examples/*/kubeconfig
 test/tests/data/*
 examples/basic/rancher_bootstrap
+.terraform.lock.hcl

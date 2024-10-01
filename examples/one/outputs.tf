@@ -16,3 +16,13 @@ output "admin_password" {
   value     = module.this.admin_password
   sensitive = true
 }
+
+output "additional_node_states" {
+  value     = module.this.additional_node_states
+  sensitive = true
+}
+
+output "rancher_bootstrap_state" {
+  value     = module.this.rancher_bootstrap_state
+  sensitive = true
+}

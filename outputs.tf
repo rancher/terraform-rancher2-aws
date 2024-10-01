@@ -7,7 +7,7 @@ output "kubeconfig" {
 }
 
 output "address" {
-  value = "https://${local.project_domain}.${local.zone}"
+  value = "https://${local.domain}.${local.zone}"
 }
 
 output "admin_token" {
@@ -17,5 +17,15 @@ output "admin_token" {
 
 output "admin_password" {
   value     = module.rancher_bootstrap.admin_password
+  sensitive = true
+}
+
+output "additional_node_states" {
+  value     = module.cluster.additional_node_states
+  sensitive = true
+}
+
+output "rancher_bootstrap_state" {
+  value     = module.rancher_bootstrap.rancher_bootstrap_state
   sensitive = true
 }

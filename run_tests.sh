@@ -2,11 +2,13 @@
 
 rerun_failed=false
 specific_test=""
+specific_package=""
 
-while getopts ":rf:" opt; do
+while getopts ":r:t:p:" opt; do
   case $opt in
     r) rerun_failed=true ;;
-    f) specific_test="$OPTARG" ;;
+    t) specific_test="$OPTARG" ;;
+    p) specific_package="$OPTARG" ;;
     \?) echo "Invalid option -$OPTARG" >&2 && exit 1 ;;
   esac
 done
@@ -60,12 +62,18 @@ EOF
     specific_test_flag="-run=$specific_test"
   fi
 
+  local package_pattern=""
+  if [ -n "$specific_package" ]; then
+    package_pattern="$specific_package"
+  else
+    package_pattern="..."
+  fi
   # shellcheck disable=SC2086
   gotestsum \
     --format=standard-verbose \
     --jsonfile "/tmp/${IDENTIFIER}_test.log" \
     --post-run-command "sh /tmp/${IDENTIFIER}_test-processor" \
-    --packages "$REPO_ROOT/$TEST_DIR/..." \
+    --packages "$REPO_ROOT/$TEST_DIR/$package_pattern" \
     -- \
     -parallel=10 \
     -count=1 \

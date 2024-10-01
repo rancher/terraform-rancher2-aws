@@ -1,4 +1,4 @@
-package test
+package prod
 
 import (
 	"cmp"
@@ -25,7 +25,7 @@ func TestBasic(t *testing.T) {
 	t.Parallel()
 	id := getId()
 	region := getRegion()
-	directory := "basic"
+	directory := "prod"
 	owner := "terraform-ci@suse.com"
 	setAcmeServer()
 
@@ -49,12 +49,21 @@ func TestBasic(t *testing.T) {
 	}
 	sshAgent := ssh.SshAgentWithKeyPair(t, keyPair.KeyPair)
 	t.Logf("Key %s created and added to agent", keyPair.Name)
+
 	_, _, rke2Version, err := GetRke2Releases()
 	if err != nil {
 		os.RemoveAll(testDir)
 		aws.DeleteEC2KeyPair(t, keyPair)
 		sshAgent.Stop()
-		t.Fatalf("Error getting release version: %s", err)
+		t.Fatalf("Error getting Rke2 release version: %s", err)
+	}
+
+	rancherVersion, _, _, err := GetRancherReleases()
+	if err != nil {
+		os.RemoveAll(testDir)
+		aws.DeleteEC2KeyPair(t, keyPair)
+		sshAgent.Stop()
+		t.Fatalf("Error getting Rancher release version: %s", err)
 	}
 
 	terraformOptions := terraform.WithDefaultRetryableErrors(t, &terraform.Options{
@@ -67,7 +76,7 @@ func TestBasic(t *testing.T) {
 			"key":             keyPair.KeyPair.PublicKey,
 			"zone":            os.Getenv("ZONE"),
 			"rke2_version":    rke2Version,
-			"rancher_version": "2.9.1",
+			"rancher_version": rancherVersion,
 			"file_path":       testDir,
 		},
 		// Environment variables to set when running Terraform
@@ -241,6 +250,50 @@ func teardown(t *testing.T, directory string, options *terraform.Options, keyPai
 		}
 	}
 	aws.DeleteEC2KeyPair(t, keyPair)
+}
+func GetRancherReleases() (string, string, string, error) {
+	releases, err := getRancherReleases()
+	if err != nil {
+		return "", "", "", err
+	}
+	versions := filterPrerelease(releases)
+	if len(versions) == 0 {
+		return "", "", "", errors.New("no eligible versions found")
+	}
+	sortVersions(&versions)
+	latest := versions[0]
+	stable := latest
+	lts := stable
+	if len(versions) > 1 {
+		stable = versions[1]
+	}
+	if len(versions) > 2 {
+		lts = versions[2]
+	}
+	return latest, stable, lts, nil
+}
+
+func getRancherReleases() ([]*github.RepositoryRelease, error) {
+	githubToken := os.Getenv("GITHUB_TOKEN")
+	if githubToken == "" {
+		fmt.Println("GITHUB_TOKEN environment variable not set")
+		return nil, errors.New("GITHUB_TOKEN environment variable not set")
+	}
+
+	// Create a new OAuth2 token using the GitHub token
+	tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: githubToken})
+	tokenClient := oauth2.NewClient(context.Background(), tokenSource)
+
+	// Create a new GitHub client using the authenticated HTTP client
+	client := github.NewClient(tokenClient)
+
+	var releases []*github.RepositoryRelease
+	releases, _, err := client.Repositories.ListReleases(context.Background(), "rancher", "rancher", &github.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	return releases, nil
 }
 
 func GetRke2Releases() (string, string, string, error) {
