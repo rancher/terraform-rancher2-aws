@@ -34,10 +34,10 @@ locals {
   rke2_version            = var.rke2_version
   local_file_path         = var.file_path
   runner_ip               = chomp(data.http.myip.response_body) # "runner" is the server running Terraform
-  cluster_size            = 1
   rancher_version         = var.rancher_version
   rancher_helm_repository = "https://releases.rancher.com/server-charts/stable"
-  cert_manager_version    = "v1.11.0"
+  cert_manager_version    = "v1.13.1"
+  os                      = "sle-micro-60"
 }
 
 data "http" "myip" {
@@ -45,29 +45,36 @@ data "http" "myip" {
 }
 
 module "this" {
-  source                  = "../../"
-  project_name            = local.project_name
-  project_domain          = local.domain
-  zone                    = local.zone
-  key_name                = local.key_name
-  key                     = local.key
-  username                = local.username
-  rke2_version            = local.rke2_version
-  local_file_path         = local.local_file_path
-  os                      = "sle-micro-55"
-  workfolder              = "/home/${local.username}"
-  install_method          = "rpm" # rpm only for now, need to figure out local helm chart installs otherwise
-  cni                     = "canal"
-  api_nodes               = local.cluster_size
-  database_nodes          = local.cluster_size
-  worker_nodes            = local.cluster_size
-  size                    = "small"
-  admin_ip                = local.runner_ip
+  source = "../../"
+  # project
+  identifier   = local.identifier
+  owner        = local.owner
+  project_name = local.project_name
+  domain       = local.domain
+  zone         = local.zone
+  # access
+  key_name = local.key_name
+  key      = local.key
+  username = local.username
+  admin_ip = local.runner_ip
+  # rke2
+  rke2_version    = local.rke2_version
+  local_file_path = local.local_file_path
+  install_method  = "rpm" # rpm only for now, need to figure out local helm chart installs otherwise
+  cni             = "canal"
+  node_configuration = {
+    "rancher" = {
+      type            = "all-in-one"
+      size            = "medium"
+      os              = local.os
+      indirect_access = true
+      initial         = true
+    }
+  }
+  # rancher
+  cert_manager_version    = local.cert_manager_version
   rancher_version         = local.rancher_version
   rancher_helm_repository = local.rancher_helm_repository
-  cert_manager_version    = local.cert_manager_version
-  identifier              = local.identifier
-  owner                   = local.owner
 }
 
 # test catalog entry

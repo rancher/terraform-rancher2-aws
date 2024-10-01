@@ -1,3 +1,4 @@
+# project
 variable "identifier" {
   type        = string
   description = <<-EOT
@@ -18,12 +19,13 @@ variable "project_name" {
     A name for the project, used as a prefix for resource names.
   EOT
 }
-variable "project_domain" {
+variable "domain" {
   type        = string
   description = <<-EOT
     The host for this project, should not include the zone.
     The zone for this domain must already exist in AWS and should be specified in the 'zone' variable.
     If left empty this will default to the project name.
+    eg. "test" in "test.example.com"
   EOT
   default     = ""
 }
@@ -31,10 +33,10 @@ variable "zone" {
   type        = string
   description = <<-EOT
     The Route53 DNS zone to deploy the cluster into.
-    This is used to generate the DNS name for the cluster.
-    The zone must already exist.
+    The zone must already exist and have propagated.
   EOT
 }
+# access
 variable "key_name" {
   type        = string
   description = <<-EOT
@@ -55,6 +57,13 @@ variable "username" {
     The username to use for SSH access to the instance.
   EOT
 }
+variable "admin_ip" {
+  type        = string
+  description = <<-EOT
+    The IP address of the server running Terraform.
+  EOT
+}
+# rke2
 variable "rke2_version" {
   type        = string
   description = <<-EOT
@@ -65,29 +74,9 @@ variable "local_file_path" {
   type        = string
   description = <<-EOT
     A local path to store files related to the install.
-    Needs to an empty directory, isolated from the terraform files and state.
+    Needs to be isolated from the terraform files and state.
   EOT
   default     = "./rke2"
-}
-variable "os" {
-  type        = string
-  description = <<-EOT
-    The operating system to use for the nodes.
-  EOT
-}
-variable "size" {
-  type        = string
-  description = <<-EOT
-    The size of the Rancher cluster to create.
-    As guided by https://ranchermanager.docs.rancher.com/getting-started/installation-and-upgrade/installation-requirements#rke2-kubernetes.
-    Options are: small, medium, or large
-    We will select the appropriate server sizes for the different roles based on this input.
-  EOT
-  validation {
-    condition     = contains(["small", "medium", "large"], var.size)
-    error_message = "The size value must be one of small, medium, or large."
-  }
-  default = "small"
 }
 variable "install_method" {
   type        = string
@@ -102,64 +91,70 @@ variable "cni" {
     The CNI plugin to use for the cluster.
   EOT
 }
-variable "api_nodes" {
-  type        = number
+variable "node_configuration" {
+  type = map(object({
+    type            = string
+    size            = string
+    os              = string
+    indirect_access = bool
+    initial         = bool
+  }))
   description = <<-EOT
-    The number of nodes serving the kubernetes api to deploy.
-    These will automatically be placed in different availability zones in the region.
-    Make sure the region you are using has multiple availability zones to ensure high availability.
-    This number should be at least 3 to ensure availability.
+    A map of configuration options for the nodes to constitute the cluster.
+    Only one node should have the "initial" attribute set to true.
+    Be careful which node you decide to start the cluster,
+      it must host the database for others to be able to join properly.
+    There are 5 types of node: 'all-in-one', 'control-plane', 'worker', 'database', 'api'.
+      'all-in-one' nodes have all roles (control-plane, worker, etcd)
+      'control-plane' nodes have the api (control-plane) and database (etcd) roles
+      'worker' nodes have just the 'worker' role
+      'database' nodes have only the database (etcd) role
+      'api' nodes have only the api (control-plane) server role
+    By default we will set taints to prevent non-component workloads
+      from running on database, api, and control-plane nodes.
+    Size correlates to the server size options from the server module:
+      https://github.com/rancher/terraform-aws-server/blob/main/modules/server/types.tf
+    We recommend using the size nodes that best fit your use case:
+      https://ranchermanager.docs.rancher.com/getting-started/installation-and-upgrade/installation-requirements#rke2-kubernetes
+    OS correlates to the server image options from the server module:
+      https://github.com/rancher/terraform-aws-server/blob/main/modules/image/types.tf
+    We recommend using the same os for all servers, we don't currently test for clusters with mixed OS types.
+    Indirect access refers to how the cluster will be load balanced,
+      some admins are ok with every server in the cluster responding to inbound requests since the built in proxy will redirect,
+      but that isn't always the best choice since some nodes (like database nodes and secure workers)
+      are better to restrict to internal access only.
+      Setting this value to true will allow the network load balancer to direct traffic to the node.
+      Setting this value to false will prevent the load balancer from directing traffic to the node.
   EOT
-  default     = 3
+  default = {
+    "initial" = {
+      type            = "all-in-one"
+      size            = "medium"
+      os              = "sle-micro-60"
+      indirect_access = true
+      initial         = true
+    }
+  }
 }
-variable "database_nodes" {
-  type        = number
-  description = <<-EOT
-    The number of nodes serving the kubernetes etcd database to deploy.
-    These will automatically be placed in different availability zones in the region.
-    Make sure the region you are using has multiple availability zones to ensure high availability.
-    This number should be at least 3 to ensure availability.
-  EOT
-  default     = 3
-}
-variable "worker_nodes" {
-  type        = number
-  description = <<-EOT
-    The number of nodes running schedulable pods.
-    These will automatically be placed in different availability zones in the region.
-    Make sure the region you are using has multiple availability zones to ensure high availability.
-    This number should be at least 3 to ensure availability.
-  EOT
-  default     = 3
-}
-
-variable "admin_ip" {
+# Rancher
+variable "cert_manager_version" {
   type        = string
   description = <<-EOT
-    The IP address of the server running Terraform.
+    The version of cert-manager to install.
   EOT
+  default     = "v1.13.1"
 }
-
 variable "rancher_version" {
   type        = string
   description = <<-EOT
     The version of Rancher to install.
   EOT
-  default     = "2.8.4"
+  default     = "2.9.1"
 }
-
 variable "rancher_helm_repository" {
   type        = string
   description = <<-EOT
     The Helm repository to use for Rancher.
   EOT
   default     = "https://releases.rancher.com/server-charts/stable"
-}
-
-variable "cert_manager_version" {
-  type        = string
-  description = <<-EOT
-    The version of cert-manager to install.
-  EOT
-  default     = "v1.11.5"
 }

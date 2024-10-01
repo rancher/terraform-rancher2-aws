@@ -31,15 +31,16 @@ locals {
     TF_DATA_DIR="${local.path}/rancher_bootstrap"
     cd ${local.path}/rancher_bootstrap
     terraform init -upgrade=true
-    terraform apply -var-file="inputs.tfvars" -auto-approve -state="${abspath(local.path)}/rancher_bootstrap/tfstate"
+    EXITCODE=1
+    ATTEMPTS=0
+    MAX=3
+    while [ $EXITCODE -gt 0 ] && [ $ATTEMPTS -lt $MAX ]; do
+      timeout 3600 terraform apply -var-file="inputs.tfvars" -auto-approve -state="${abspath(local.path)}/rancher_bootstrap/tfstate"
+      EXITCODE=$?
+      ATTEMPTS=$((ATTEMPTS+1))
+    done
     terraform output -state="${abspath(local.path)}/rancher_bootstrap/tfstate" -json > ${abspath(local.path)}/output.json
-  EOT
-  destroy_script          = <<-EOT
-    export KUBECONFIG=${abspath(local.path)}/kubeconfig
-    export KUBE_CONFIG_PATH=${abspath(local.path)}/kubeconfig
-    TF_DATA_DIR="${local.path}/rancher_bootstrap"
-    cd ${local.path}/rancher_bootstrap
-    terraform destroy -var-file="inputs.tfvars" -auto-approve -state="${abspath(local.path)}/rancher_bootstrap/tfstate"
+    exit $EXITCODE
   EOT
 }
 
@@ -64,40 +65,25 @@ resource "local_file" "inputs" {
   filename = "${local.path}/rancher_bootstrap/inputs.tfvars"
 }
 
+# bootstrapping Rancher is a one way operation, there is no destroy or update
 resource "terraform_data" "create" {
   depends_on = [
     terraform_data.path,
     local_file.inputs,
   ]
-  triggers_replace = {
-    path               = local.path
-    inputs             = local_file.inputs.content
-    path_script        = local.path_script
-    create_script      = local.create_script
-    destroy_script     = local.destroy_script
-    bootstrap_contents = md5(file("${path.module}/tf.bootstrap"))
-    variables_contents = md5(file("${path.module}/variables.tf"))
-    versions_contents  = md5(file("${path.module}/versions.tf"))
-    outputs_contents   = md5(file("${path.module}/tf.bootstrap_output"))
-  }
   provisioner "local-exec" {
     command = local.create_script
   }
-  provisioner "local-exec" {
-    # warning! this is only triggered on destroy, not refresh/taint
-    when    = destroy
-    command = self.triggers_replace.destroy_script
-  }
 }
 
-data "external" "output" {
+data "terraform_remote_state" "rancher_bootstrap_state" {
   depends_on = [
     terraform_data.path,
     local_file.inputs,
     terraform_data.create,
   ]
-  program = ["bash", "${path.module}/get_terraform_output.sh"]
-  query = {
-    data = "${abspath(local.path)}/output.json"
+  backend = "local"
+  config = {
+    path = "${abspath(local.path)}/rancher_bootstrap/tfstate"
   }
 }

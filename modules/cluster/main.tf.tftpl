@@ -22,48 +22,23 @@ locals {
   ssh_key_name       = var.key_name
   domain             = var.domain
   zone               = var.zone # DNS zone
-  # tflint-ignore: terraform_unused_declarations
-  fail_domain_has_zone = (strcontains(local.domain, local.zone) ? one([local.domain, "domain_contains_zone"]) : false)
 
-  rke2_version       = var.rke2_version
-  image              = var.os
-  install_method     = var.install_method
-  install_prep_script_file = (
-    strcontains(local.image, "sles") ? "$${path.root}/suse_prep.sh" :
-    strcontains(local.image, "rhel") ? "$${path.root}/rhel_prep.sh" :
-    strcontains(local.image, "ubuntu") ? "$${path.root}/ubuntu_prep.sh" :
-    ""
-  )
-  install_prep_script = (local.install_prep_script_file == "" ? "" :
-    templatefile(local.install_prep_script_file, {
-      install_method = local.install_method,
-      ip_family      = local.ip_family,
-      image          = local.image,
-    })
-  )
-  download     = (local.install_method == "tar" ? "download" : "skip")
-  # WARNING! Local file path needs to be isolated, don't use the same path as your terraform files
-  local_file_path = (
-    var.file_path != "" ? (var.file_path == path.root ? "$${abspath(path.root)}/rke2" : var.file_path) :
-    "$${abspath(path.root)}/rke2"
-  )
-  workfolder           = (strcontains(local.image, "cis") ? "/var/tmp" : "/home/$${local.username}")
-  target_groups        = jsondecode(<<-EOT
-    ${target_groups}
-  EOT
-  )
-  cloudinit_strategy   = ((local.image == "sle-micro-55" || local.image == "cis-rhel-8") ? "skip" : "default")
-
-  # CIS images are not supported on IPv6 only deployments due to kernel modifications with how AWS IPv6 works (dhcpv6)
-  # tflint-ignore: terraform_unused_declarations
-  fail_cis_ipv6 = ((local.image == "rhel-8-cis" && local.ip_family == "ipv6") ? one([local.ip_family, "cis_ipv6_incompatible"]) : false)
-
-  # Ubuntu images do not support rpm unstall method
-  # tflint-ignore: terraform_unused_declarations
-  fail_ubuntu_rpm = ((strcontains(local.image, "ubuntu") && local.install_method == "rpm") ? one([local.install_method, "ubuntu_rpm_incompatible"]) : false)
+  rke2_version   = var.rke2_version
+  install_method = var.install_method
+  download       = (local.install_method == "tar" ? "download" : "skip")
 
   server_info = jsondecode(<<-EOT
     ${server_info}
+  EOT
+  )
+  install_prep_script = local.server_info.prep_script
+  local_file_path     = local.server_info.file_path
+  workfolder          = local.server_info.workfolder
+  cloudinit_strategy  = local.server_info.cloudinit_strategy
+  config              = local.server_info.config
+
+  target_groups       = jsondecode(<<-EOT
+    ${target_groups}
   EOT
   )
   cluster_cidr = jsondecode(<<-EOT
@@ -74,7 +49,6 @@ locals {
     ${service_cidr}
   EOT
   )
-  config = local.server_info.config
 }
 
 data "http" "myip" {
@@ -87,19 +61,18 @@ module "${role}_node" {
   project_use_strategy                = "skip"
   project_domain                      = local.domain
   project_domain_zone                 = local.zone
-  project_load_balancer_access_cidrs  = null
   server_use_strategy                 = "create"
-  server_name                         = local.server_info["name"]
-  server_type                         = local.server_info["size"]
+  server_name                         = local.server_info.name
+  server_type                         = local.server_info.size
   server_security_group_name          = "${project_security_group_name}" # should always match project security group
-  server_availability_zone            = local.server_info["az"]
-  server_subnet_name                  = local.server_info["subnet"]
+  server_availability_zone            = local.server_info.az
   server_image_use_strategy           = "find"
-  server_image_type                   = local.image
+  server_image_type                   = local.server_info.image
   server_ip_family                    = local.ip_family
-  server_cloudinit_use_strategy       = local.cloudinit_strategy
-  server_indirect_access_use_strategy = "enable"
+  server_cloudinit_use_strategy       = local.server_info.cloudinit_strategy
+  server_indirect_access_use_strategy = local.server_info.indirect_access
   server_load_balancer_target_groups  = values(local.target_groups)
+  server_subnet_name                  = local.server_info.subnet
   server_direct_access_use_strategy   = "ssh"                    # configure the servers for direct ssh access
   # remember these are external access objects, internal access is enabled by default
   server_access_addresses = { # you must include ssh access here to enable setup
@@ -133,30 +106,30 @@ module "${role}_node" {
     aws_keypair_use_strategy = "select"
     ssh_key_name             = local.ssh_key_name
     public_ssh_key           = local.ssh_key
-    user_workfolder          = local.workfolder
+    user_workfolder          = local.server_info.workfolder
     timeout                  = 10
   }
   server_add_domain        = false
-  server_domain_name       = local.server_info["domain"]
+  server_domain_name       = local.server_info.domain
   server_domain_zone       = local.zone
   server_add_eip           = false
   install_use_strategy     = local.install_method
   local_file_use_strategy  = local.download
-  local_file_path          = local.server_info["file_path"]
+  local_file_path          = local.server_info.file_path
   install_rke2_version     = local.rke2_version
   install_rpm_channel      = "stable"
-  install_remote_file_path = "$${local.workfolder}/rke2"
-  install_role             = "$${local.server_info["type"]}"
+  install_remote_file_path = "$${local.server_info.workfolder}/rke2"
+  install_role             = local.server_info.type
   install_start            = true
-  install_prep_script      = local.install_prep_script
+  install_prep_script      = local.server_info.prep_script
   install_start_timeout    = 10
-  config_use_strategy      = "merge"
+  config_use_strategy      = local.server_info.config_strategy
   config_join_strategy     = "join"
   config_join_url          = "${join_url}"
   config_join_token        = "${join_token}"
   config_cluster_cidr      = local.cluster_cidr
   config_service_cidr      = local.service_cidr
-  config_supplied_content  = local.config
+  config_supplied_content  = local.server_info.config
   config_supplied_name     = "51-config.yaml"
   retrieve_kubeconfig      = false # use initial
 }
