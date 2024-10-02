@@ -9,6 +9,7 @@ env:
   AWS_REGION: us-west-2
   AWS_ROLE: arn:aws:iam::270074865685:role/terraform-module-ci-test
   GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+  ACME_SERVER_URL: https://acme-v02.api.letsencrypt.org/directory
 
 permissions: write-all
 
@@ -50,6 +51,7 @@ jobs:
           GITHUB_OWNER: rancher
           IDENTIFIER: ${{github.run_id}}
           ZONE: ${{secrets.ZONE}}
+          ACME_SERVER_URL: https://acme-v02.api.letsencrypt.org/directory
         run: |
           ./run_tests.sh
       - uses: peter-evans/create-or-update-comment@v4
