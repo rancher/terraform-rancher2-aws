@@ -174,7 +174,7 @@ resource "random_password" "password" {
 
 resource "terraform_data" "get_cert_info" {
   depends_on = [
-    module.this,
+    helm_release.rancher_server,
   ]
   provisioner "local-exec" {
     command = <<-EOT
@@ -187,9 +187,7 @@ resource "terraform_data" "get_cert_info" {
       kubectl get pods -n cattle-system
     EOT
   }
-
 }
-
 
 resource "rancher2_bootstrap" "admin" {
   depends_on = [
