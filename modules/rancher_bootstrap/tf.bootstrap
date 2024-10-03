@@ -181,12 +181,6 @@ resource "terraform_data" "get_cert_info" {
       echo | openssl s_client -showcerts -servername ${local.rancher_domain} -connect ${local.rancher_domain}:443 2>/dev/null | openssl x509 -inform pem -noout -text
     EOT
   }
-  provisioner "local-exec" {
-    command = <<-EOT
-      export KUBECONFIG="../kubeconfig"
-      kubectl get pods -n cattle-system
-    EOT
-  }
 }
 
 resource "rancher2_bootstrap" "admin" {
