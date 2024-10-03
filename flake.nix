@@ -67,6 +67,7 @@
               leftovers
               less
               openssh
+              openssl
               shellcheck
               tflint
               tfsec

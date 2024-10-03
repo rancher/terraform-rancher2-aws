@@ -12,8 +12,11 @@ locals {
   username = var.username
   admin_ip = var.admin_ip
   # rke2
-  rke2_version       = var.rke2_version
-  local_file_path    = var.local_file_path
+  rke2_version = var.rke2_version
+  local_file_path = (
+    var.local_file_path != "" ? (var.local_file_path == path.root ? "${abspath(path.root)}/rke2" : abspath(var.local_file_path)) :
+    "${abspath(path.root)}/rke2"
+  )
   install_method     = var.install_method
   cni                = var.cni
   node_configuration = var.node_configuration
@@ -46,7 +49,9 @@ module "cluster" {
 }
 
 module "rancher_bootstrap" {
-  depends_on              = [module.cluster]
+  depends_on = [
+    module.cluster,
+  ]
   source                  = "./modules/rancher_bootstrap"
   project_domain          = local.fqdn
   cert_manager_version    = local.cert_manager_version
