@@ -21,7 +21,7 @@ import (
 	"golang.org/x/oauth2"
 )
 
-func TestBasic(t *testing.T) {
+func TestProdBasic(t *testing.T) {
 	t.Parallel()
 	id := getId()
 	region := getRegion()

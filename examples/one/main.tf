@@ -77,10 +77,22 @@ module "this" {
   rancher_helm_repository = local.rancher_helm_repository
 }
 
+resource "terraform_data" "get_cert_info" {
+  depends_on = [
+    module.this,
+  ]
+  provisioner "local-exec" {
+    command = <<-EOT
+      echo | openssl s_client -showcerts -servername ${local.domain}.${local.zone} -connect ${local.domain}.${local.zone}:443 2>/dev/null | openssl x509 -inform pem -noout -text
+    EOT
+  }
+}
+
 # test catalog entry
 resource "rancher2_catalog" "foo" {
   depends_on = [
     module.this,
+    terraform_data.get_cert_info,
   ]
   name = "test"
   url  = "http://foo.com:8080"
