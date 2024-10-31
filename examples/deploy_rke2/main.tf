@@ -132,11 +132,6 @@ resource "aws_route53_record" "modified" {
   ttl             = 30
   records         = concat([local.private_ip], tolist(module.rancher.domain_object.records))
   allow_overwrite = true
-  # provisioner "local-exec" {
-  #   command = <<-EOT
-  #     terraform state rm 
-  #   EOT
-  # }
 }
 
 resource "rancher2_cloud_credential" "aws" {
@@ -175,16 +170,9 @@ resource "rancher2_machine_config_v2" "aio" {
       local.aws_region,
       ""
     )
-    #insecure_transport = true # traffic doesn't leave the VPC due to security group rules on the Rancher cluster
-    #endpoint      = "${local.domain}.${local.zone}"
     instance_type = "m5.large"
     ssh_user      = "ec2-user"
     tags          = join(",", ["Id", local.identifier, "Owner", local.owner])
-  }
-  lifecycle {
-    # replace_triggered_by = [
-    #   rancher2_cluster_v2.rke2_cluster,
-    # ]
   }
 }
 
@@ -236,86 +224,3 @@ resource "rancher2_cluster_sync" "sync" {
   provider   = rancher2.default
   cluster_id = rancher2_cluster_v2.rke2_cluster.cluster_v1_id
 }
-
-# resource "rancher2_cluster_v2" "cluster" {
-#   name                                                       = "${local.project_name}-s1"
-#   kubernetes_version                                         = local.rke2_version
-#   enable_network_policy                                      = true
-#   default_pod_security_admission_configuration_template_name = "rancher-privileged"
-#   default_cluster_role_for_project_members                   = "user"
-#   local_auth_endpoint {
-#     ca_certs = fileexists("ssl/ca.pem") ? file("ssl/ca.pem") : ""
-#     enabled  = true
-#     fqdn     = "${}:6443"
-#   }
-#   rke_config {
-#     machine_global_config = <<-EOF
-#       cni: "cilium"
-#       disable:
-#         - rke2-ingress-nginx
-#       disable-kube-proxy: true
-#       etcd-expose-metrics: true
-#       cluster-cidr: "172.30.0.0/16"
-#       service-cidr: "172.20.0.0/16"
-#       cluster-dns: "172.20.0.10"
-#       tls-san:
-#         - ${var.rancher_config.cluster_api_server}
-#       kubelet-arg:
-#         - max-pods=250
-#       kube-controller-manager-arg:
-#         - node-cidr-mask-size=23
-#       audit-policy-file: |
-#         ${indent(2, file("manifests/audit-policy.yaml"))}
-#     EOF
-#     machine_selector_config {
-#       config = <<-EOF
-#         protect-kernel-defaults: true
-#       EOF
-#     }
-#     etcd {
-#       snapshot_retention     = 56
-#       snapshot_schedule_cron = "0 */1 * * *"
-#       s3_config {
-#         bucket                = var.rancher_config.s3_backup.bucket_name
-#         cloud_credential_name = rancher2_cloud_credential.s3.id
-#         endpoint              = var.rancher_config.s3_backup.endpoint
-#         folder                = var.rancher_config.s3_backup.folder
-#         region                = var.rancher_config.s3_backup.region
-#         skip_ssl_verify       = true
-#       }
-#     }
-#     upgrade_strategy {
-#       control_plane_concurrency = "1"
-#       worker_concurrency        = "1"
-#       control_plane_drain_options {
-#         enabled                              = false
-#         delete_empty_dir_data                = true
-#         force                                = true
-#         grace_period                         = 30
-#         ignore_daemon_sets                   = true
-#         skip_wait_for_delete_timeout_seconds = 60
-#         timeout                              = 300
-#       }
-#       worker_drain_options {
-#         enabled                              = false
-#         delete_empty_dir_data                = true
-#         force                                = true
-#         grace_period                         = 30
-#         ignore_daemon_sets                   = true
-#         skip_wait_for_delete_timeout_seconds = 60
-#         timeout                              = 300
-#       }
-#     }
-#     chart_values = <<-EOF
-#       rke2-cilium:
-#         kubeProxyReplacement: "true"
-#         k8sServiceHost: "${var.rancher_config.cluster_api_server}"
-#         k8sServicePort: 6443
-#         cni:
-#           exclusive: false
-#         l2announcements:
-#           enabled: true
-#     EOF
-#   }
-# }
-

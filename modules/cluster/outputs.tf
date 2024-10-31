@@ -13,6 +13,7 @@ output "cert" {
   description = "Information about the certificate that was generated with the domain"
   sensitive   = true
 }
+# commented for performance, leaving to show how you can export the state if necessary
 # output "additional_node_states" {
 #   value       = data.terraform_remote_state.additional_node_states
 #   description = "The states for the orchestrated modules which produce nodes."

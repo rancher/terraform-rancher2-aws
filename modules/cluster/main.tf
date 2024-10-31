@@ -372,7 +372,7 @@ resource "local_file" "kubeconfig" {
   content  = local.ino.kubeconfig
   filename = "${local.local_file_path}/kubeconfig"
 }
-
+# commented for performance, leaving to show how you can export the state if necessary
 # data "terraform_remote_state" "additional_node_states" {
 #   depends_on = [
 #     module.initial,
