@@ -17,18 +17,22 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: googleapis/release-please-action@v4
+      - uses: google-github-actions/release-please-action@v4
         id: release-please
         with:
           release-type: terraform-module
-      - uses: peter-evans/create-or-update-comment@v4
-        name: 'Remind to wait'
-        if: steps.release-please.outputs.pr
+      - uses: actions/github-script@v6
         with:
-          issue-number: ${{ fromJson(steps.release-please.outputs.pr).number }}
-          body: |
-            Please make sure e2e tests pass before merging this PR!
-            ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            github.rest.issues.createComment({
+              issue_number: ${{ fromJson(steps.release-please.outputs.pr).number }},
+              owner: ${{ github.repository_owner }},
+              repo: ${{ github.event.repository.name }},
+              body: |
+                Please make sure e2e tests pass before merging this PR!
+                ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            })
       - uses: actions/checkout@v4
         if: steps.release-please.outputs.pr
         with:
@@ -41,7 +45,9 @@ jobs:
           role-session-name: ${{github.run_id}}
           aws-region: ${{env.AWS_REGION}}
           role-duration-seconds: 7200 # 2 hours
-      - uses: matttrach/nix-installer-action@main
+      - name: install-nix
+        run: |
+          curl -L https://nixos.org/nix/install | sh
         if: steps.release-please.outputs.pr
       - name: Run Tests
         if: steps.release-please.outputs.pr
@@ -55,11 +61,15 @@ jobs:
           RANCHER_INSECURE: true
         run: |
           ./run_tests.sh
-      - uses: peter-evans/create-or-update-comment@v4
-        name: 'Report Success'
-        if: steps.release-please.outputs.pr
+      - uses: actions/github-script@v6
         with:
-          issue-number: ${{ fromJson(steps.release-please.outputs.pr).number }}
-          body: |
-            End to End Tests Passed!
-            ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            github.rest.issues.createComment({
+              issue_number: ${{ fromJson(steps.release-please.outputs.pr).number }},
+              owner: ${{ github.repository_owner }},
+              repo: ${{ github.event.repository.name }},
+              body: |
+                End to End Tests Passed!
+                ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            })
