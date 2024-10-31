@@ -7,6 +7,7 @@ locals {
   domain       = var.domain
   zone         = var.zone # DNS zone
   ip_family    = var.ip_family
+  skip_cert    = var.skip_cert_creation
 
   # access
   ssh_key_name = var.key_name
@@ -127,7 +128,7 @@ module "initial" {
     data.aws_availability_zones.available,
   ]
   source                              = "rancher/rke2/aws"
-  version                             = "1.1.7"
+  version                             = "1.1.11"
   for_each                            = local.initial_node
   project_use_strategy                = "create"
   project_vpc_use_strategy            = "create"
@@ -168,7 +169,7 @@ module "initial" {
   project_domain_use_strategy         = "create"
   project_domain                      = local.domain
   project_domain_zone                 = local.zone
-  project_domain_cert_use_strategy    = "create"
+  project_domain_cert_use_strategy    = (local.skip_cert ? "skip" : "create")
   server_use_strategy                 = "create"
   server_name                         = each.value.name
   server_type                         = each.value.size
@@ -372,17 +373,17 @@ resource "local_file" "kubeconfig" {
   filename = "${local.local_file_path}/kubeconfig"
 }
 
-data "terraform_remote_state" "additional_node_states" {
-  depends_on = [
-    module.initial,
-    terraform_data.path,
-    local_file.main,
-    local_file.inputs,
-    terraform_data.create,
-  ]
-  for_each = local.additional_nodes
-  backend  = "local"
-  config = {
-    path = "${each.value.path}/tfstate"
-  }
-}
+# data "terraform_remote_state" "additional_node_states" {
+#   depends_on = [
+#     module.initial,
+#     terraform_data.path,
+#     local_file.main,
+#     local_file.inputs,
+#     terraform_data.create,
+#   ]
+#   for_each = local.additional_nodes
+#   backend  = "local"
+#   config = {
+#     path = "${each.value.path}/tfstate"
+#   }
+# }

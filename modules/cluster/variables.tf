@@ -116,3 +116,8 @@ variable "ingress_controller" {
   type        = string
   description = "The ingress controller to use. Must be 'nginx' or 'traefik'. Currently only supports 'nginx'."
 }
+variable "skip_cert_creation" {
+  type        = bool
+  description = "Skip the generation of a certificate, useful when configuring cert manager."
+  default     = false
+}

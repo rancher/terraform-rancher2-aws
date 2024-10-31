@@ -51,6 +51,7 @@
               aspellWithDicts
               awscli2
               bashInteractive
+              cmctl
               curl
               dig
               gh

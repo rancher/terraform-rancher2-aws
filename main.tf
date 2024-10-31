@@ -6,6 +6,7 @@ locals {
   domain       = var.domain
   zone         = var.zone
   fqdn         = join(".", [local.domain, local.zone])
+  skip_cert    = var.skip_project_cert_generation
   # access
   key_name = var.key_name
   key      = var.key
@@ -26,6 +27,10 @@ locals {
   rancher_helm_repository = var.rancher_helm_repository
   ip_family               = "ipv4"
   ingress_controller      = "nginx"
+  bootstrap_rancher       = var.bootstrap_rancher
+  install_cert_manager    = var.install_cert_manager
+  configure_cert_manager  = var.configure_cert_manager
+  cert_manager_config     = var.cert_manager_configuration
 }
 
 module "cluster" {
@@ -46,18 +51,40 @@ module "cluster" {
   node_configuration = local.node_configuration
   ip_family          = local.ip_family
   ingress_controller = local.ingress_controller
+  skip_cert_creation = local.skip_cert
+}
+
+module "install_cert_manager" {
+  depends_on = [
+    module.cluster,
+  ]
+  count                      = (local.install_cert_manager ? 1 : 0)
+  source                     = "./modules/install_cert_manager"
+  project_domain             = local.fqdn
+  zone                       = local.zone
+  project_cert_name          = module.cluster.cert.name
+  project_cert_key_id        = module.cluster.cert.key_id
+  path                       = local.local_file_path
+  cert_manager_version       = local.cert_manager_version
+  configure_cert_manager     = local.configure_cert_manager
+  cert_manager_configuration = local.cert_manager_config
 }
 
 module "rancher_bootstrap" {
   depends_on = [
     module.cluster,
+    module.install_cert_manager,
   ]
-  source                  = "./modules/rancher_bootstrap"
-  project_domain          = local.fqdn
-  cert_manager_version    = local.cert_manager_version
-  rancher_version         = local.rancher_version
-  rancher_helm_repository = local.rancher_helm_repository
-  project_cert_name       = module.cluster.cert.name
-  project_cert_key_id     = module.cluster.cert.key_id
-  path                    = local.local_file_path
+  count                      = (local.bootstrap_rancher ? 1 : 0)
+  source                     = "./modules/rancher_bootstrap"
+  path                       = local.local_file_path
+  project_domain             = local.fqdn
+  zone                       = local.zone
+  region                     = local.cert_manager_config.aws_region
+  email                      = local.cert_manager_config.email
+  rancher_version            = local.rancher_version
+  rancher_helm_repository    = local.rancher_helm_repository
+  cert_manager_version       = local.cert_manager_version
+  externalTLS                = (local.configure_cert_manager ? false : true)
+  cert_manager_configuration = local.cert_manager_config
 }

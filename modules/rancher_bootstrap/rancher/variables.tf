@@ -28,7 +28,7 @@ variable "rancher_version" {
   description = <<-EOT
     The version of rancher to install.
   EOT
-  default     = "2.8.4"
+  default     = "2.9.2"
 }
 variable "rancher_helm_repository" {
   type        = string
@@ -43,14 +43,6 @@ variable "cert_manager_version" {
     The version of cert manager to install.
   EOT
   default     = "v1.13.1"
-}
-variable "externalTLS" {
-  type        = bool
-  description = <<-EOT
-    Whether or not to use Cert Manager for Rancher's TLS.
-    If true, this assumes you have saved the external certificate in the "tls-rancher-ingress" kubernetes secret.
-  EOT
-  default     = false
 }
 variable "path" {
   type        = string
