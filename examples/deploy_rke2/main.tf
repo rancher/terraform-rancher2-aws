@@ -89,7 +89,7 @@ module "rancher" {
   node_configuration = {
     "rancher" = {
       type            = "all-in-one"
-      size            = "medium"
+      size            = "large"
       os              = local.os
       indirect_access = true
       initial         = true
