@@ -4,56 +4,31 @@
 
 locals {
   rancher_domain          = var.project_domain
+  zone                    = var.zone
+  region                  = var.region
+  email                   = var.email
   rancher_version         = replace(var.rancher_version, "v", "") # don't include the v
   rancher_helm_repository = var.rancher_helm_repository
   cert_manager_version    = var.cert_manager_version
-  project_cert_name       = var.project_cert_name
-  project_cert_key_id     = var.project_cert_key_id
+  cert_manager_config     = var.cert_manager_configuration
+  externalTLS             = var.externalTLS
   path                    = var.path
-  path_script             = <<-EOT
-    install -d ${local.path}/rancher_bootstrap
-    cp ${abspath(path.module)}/tf.bootstrap        ${local.path}/rancher_bootstrap/main.tf
-    cp ${abspath(path.module)}/variables.tf        ${local.path}/rancher_bootstrap/variables.tf
-    cp ${abspath(path.module)}/versions.tf         ${local.path}/rancher_bootstrap/versions.tf
-    cp ${abspath(path.module)}/tf.bootstrap_output ${local.path}/rancher_bootstrap/outputs.tf
-  EOT
-  inputs_content          = <<-EOT
-    project_domain          = "${local.rancher_domain}"
-    rancher_version         = "${local.rancher_version}"
-    rancher_helm_repository = "${local.rancher_helm_repository}"
-    cert_manager_version    = "${local.cert_manager_version}"
-    project_cert_name       = "${local.project_cert_name}"
-    project_cert_key_id     = "${local.project_cert_key_id}"
-  EOT
-  create_script           = <<-EOT
-    export KUBECONFIG=${abspath(local.path)}/kubeconfig
-    export KUBE_CONFIG_PATH=${abspath(local.path)}/kubeconfig
-    TF_DATA_DIR="${local.path}/rancher_bootstrap"
-    cd ${local.path}/rancher_bootstrap
-    terraform init -upgrade=true
-    EXITCODE=1
-    ATTEMPTS=0
-    MAX=3
-    while [ $EXITCODE -gt 0 ] && [ $ATTEMPTS -lt $MAX ]; do
-      timeout 3600 terraform apply -var-file="inputs.tfvars" -auto-approve -state="${abspath(local.path)}/rancher_bootstrap/tfstate"
-      EXITCODE=$?
-      ATTEMPTS=$((ATTEMPTS+1))
-    done
-    terraform output -state="${abspath(local.path)}/rancher_bootstrap/tfstate" -json > ${abspath(local.path)}/output.json
-    exit $EXITCODE
-  EOT
+  rancher_path            = (local.externalTLS ? "${abspath(path.module)}/rancher_externalTLS" : "${abspath(path.module)}/rancher")
+  deploy_path             = "${abspath(local.path)}/rancher_bootstrap"
 }
 
 resource "terraform_data" "path" {
   triggers_replace = {
-    script_contents    = local.path_script,
-    bootstrap_contents = md5(file("${path.module}/tf.bootstrap"))
-    variables_contents = md5(file("${path.module}/variables.tf"))
-    versions_contents  = md5(file("${path.module}/versions.tf"))
-    outputs_contents   = md5(file("${path.module}/tf.bootstrap_output"))
+    main_contents      = md5(file("${local.rancher_path}/main.tf"))
+    variables_contents = md5(file("${local.rancher_path}/variables.tf"))
+    versions_contents  = md5(file("${local.rancher_path}/versions.tf"))
+    outputs_contents   = md5(file("${local.rancher_path}/outputs.tf"))
   }
   provisioner "local-exec" {
-    command = local.path_script
+    command = <<-EOT
+      install -d ${local.deploy_path}
+      cp ${local.rancher_path}/* ${local.deploy_path}/
+    EOT
   }
 }
 
@@ -61,18 +36,48 @@ resource "local_file" "inputs" {
   depends_on = [
     terraform_data.path,
   ]
-  content  = local.inputs_content
-  filename = "${local.path}/rancher_bootstrap/inputs.tfvars"
+  content  = <<-EOT
+    project_domain             = "${local.rancher_domain}"
+    zone                       = "${local.zone}"
+    region                     = "${local.region}"
+    email                      = "${local.email}"
+    rancher_version            = "${local.rancher_version}"
+    rancher_helm_repository    = "${local.rancher_helm_repository}"
+    cert_manager_version       = "${local.cert_manager_version}"
+    cert_manager_configuration = {
+      aws_access_key_id     = "${local.cert_manager_config.aws_access_key_id}"
+      aws_secret_access_key = "${local.cert_manager_config.aws_secret_access_key}"
+      aws_region            = "${local.cert_manager_config.aws_region}"
+      email                 = "${local.cert_manager_config.email}"
+    }
+    path                       = "${local.deploy_path}"
+  EOT
+  filename = "${local.deploy_path}/inputs.tfvars"
 }
 
-# bootstrapping Rancher is a one way operation, there is no destroy or update
+# this is a one way operation, there is no destroy or update
 resource "terraform_data" "create" {
   depends_on = [
     terraform_data.path,
     local_file.inputs,
   ]
   provisioner "local-exec" {
-    command = local.create_script
+    command = <<-EOT
+      export KUBECONFIG=${abspath(local.path)}/kubeconfig
+      export KUBE_CONFIG_PATH=${abspath(local.path)}/kubeconfig
+      TF_DATA_DIR="${local.deploy_path}"
+      cd ${local.deploy_path}
+      terraform init -upgrade=true
+      EXITCODE=1
+      ATTEMPTS=0
+      MAX=3
+      while [ $EXITCODE -gt 0 ] && [ $ATTEMPTS -lt $MAX ]; do
+        timeout 3600 terraform apply -var-file="inputs.tfvars" -auto-approve -state="${local.deploy_path}/tfstate"
+        EXITCODE=$?
+        ATTEMPTS=$((ATTEMPTS+1))
+      done
+      exit $EXITCODE
+    EOT
   }
 }
 
@@ -84,6 +89,6 @@ data "terraform_remote_state" "rancher_bootstrap_state" {
   ]
   backend = "local"
   config = {
-    path = "${abspath(local.path)}/rancher_bootstrap/tfstate"
+    path = "${local.deploy_path}/tfstate"
   }
 }

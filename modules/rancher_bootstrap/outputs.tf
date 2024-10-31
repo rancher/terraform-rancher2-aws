@@ -8,7 +8,7 @@ output "admin_password" {
   sensitive = true
 }
 
-output "rancher_bootstrap_state" {
-  value     = data.terraform_remote_state.rancher_bootstrap_state
+output "rancher_bootstrap_state_location" {
+  value     = "${local.deploy_path}/tfstate"
   sensitive = true
 }
