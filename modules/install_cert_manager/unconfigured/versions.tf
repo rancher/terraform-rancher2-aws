@@ -9,6 +9,10 @@ terraform {
       source  = "rancher/rancher2"
       version = ">= 4.1.0, < 6.0"
     }
+    aws = {
+      source  = "hashicorp/aws"
+      version = ">= 5.11"
+    }
     kubernetes = {
       source  = "hashicorp/kubernetes"
       version = ">= 2.31.0"
@@ -20,6 +24,10 @@ terraform {
     external = {
       source  = "hashicorp/external"
       version = ">= 2.3.4"
+    }
+    time = {
+      source  = "hashicorp/time"
+      version = ">= 0.12.0"
     }
   }
 }

@@ -60,7 +60,6 @@ locals {
   aws_region              = var.aws_region
   email                   = (var.email != "" ? var.email : "${local.identifier}@${local.zone}")
   private_ip              = replace(module.rancher.private_endpoint, "http://", "")
-  issuer_name             = "rancher"
 }
 
 data "http" "myip" {
@@ -114,10 +113,6 @@ module "rke2_image" {
   server_use_strategy = "skip"
   image_use_strategy  = "find"
   image_type          = local.os
-}
-
-data "aws_route53_zone" "selected" {
-  name = "${local.zone}."
 }
 
 # this adds the private (10.) IP to the domain

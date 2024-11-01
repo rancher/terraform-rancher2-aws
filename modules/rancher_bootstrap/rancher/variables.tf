@@ -44,12 +44,6 @@ variable "cert_manager_version" {
   EOT
   default     = "v1.13.1"
 }
-variable "path" {
-  type        = string
-  description = <<-EOT
-    The local file path to stage files for the deployment.
-  EOT
-}
 variable "cert_manager_configuration" {
   type = object({
     aws_access_key_id     = string
