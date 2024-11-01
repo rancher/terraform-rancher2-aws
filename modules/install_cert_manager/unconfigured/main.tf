@@ -1,9 +1,7 @@
 locals {
   cert_manager_version = var.cert_manager_version
-  project_cert_name    = var.project_cert_name
   project_cert_key_id  = var.project_cert_key_id
 }
-
 
 data "aws_iam_server_certificate" "project_cert" {
   name = local.project_cert_name
@@ -55,8 +53,8 @@ resource "kubernetes_secret" "tls_rancher_ingress" {
   }
   type = "kubernetes.io/tls"
   data = {
-    "tls.crt" = data.aws_iam_server_certificate.project_domain[0].certificate_body,
-    "tls.key" = data.aws_secretsmanager_secret_version.rancher_private_key[0].secret_string,
+    "tls.crt" = data.aws_iam_server_certificate.project_cert.certificate_body,
+    "tls.key" = data.aws_secretsmanager_secret_version.project_cert_key.secret_string,
   }
   lifecycle {
     ignore_changes = [
@@ -76,7 +74,7 @@ resource "kubernetes_secret" "tls_rancher_ca" {
   }
   type = "generic"
   data = {
-    "cacerts.pem" = data.aws_iam_server_certificate.project_domain[0].certificate_chain,
+    "cacerts.pem" = data.aws_iam_server_certificate.project_cert.certificate_chain,
   }
   lifecycle {
     ignore_changes = [

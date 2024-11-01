@@ -1,7 +1,5 @@
 locals {
-  zone                 = var.zone
   cert_manager_version = var.cert_manager_version
-  cert_manager_config  = var.cert_manager_configuration
 }
 
 resource "time_sleep" "settle_before_cert_manager" {
