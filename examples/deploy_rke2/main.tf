@@ -185,9 +185,6 @@ resource "rancher2_cluster_v2" "rke2_cluster" {
   kubernetes_version    = local.rke2_version
   enable_network_policy = true
   rke_config {
-    machine_global_config = yamlencode({
-      kubelet-arg = ["max-pods=250"]
-    })
     machine_pools {
       name                         = "mp1"
       control_plane_role           = true
