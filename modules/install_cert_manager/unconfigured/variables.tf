@@ -5,13 +5,6 @@ variable "cert_manager_version" {
   EOT
   default     = "v1.13.1"
 }
-variable "project_cert_name" {
-  type        = string
-  description = <<-EOT
-    The project's cert name
-  EOT
-  default     = ""
-}
 variable "project_cert_key_id" {
   type        = string
   description = <<-EOT

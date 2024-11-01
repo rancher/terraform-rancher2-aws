@@ -12,7 +12,6 @@ locals {
   rancher_helm_repository = var.rancher_helm_repository
   cert_manager_version    = replace(var.cert_manager_version, "v", "") # don't include the v
   cert_manager_config     = var.cert_manager_configuration
-  path                    = var.path
 }
 
 resource "time_sleep" "settle_before_rancher" {
