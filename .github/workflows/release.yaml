@@ -29,9 +29,7 @@ jobs:
               issue_number: ${{ fromJson(steps.release-please.outputs.pr).number }},
               owner: ${{ github.repository_owner }},
               repo: ${{ github.event.repository.name }},
-              body: |
-                Please make sure e2e tests pass before merging this PR!
-                ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+              body: Please make sure e2e tests pass before merging this PR! \n ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
             })
       - uses: actions/checkout@v4
         if: steps.release-please.outputs.pr
@@ -71,7 +69,5 @@ jobs:
               issue_number: ${{ fromJson(steps.release-please.outputs.pr).number }},
               owner: ${{ github.repository_owner }},
               repo: ${{ github.event.repository.name }},
-              body: |
-                End to End Tests Passed!
-                ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+              body: End to End Tests Passed! \n ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
             })
