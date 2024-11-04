@@ -58,16 +58,15 @@ module "install_cert_manager" {
   depends_on = [
     module.cluster,
   ]
-  count                      = (local.install_cert_manager ? 1 : 0)
-  source                     = "./modules/install_cert_manager"
-  project_domain             = local.fqdn
-  zone                       = local.zone
-  project_cert_name          = module.cluster.cert.name
-  project_cert_key_id        = module.cluster.cert.key_id
-  path                       = local.local_file_path
-  cert_manager_version       = local.cert_manager_version
-  configure_cert_manager     = local.configure_cert_manager
-  cert_manager_configuration = local.cert_manager_config
+  count                  = (local.install_cert_manager ? 1 : 0)
+  source                 = "./modules/install_cert_manager"
+  project_domain         = local.fqdn
+  zone                   = local.zone
+  project_cert_name      = module.cluster.cert.name
+  project_cert_key_id    = module.cluster.cert.key_id
+  path                   = local.local_file_path
+  cert_manager_version   = local.cert_manager_version
+  configure_cert_manager = local.configure_cert_manager
 }
 
 module "rancher_bootstrap" {
