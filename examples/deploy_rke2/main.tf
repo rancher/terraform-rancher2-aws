@@ -197,6 +197,9 @@ resource "rancher2_cluster_v2" "rke2_cluster" {
         name = rancher2_machine_config_v2.aio.name
       }
     }
+    rotate_certificates {
+      generation = 1
+    }
   }
   timeouts {
     create = "120m" # 2 hours
