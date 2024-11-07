@@ -167,6 +167,11 @@ resource "rancher2_machine_config_v2" "aio" {
     )
     instance_type = "m5.large"
     ssh_user      = "ec2-user"
+    userdata      = <<-EOT
+      #cloud-config
+      bootcmd:
+        - echo ${local.private_ip} ${local.domain}.${local.zone} >> /etc/hosts
+    EOT
     tags          = join(",", ["Id", local.identifier, "Owner", local.owner])
   }
 }
