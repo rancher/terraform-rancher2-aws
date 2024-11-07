@@ -12,3 +12,10 @@ variable "project_cert_key_id" {
   EOT
   default     = ""
 }
+variable "project_cert_name" {
+  type        = string
+  description = <<-EOT
+    The project's cert name
+  EOT
+  default     = ""
+}

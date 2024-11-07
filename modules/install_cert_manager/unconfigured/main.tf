@@ -1,6 +1,7 @@
 locals {
   cert_manager_version = var.cert_manager_version
   project_cert_key_id  = var.project_cert_key_id
+  project_cert_name    = var.project_cert_name
 }
 
 data "aws_iam_server_certificate" "project_cert" {
@@ -95,7 +96,7 @@ resource "helm_release" "cert_manager_unconfigured" {
   chart            = "cert-manager"
   version          = local.cert_manager_version
   namespace        = "cert-manager"
-  create_namespace = false
+  create_namespace = true
   wait             = false
   wait_for_jobs    = false
   force_update     = true
