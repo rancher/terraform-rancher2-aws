@@ -78,7 +78,16 @@ resource "terraform_data" "get_public_cert_info" {
   ]
   provisioner "local-exec" {
     command = <<-EOT
-      echo | openssl s_client -showcerts -servername ${local.rancher_domain} -connect ${local.rancher_domain}:443 2>/dev/null | openssl x509 -inform pem -noout -text
+      CERT="$(echo | openssl s_client -showcerts -servername ${local.rancher_domain} -connect ${local.rancher_domain}:443 2>/dev/null | openssl x509 -inform pem -noout -text)"
+      echo "$CERT"
+      FAKE="$(echo "$CERT" | grep 'Kubernetes Ingress Controller Fake Certificate')"
+      if [ -z "$FAKE" ]; then
+        echo "cert is not fake"
+        exit 0
+      else
+        echo "cert is fake"
+        exit 1
+      fi
     EOT
   }
 }
