@@ -57,7 +57,7 @@ jobs:
           GITHUB_OWNER: rancher
           IDENTIFIER: ${{github.run_id}}
           ZONE: ${{secrets.ZONE}}
-          ACME_SERVER_URL: https://acme-staging-v02.api.letsencrypt.org/directory
+          ACME_SERVER_URL: https://acme-v02.api.letsencrypt.org/directory
           RANCHER_INSECURE: true
         run: |
           ./run_tests.sh
