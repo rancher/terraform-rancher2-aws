@@ -2,7 +2,7 @@ name: validate
 
 on:
   pull_request:
-    branches: main
+    branches: [main]
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -167,3 +167,16 @@ jobs:
           gitleaks detect --no-banner -v --no-git
           gitleaks detect --no-banner -v
         continue-on-error: true
+
+  check-certificate-authorities:
+    name: 'Check Certificate Authorities'
+    runs-on: ubuntu-latest
+    steps:
+      - name: check-ca
+        run: |
+          echo "Checking CA certificates"
+          sudo find /etc/ssl/certs -type l -iname "*.0" -exec cat "{}" \; | awk -v cmd='openssl x509 -noout -subject -enddate 2>/dev/null | tr "\n" " " ; echo' '/BEGIN/{cert=""};{cert=sprintf("%s\n%s",cert,$0)};/END/{print cert | cmd ;close(cmd)}' | sed -r 's:^subject=::' | sort -u
+          echo "Updating CA certificates"
+          sudo update-ca-certificates
+          echo "Checking CA certificates after update"
+          sudo find /etc/ssl/certs -type l -iname "*.0" -exec cat "{}" \; | awk -v cmd='openssl x509 -noout -subject -enddate 2>/dev/null | tr "\n" " " ; echo' '/BEGIN/{cert=""};{cert=sprintf("%s\n%s",cert,$0)};/END/{print cert | cmd ;close(cmd)}' | sed -r 's:^subject=::' | sort -u

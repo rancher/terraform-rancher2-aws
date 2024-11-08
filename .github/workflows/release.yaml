@@ -17,6 +17,14 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
+      - name: check-ca
+        run: |
+          echo "Checking CA certificates"
+          sudo find /etc/ssl/certs -type l -iname "*.0" -exec cat "{}" \; | awk -v cmd='openssl x509 -noout -subject -enddate 2>/dev/null | tr "\n" " " ; echo' '/BEGIN/{cert=""};{cert=sprintf("%s\n%s",cert,$0)};/END/{print cert | cmd ;close(cmd)}' | sed -r 's:^subject=::' | sort -u
+          echo "Updating CA certificates"
+          sudo update-ca-certificates
+          echo "Checking CA certificates after update"
+          sudo find /etc/ssl/certs -type l -iname "*.0" -exec cat "{}" \; | awk -v cmd='openssl x509 -noout -subject -enddate 2>/dev/null | tr "\n" " " ; echo' '/BEGIN/{cert=""};{cert=sprintf("%s\n%s",cert,$0)};/END/{print cert | cmd ;close(cmd)}' | sed -r 's:^subject=::' | sort -u
       - uses: google-github-actions/release-please-action@v4
         id: release-please
         with:
