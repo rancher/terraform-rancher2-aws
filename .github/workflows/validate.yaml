@@ -175,8 +175,26 @@ jobs:
       - name: check-ca
         run: |
           echo "Checking CA certificates"
-          sudo find /etc/ssl/certs -type l -iname "*.0" -exec cat "{}" \; | awk -v cmd='openssl x509 -noout -subject -enddate 2>/dev/null | tr "\n" " " ; echo' '/BEGIN/{cert=""};{cert=sprintf("%s\n%s",cert,$0)};/END/{print cert | cmd ;close(cmd)}' | sed -r 's:^subject=::' | sort -u
+          AUTHORITIES="$(sudo find /etc/ssl/certs -type l -iname "*.0" -exec cat "{}" \; | awk -v cmd='openssl x509 -noout -subject -enddate 2>/dev/null | tr "\n" " " ; echo' '/BEGIN/{cert=""};{cert=sprintf("%s\n%s",cert,$0)};/END/{print cert | cmd ;close(cmd)}' | sed -r 's:^subject=::' | sort -u)""
+          LECA="$(grep "Let" <<< "$AUTHORITIES")"
+          if [ -z "$LECA" ]; then
+            echo "Lets Encrypt CA not found"
+          fi
           echo "Updating CA certificates"
           sudo update-ca-certificates
           echo "Checking CA certificates after update"
-          sudo find /etc/ssl/certs -type l -iname "*.0" -exec cat "{}" \; | awk -v cmd='openssl x509 -noout -subject -enddate 2>/dev/null | tr "\n" " " ; echo' '/BEGIN/{cert=""};{cert=sprintf("%s\n%s",cert,$0)};/END/{print cert | cmd ;close(cmd)}' | sed -r 's:^subject=::' | sort -u
+          AUTHORITIES="$(sudo find /etc/ssl/certs -type l -iname "*.0" -exec cat "{}" \; | awk -v cmd='openssl x509 -noout -subject -enddate 2>/dev/null | tr "\n" " " ; echo' '/BEGIN/{cert=""};{cert=sprintf("%s\n%s",cert,$0)};/END/{print cert | cmd ;close(cmd)}' | sed -r 's:^subject=::' | sort -u)""
+          LECA="$(grep "Let" <<< "$AUTHORITIES")"
+          if [ -z "$LECA" ]; then
+            echo "Lets Encrypt CA not found after update"
+            echo "Uninstalling certs and reinstalling"
+            sudo apt purge -y ca-certificates
+            sudo apt install -y ca-certificates
+            echo "Checking CA certificates after purge and reinstall"
+            AUTHORITIES="$(sudo find /etc/ssl/certs -type l -iname "*.0" -exec cat "{}" \; | awk -v cmd='openssl x509 -noout -subject -enddate 2>/dev/null | tr "\n" " " ; echo' '/BEGIN/{cert=""};{cert=sprintf("%s\n%s",cert,$0)};/END/{print cert | cmd ;close(cmd)}' | sed -r 's:^subject=::' | sort -u)""
+            LECA="$(grep "Let" <<< "$AUTHORITIES")"
+            if [ -z "$LECA" ]; then
+              echo "Lets Encrypt CA not found"
+              exit 1
+            fi
+          fi
