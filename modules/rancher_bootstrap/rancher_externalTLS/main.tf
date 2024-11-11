@@ -10,13 +10,12 @@ locals {
 }
 
 resource "time_sleep" "settle_before_rancher" {
-  depends_on = [
-  ]
   create_duration = "30s"
 }
 
 resource "helm_release" "rancher" {
   depends_on = [
+    time_sleep.settle_before_rancher,
   ]
   name             = "rancher"
   chart            = "${local.rancher_helm_repository}/rancher-${local.rancher_version}.tgz"
@@ -33,7 +32,7 @@ resource "helm_release" "rancher" {
   }
   set {
     name  = "replicas"
-    value = "2"
+    value = "2" # this should be variable on number of nodes deployed
   }
   set {
     name  = "bootstrapPassword"
@@ -63,6 +62,8 @@ resource "helm_release" "rancher" {
 
 resource "time_sleep" "settle_after_rancher" {
   depends_on = [
+    time_sleep.settle_before_rancher,
+    helm_release.rancher,
   ]
   create_duration = "120s"
 }
@@ -75,6 +76,10 @@ resource "random_password" "password" {
 
 resource "terraform_data" "get_public_cert_info" {
   depends_on = [
+    random_password.password,
+    time_sleep.settle_before_rancher,
+    helm_release.rancher,
+    time_sleep.settle_after_rancher,
   ]
   provisioner "local-exec" {
     command = <<-EOT
@@ -94,6 +99,11 @@ resource "terraform_data" "get_public_cert_info" {
 
 resource "rancher2_bootstrap" "admin" {
   depends_on = [
+    random_password.password,
+    time_sleep.settle_before_rancher,
+    helm_release.rancher,
+    time_sleep.settle_after_rancher,
+    terraform_data.get_public_cert_info,
   ]
   password  = random_password.password.result
   telemetry = false
