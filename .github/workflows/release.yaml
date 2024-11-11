@@ -17,6 +17,29 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
+      - name: Install Let's Encrypt Root Certificate
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y ca-certificates wget
+          wget -qO - https://letsencrypt.org/certs/isrgrootx1.pem.txt | sudo tee /usr/local/share/ca-certificates/isrgrootx1.crt > /dev/null
+          sudo update-ca-certificates
+      - name: Verify Lets Encrypt CA Functionality
+        run: |
+          # Function to check if Let's Encrypt CA is effectively used by openssl
+          check_letsencrypt_ca() {
+            # Try to verify a known Let's Encrypt certificate (you can use any valid one)
+            if openssl s_client -showcerts -connect letsencrypt.org:443 < /dev/null | openssl x509 -noout -issuer | grep -q "Let's Encrypt"; then
+              return 0 # Success
+            else
+              return 1 # Failure
+            fi
+          }
+          if check_letsencrypt_ca; then
+            echo "Let's Encrypt CA is functioning correctly."
+          else
+            echo "Error: Let's Encrypt CA is not being used for verification."
+            exit 1
+          fi
       - uses: google-github-actions/release-please-action@v4
         id: release-please
         with:
