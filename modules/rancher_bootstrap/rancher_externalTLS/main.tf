@@ -97,6 +97,21 @@ resource "terraform_data" "get_public_cert_info" {
   }
 }
 
+resource "terraform_data" "get_ping" {
+  depends_on = [
+    random_password.password,
+    time_sleep.settle_before_rancher,
+    helm_release.rancher,
+    time_sleep.settle_after_rancher,
+    terraform_data.get_public_cert_info,
+  ]
+  provisioner "local-exec" {
+    command = <<-EOT
+    curl -vvv "https://${local.rancher_domain}/ping"
+    EOT
+  }
+}
+
 resource "rancher2_bootstrap" "admin" {
   depends_on = [
     random_password.password,
@@ -104,6 +119,7 @@ resource "rancher2_bootstrap" "admin" {
     helm_release.rancher,
     time_sleep.settle_after_rancher,
     terraform_data.get_public_cert_info,
+    terraform_data.get_ping,
   ]
   password  = random_password.password.result
   telemetry = false
