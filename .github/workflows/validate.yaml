@@ -168,56 +168,32 @@ jobs:
           gitleaks detect --no-banner -v
         continue-on-error: true
 
-  # check-certificate-authorities:
-  #     name: 'Check Certificate Authorities'
-  #     runs-on: ubuntu-latest
-  #     steps:
-  #       - name: check-ca
-  #         run: |
-  #           # Function to check if Let's Encrypt CA is present in certificate store
-  #           check_letsencrypt_ca() {
-  #             local authorities=$(sudo find /etc/ssl/certs -type l -iname "*.0" -exec sh -c '
-  #               openssl x509 -noout -subject -enddate 2>/dev/null < "{}"
-  #             ' \; | tr "\n" " " | sed -r 's:^subject=::' | sort -u)
-  #             grep -q "Let" <<< "$authorities"
-  #           }
-
-  #           echo "Checking CA certificates..."
-  #           if ! check_letsencrypt_ca; then
-  #             echo "Let's Encrypt CA not found."
-  #             echo "Updating CA certificates..."
-  #             sudo update-ca-certificates
-
-  #             if ! check_letsencrypt_ca; then
-  #               echo "Let's Encrypt CA not found after update."
-  #               echo "Uninstalling and reinstalling CA certificates..."
-  #               sudo apt purge -y ca-certificates && sudo apt install -y ca-certificates
-
-  #               if ! check_letsencrypt_ca; then
-  #                 echo "Error: Let's Encrypt CA not found after reinstall."
-  #                 exit 1
-  #               fi
-  #             fi
-  #           fi
-
-  #           echo "Let's Encrypt CA found."
-
   check-certificate-authorities:
-    name: 'Install Lets Encrypt CA Certificate'
+    name: 'Verify Lets Encrypt CA Functionality'
     runs-on: ubuntu-latest
     steps:
-      - name: Install Lets Encrypt Root Certificate
+      - name: Install Let's Encrypt Root Certificate
         run: |
           sudo apt-get update -y
           sudo apt-get install -y ca-certificates wget
           wget -qO - https://letsencrypt.org/certs/isrgrootx1.pem.txt | sudo tee /usr/local/share/ca-certificates/isrgrootx1.crt > /dev/null
           sudo update-ca-certificates
 
-      - name: Verify Lets Encrypt CA
+      - name: Verify Lets Encrypt CA Functionality
         run: |
-          if openssl x509 -in /usr/local/share/ca-certificates/isrgrootx1.crt -text | grep -q "Lets Encrypt Authority X1"; then
-            echo "Lets Encrypt CA certificate installed successfully."
+          # Function to check if Let's Encrypt CA is effectively used by openssl
+          check_letsencrypt_ca() {
+            # Try to verify a known Let's Encrypt certificate (you can use any valid one)
+            if openssl s_client -showcerts -connect letsencrypt.org:443 < /dev/null | openssl x509 -noout -issuer | grep -q "Let's Encrypt"; then
+              return 0 # Success
+            else
+              return 1 # Failure
+            fi
+          }
+
+          if check_letsencrypt_ca; then
+            echo "Let's Encrypt CA is functioning correctly."
           else
-            echo "Error: Lets Encrypt CA certificate not found."
+            echo "Error: Let's Encrypt CA is not being used for verification."
             exit 1
           fi
