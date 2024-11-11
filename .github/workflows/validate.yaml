@@ -169,34 +169,37 @@ jobs:
         continue-on-error: true
 
   check-certificate-authorities:
-    name: 'Check Certificate Authorities'
-    runs-on: ubuntu-latest
-    steps:
-      - name: check-ca
-        shell: /home/runner/.nix-profile/bin/nix develop --ignore-environment --extra-experimental-features nix-command --extra-experimental-features flakes --keep HOME --keep SSH_AUTH_SOCK --keep GITHUB_TOKEN --keep AWS_ROLE --keep AWS_REGION --keep AWS_DEFAULT_REGION --keep AWS_ACCESS_KEY_ID --keep AWS_SECRET_ACCESS_KEY --keep AWS_SESSION_TOKEN --keep UPDATECLI_GPGTOKEN --keep UPDATECLI_GITHUB_TOKEN --keep UPDATECLI_GITHUB_ACTOR --keep GPG_SIGNING_KEY --keep NIX_ENV_LOADED --keep TERM --command bash -e {0}
-        run: |
-          echo "Checking CA certificates"
+      name: 'Check Certificate Authorities'
+      runs-on: ubuntu-latest
+      steps:
+        - name: check-ca
+          run: |
+            # Function to check if Let's Encrypt CA is present in certificate store
+            check_letsencrypt_ca() {
+              local authorities=$(sudo find /etc/ssl/certs -type l -iname "*.0" -exec cat "{}" \; | \
+                                openssl x509 -noout -subject -enddate 2>/dev/null | \
+                                tr "\n" " " | \
+                                sed -r 's:^subject=::' | \
+                                sort -u)
+              grep -q "Let" <<< "$authorities"
+            }
 
-          AUTHORITIES="$(sudo find /etc/ssl/certs -type l -iname "*.0" -exec cat "{}" \; | awk -v cmd='openssl x509 -noout -subject -enddate 2>/dev/null | tr "\n" " " ; echo' '/BEGIN/{cert=""};{cert=sprintf("%s\n%s",cert,$0)};/END/{print cert | cmd ;close(cmd)}' | sed -r 's:^subject=::' | sort -u)"
-          LECA="$(grep "Let" <<< "$AUTHORITIES")"
-          if [ -z "$LECA" ]; then
-            echo 'Lets Encrypt CA not found'
-          fi
-          echo 'Updating CA certificates'
-          sudo update-ca-certificates
-          echo 'Checking CA certificates after update'
-          AUTHORITIES="$(sudo find /etc/ssl/certs -type l -iname "*.0" -exec cat "{}" \; | awk -v cmd='openssl x509 -noout -subject -enddate 2>/dev/null | tr "\n" " " ; echo' '/BEGIN/{cert=""};{cert=sprintf("%s\n%s",cert,$0)};/END/{print cert | cmd ;close(cmd)}' | sed -r 's:^subject=::' | sort -u)"
-          LECA="$(grep "Let" <<< "$AUTHORITIES")"
-          if [ -z "$LECA" ]; then
-            echo 'Lets Encrypt CA not found after update'
-            echo 'Uninstalling certs and reinstalling'
-            sudo apt purge -y ca-certificates
-            sudo apt install -y ca-certificates
-            echo 'Checking CA certificates after purge and reinstall'
-            AUTHORITIES="$(sudo find /etc/ssl/certs -type l -iname "*.0" -exec cat "{}" \; | awk -v cmd='openssl x509 -noout -subject -enddate 2>/dev/null | tr "\n" " " ; echo' '/BEGIN/{cert=""};{cert=sprintf("%s\n%s",cert,$0)};/END/{print cert | cmd ;close(cmd)}' | sed -r 's:^subject=::' | sort -u)"
-            LECA="$(grep "Let" <<< "$AUTHORITIES")"
-            if [ -z "$LECA" ]; then
-              echo 'Lets Encrypt CA not found'
-              exit 1
+            echo "Checking CA certificates..."
+            if ! check_letsencrypt_ca; then
+              echo "Let's Encrypt CA not found."
+              echo "Updating CA certificates..."
+              sudo update-ca-certificates
+
+              if ! check_letsencrypt_ca; then
+                echo "Let's Encrypt CA not found after update."
+                echo "Uninstalling and reinstalling CA certificates..."
+                sudo apt purge -y ca-certificates && sudo apt install -y ca-certificates
+
+                if ! check_letsencrypt_ca; then
+                  echo "Error: Let's Encrypt CA not found after reinstall."
+                  exit 1
+                fi
+              fi
             fi
-          fi
+
+            echo "Let's Encrypt CA found."
