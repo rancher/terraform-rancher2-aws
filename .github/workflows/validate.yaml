@@ -174,11 +174,21 @@ jobs:
     steps:
       - name: Install Let's Encrypt Root Certificate
         run: |
+          # https://letsencrypt.org/certificates/
           sudo apt-get update -y
           sudo apt-get install -y ca-certificates wget openssl libssl-dev
-          wget -qO - https://letsencrypt.org/certs/isrgrootx1.pem.txt | sudo tee /usr/local/share/ca-certificates/isrgrootx1.crt > /dev/null
-          wget https://letsencrypt.org/certs/lets-encrypt-r3.pem
-          sudo cp lets-encrypt-r3.pem /usr/local/share/ca-certificates/
+          wget https://letsencrypt.org/certs/isrgrootx1.pem
+          sudo cp isrgrootx1.pem /usr/local/share/ca-certificates/
+          wget https://letsencrypt.org/certs/isrg-root-x2.pem
+          sudo cp isrg-root-x2.pem /usr/local/share/ca-certificates/
+          wget https://letsencrypt.org/certs/2024/r11.pem
+          sudo cp r11.pem /usr/local/share/ca-certificates/
+          wget https://letsencrypt.org/certs/2024/r10.pem
+          sudo cp r10.pem /usr/local/share/ca-certificates/
+          wget https://letsencrypt.org/certs/2024/e5.pem
+          sudo cp e5.pem /usr/local/share/ca-certificates/
+          wget https://letsencrypt.org/certs/2024/e6.pem
+          sudo cp e6.pem /usr/local/share/ca-certificates/
           sudo update-ca-certificates
       - name: Verify Lets Encrypt CA Functionality
         run: |
