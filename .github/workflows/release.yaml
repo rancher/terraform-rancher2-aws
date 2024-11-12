@@ -20,7 +20,7 @@ jobs:
       - name: Install Let's Encrypt Root Certificate
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y ca-certificates wget
+          sudo apt-get install -y ca-certificates wget openssl libssl-dev
           wget -qO - https://letsencrypt.org/certs/isrgrootx1.pem.txt | sudo tee /usr/local/share/ca-certificates/isrgrootx1.crt > /dev/null
           sudo update-ca-certificates
       - name: Verify Lets Encrypt CA Functionality
