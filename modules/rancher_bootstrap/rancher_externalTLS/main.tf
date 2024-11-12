@@ -107,8 +107,10 @@ resource "terraform_data" "get_ping" {
   ]
   provisioner "local-exec" {
     command = <<-EOT
-    echo | openssl s_client -showcerts -servername ${local.rancher_domain} -connect "https://${local.rancher_domain}/ping" 2>/dev/null | openssl x509 -inform pem -noout -text || true
-    curl --trace-ascii "-" -vvvv "https://${local.rancher_domain}/ping"
+      echo "Checking Cert"
+      echo | openssl s_client -showcerts -servername ${local.rancher_domain} -connect "${local.rancher_domain}:443" 2>/dev/null | openssl x509 -inform pem -noout -text || true
+      echo "Checking Curl"
+      curl -vvvv "https://${local.rancher_domain}/ping"
     EOT
   }
 }
