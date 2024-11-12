@@ -17,11 +17,13 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - name: Install Let's Encrypt Root Certificate
+      - name: Install Let's Encrypt Root and Intermediate Certificate
         run: |
           sudo apt-get update -y
           sudo apt-get install -y ca-certificates wget openssl libssl-dev
           wget -qO - https://letsencrypt.org/certs/isrgrootx1.pem.txt | sudo tee /usr/local/share/ca-certificates/isrgrootx1.crt > /dev/null
+          wget https://letsencrypt.org/certs/lets-encrypt-r3.pem
+          sudo cp lets-encrypt-r3.pem /usr/local/share/ca-certificates/
           sudo update-ca-certificates
       - name: Verify Lets Encrypt CA Functionality
         run: |

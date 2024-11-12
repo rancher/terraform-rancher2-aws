@@ -177,8 +177,9 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y ca-certificates wget openssl libssl-dev
           wget -qO - https://letsencrypt.org/certs/isrgrootx1.pem.txt | sudo tee /usr/local/share/ca-certificates/isrgrootx1.crt > /dev/null
+          wget https://letsencrypt.org/certs/lets-encrypt-r3.pem
+          sudo cp lets-encrypt-r3.pem /usr/local/share/ca-certificates/
           sudo update-ca-certificates
-
       - name: Verify Lets Encrypt CA Functionality
         run: |
           # Function to check if Let's Encrypt CA is effectively used by openssl

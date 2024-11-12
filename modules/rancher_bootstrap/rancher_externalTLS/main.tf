@@ -107,6 +107,21 @@ resource "terraform_data" "get_ping" {
   ]
   provisioner "local-exec" {
     command = <<-EOT
+      check_letsencrypt_ca() {
+        # Try to verify a known Let's Encrypt certificate (you can use any valid one)
+        if openssl s_client -showcerts -connect letsencrypt.org:443 < /dev/null | openssl x509 -noout -issuer | grep -q "Let's Encrypt"; then
+          return 0 # Success
+        else
+          return 1 # Failure
+        fi
+      }
+      echo "Checking Let's Encrypt CA"
+      if check_letsencrypt_ca; then
+        echo "Let's Encrypt CA is functioning correctly."
+      else
+        echo "Error: Let's Encrypt CA is not being used for verification."
+        exit 1
+      fi
       echo "Checking Cert"
       echo | openssl s_client -showcerts -servername ${local.rancher_domain} -connect "${local.rancher_domain}:443" 2>/dev/null | openssl x509 -inform pem -noout -text || true
       echo "Checking Curl"
