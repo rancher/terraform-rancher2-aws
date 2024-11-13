@@ -125,7 +125,7 @@ resource "terraform_data" "get_ping" {
       echo "Checking Cert"
       echo | openssl s_client -showcerts -servername ${local.rancher_domain} -connect "${local.rancher_domain}:443" 2>/dev/null | openssl x509 -inform pem -noout -text || true
       echo "Checking Curl"
-      curl -vvvv "https://${local.rancher_domain}/ping"
+      curl "https://${local.rancher_domain}/ping"
     EOT
   }
 }

@@ -54,7 +54,10 @@ resource "kubernetes_secret" "tls_rancher_ingress" {
   }
   type = "kubernetes.io/tls"
   data = {
-    "tls.crt" = data.aws_iam_server_certificate.project_cert.certificate_body,
+    "tls.crt" = <<-EOT
+      ${data.aws_iam_server_certificate.project_cert.certificate_body}
+      ${data.aws_iam_server_certificate.project_cert.certificate_chain}
+    EOT
     "tls.key" = data.aws_secretsmanager_secret_version.project_cert_key.secret_string,
   }
   lifecycle {

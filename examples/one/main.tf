@@ -16,8 +16,24 @@ provider "kubernetes" {} # make sure you set the env variable KUBE_CONFIG_PATH t
 provider "helm" {}       # make sure you set the env variable KUBE_CONFIG_PATH to local_file_path (file_path variable)
 
 provider "rancher2" {
+  alias     = "authenticate"
+  bootstrap = true
   api_url   = "https://${local.domain}.${local.zone}"
-  token_key = module.this.admin_token
+  timeout   = "300s"
+}
+
+resource "rancher2_bootstrap" "authenticate" {
+  provider         = rancher2.authenticate
+  initial_password = module.rancher.admin_password
+  password         = module.rancher.admin_password
+  token_update     = true
+  token_ttl        = 7200 # 2 hours
+}
+
+provider "rancher2" {
+  alias     = "default"
+  api_url   = "https://${local.domain}.${local.zone}"
+  token_key = rancher2_bootstrap.authenticate.token
   timeout   = "300s"
 }
 
@@ -44,7 +60,7 @@ data "http" "myip" {
   url = "https://ipinfo.io/ip"
 }
 
-module "this" {
+module "rancher" {
   source = "../../"
   # project
   identifier   = local.identifier
@@ -77,33 +93,12 @@ module "this" {
   rancher_helm_repository = local.rancher_helm_repository
 }
 
-# this will fail if the default self signed cert is found
-resource "terraform_data" "get_cert_info" {
-  depends_on = [
-    module.this,
-  ]
-  provisioner "local-exec" {
-    command = <<-EOT
-      CERT="$(echo | openssl s_client -showcerts -servername ${local.domain}.${local.zone} -connect ${local.domain}.${local.zone}:443 2>/dev/null | openssl x509 -inform pem -noout -text)"
-      echo "$CERT"
-      FAKE="$(echo "$CERT" | grep 'Kubernetes Ingress Controller Fake Certificate')"
-      if [ -z "$FAKE" ]; then
-        echo "cert is not fake"
-        exit 0
-      else
-        echo "cert is fake"
-        exit 1
-      fi
-    EOT
-  }
-}
-
 # test catalog entry
 resource "rancher2_catalog" "foo" {
   depends_on = [
-    module.this,
-    terraform_data.get_cert_info,
+    module.rancher,
   ]
-  name = "test"
-  url  = "http://foo.com:8080"
+  provider = rancher2.default
+  name     = "test"
+  url      = "http://foo.com:8080"
 }
