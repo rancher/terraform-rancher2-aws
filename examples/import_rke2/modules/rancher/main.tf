@@ -22,7 +22,7 @@ data "http" "myip" {
 }
 
 module "rancher" {
-  source = "../../"
+  source = "../../../../"
   # project
   identifier   = local.identifier
   owner        = local.owner
