@@ -52,7 +52,7 @@ jobs:
             echo "Error: Let's Encrypt CA is not being used for verification."
             exit 1
           fi
-      - uses: google-github-actions/release-please-action@v4
+      - uses: googleapis/release-please-action@v4
         id: release-please
         with:
           release-type: terraform-module
