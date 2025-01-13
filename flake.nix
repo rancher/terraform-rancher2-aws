@@ -69,6 +69,7 @@
               less
               openssh
               openssl
+              pup
               shellcheck
               tflint
               tfsec
@@ -76,6 +77,7 @@
               updatecli
               vim
               which
+              yq-go
             ];
           };
 
