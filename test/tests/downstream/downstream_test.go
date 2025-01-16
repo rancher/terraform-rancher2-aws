@@ -16,8 +16,8 @@ func TestDownstreamBasic(t *testing.T) {
   t.Parallel()
   id := util.GetId()
   region := util.GetRegion()
-	accessKey := util.GetAwsAccessKey()
-	secretKey := util.GetAwsSecretKey()
+  accessKey := util.GetAwsAccessKey()
+  secretKey := util.GetAwsSecretKey()
   directory := "deploy_rke2"
   owner := "terraform-ci@suse.com"
   util.SetAcmeServer()
@@ -73,9 +73,9 @@ func TestDownstreamBasic(t *testing.T) {
       "rke2_version":          rke2Version,
       "rancher_version":       rancherVersion,
       "file_path":             testDir,
-			"aws_access_key_id":     accessKey,
-			"aws_secret_access_key": secretKey,
-			"aws_region":            region,
+      "aws_access_key_id":     accessKey,
+      "aws_secret_access_key": secretKey,
+      "aws_region":            region,
     },
     // Environment variables to set when running Terraform
     EnvVars: map[string]string{
@@ -114,8 +114,8 @@ func TestDownstreamProd(t *testing.T) {
   t.Parallel()
   id := util.GetId()
   region := util.GetRegion()
-	accessKey := util.GetAwsAccessKey()
-	secretKey := util.GetAwsSecretKey()
+  accessKey := util.GetAwsAccessKey()
+  secretKey := util.GetAwsSecretKey()
   directory := "deploy_rke2_multiple_pools"
   owner := "terraform-ci@suse.com"
   util.SetAcmeServer()
@@ -171,9 +171,9 @@ func TestDownstreamProd(t *testing.T) {
       "rke2_version":          rke2Version,
       "rancher_version":       rancherVersion,
       "file_path":             testDir,
-			"aws_access_key_id":     accessKey,
-			"aws_secret_access_key": secretKey,
-			"aws_region":            region,
+      "aws_access_key_id":     accessKey,
+      "aws_secret_access_key": secretKey,
+      "aws_region":            region,
     },
     // Environment variables to set when running Terraform
     EnvVars: map[string]string{
