@@ -9,10 +9,10 @@ import (
   "path/filepath"
   "slices"
   "strings"
-	"testing"
+  "testing"
 
   ec2 "github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/google/go-github/v53/github"
+  "github.com/google/go-github/v53/github"
   aws "github.com/gruntwork-io/terratest/modules/aws"
   g "github.com/gruntwork-io/terratest/modules/git"
   "github.com/gruntwork-io/terratest/modules/random"
@@ -341,6 +341,22 @@ func GetRegion() string {
     region = "us-west-2"
   }
   return region
+}
+
+func GetAwsAccessKey() string {
+  key := os.Getenv("AWS_ACCESS_KEY_ID")
+  if key == "" {
+    key = "FAKE123-ABC"
+  }
+  return key
+}
+
+func GetAwsSecretKey() string {
+  secret := os.Getenv("AWS_SECRET_ACCESS_KEY")
+  if secret == "" {
+    secret = "FAKE123-ABC"
+  }
+  return secret
 }
 
 func GetId() string {
