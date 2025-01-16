@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.2](https://github.com/rancher/terraform-rancher2-aws/compare/v0.2.1...v0.2.2) (2025-01-16)
+
+
+### Features
+
+* Test Downstream Clusters ([#54](https://github.com/rancher/terraform-rancher2-aws/issues/54)) ([402f60d](https://github.com/rancher/terraform-rancher2-aws/commit/402f60d31cd4fbd0bbc3a0b1b505a07ad3f9707f))
+
+
+### Bug Fixes
+
+* trigger workflow with new permissions ([#56](https://github.com/rancher/terraform-rancher2-aws/issues/56)) ([903f378](https://github.com/rancher/terraform-rancher2-aws/commit/903f378683750dadd85e5ee85c64f644f658b1f2))
+
 ## [0.2.1](https://github.com/rancher/terraform-rancher2-aws/compare/v0.2.0...v0.2.1) (2025-01-13)
 
 
