@@ -78,3 +78,6 @@ These tools are not necessary, but they can make it much simpler to collaborate.
 Our continuous integration tests using the GitHub [ubuntu-latest runner](https://github.com/actions/runner-images/blob/main/images/linux/Ubuntu2204-Readme.md), we then rely on Nix to deploy the additional dependencies.
 
 It also has special integrations with AWS to allow secure authentication, see https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services for more information.
+
+With this tool it is possible to retrieve the aws access key and aws secret key to the temporarily defined access to the AWS account.
+We send these to Rancher when building our tests, this allows us to temporarily and securely setup certmanger and Rancher provisioning.
