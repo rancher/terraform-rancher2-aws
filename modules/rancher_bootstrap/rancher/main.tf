@@ -96,12 +96,15 @@ resource "kubernetes_manifest" "issuer" {
           name = "acme-account-key"
         }
         solvers = [
+          # https://cert-manager.io/docs/reference/api-docs/#acme.cert-manager.io/v1.ACMEChallengeSolver
           {
+            # https://cert-manager.io/docs/reference/api-docs/#acme.cert-manager.io/v1.CertificateDNSNameSelector
             selector = {
               dnsZones = [
                 local.zone
               ]
             }
+            # https://cert-manager.io/docs/reference/api-docs/#acme.cert-manager.io/v1.ACMEIssuerDNS01ProviderRoute53
             dns01 = {
               route53 = {
                 region = local.region
