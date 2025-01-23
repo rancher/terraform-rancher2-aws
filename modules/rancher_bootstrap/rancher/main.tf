@@ -5,6 +5,7 @@ provider "rancher2" {
 
 locals {
   rancher_domain          = var.project_domain
+  zone                    = var.zone
   region                  = var.region
   email                   = var.email
   rancher_version         = replace(var.rancher_version, "v", "") # don't include the v
@@ -95,7 +96,15 @@ resource "kubernetes_manifest" "issuer" {
           name = "acme-account-key"
         }
         solvers = [
+          # https://cert-manager.io/docs/reference/api-docs/#acme.cert-manager.io/v1.ACMEChallengeSolver
           {
+            # https://cert-manager.io/docs/reference/api-docs/#acme.cert-manager.io/v1.CertificateDNSNameSelector
+            selector = {
+              dnsZones = [
+                local.zone
+              ]
+            }
+            # https://cert-manager.io/docs/reference/api-docs/#acme.cert-manager.io/v1.ACMEIssuerDNS01ProviderRoute53
             dns01 = {
               route53 = {
                 region = local.region
