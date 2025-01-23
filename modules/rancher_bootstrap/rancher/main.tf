@@ -97,11 +97,6 @@ resource "kubernetes_manifest" "issuer" {
         }
         solvers = [
           {
-            selector = {
-              dnsZones = [
-                local.zone
-              ]
-            }
             dns01 = {
               route53 = {
                 region = local.region
@@ -119,6 +114,10 @@ resource "kubernetes_manifest" "issuer" {
         ]
       }
     }
+  }
+  field_manager {
+    # force field manager conflicts to be overridden
+    force_conflicts = true
   }
   lifecycle {
     ignore_changes = [
@@ -241,13 +240,38 @@ resource "terraform_data" "get_public_cert_info" {
   ]
   provisioner "local-exec" {
     command = <<-EOT
-      CERT="$(echo | openssl s_client -showcerts -servername ${local.rancher_domain} -connect ${local.rancher_domain}:443 2>/dev/null | openssl x509 -inform pem -noout -text)"
-      echo "$CERT"
-      FAKE="$(echo "$CERT" | grep 'Kubernetes Ingress Controller Fake Certificate')"
-      if [ -z "$FAKE" ]; then exit 0; else exit 1; fi
+      MAX=4
+      ATTEMPTS=0
+      E=""
+      INTERVAL=30 # seconds
+      while [ $ATTEMPTS -lt $MAX ]; do
+        CERT="$(echo | openssl s_client -showcerts -servername ${local.rancher_domain} -connect ${local.rancher_domain}:443 2>/dev/null | openssl x509 -inform pem -noout -text)"
+        echo "$CERT"
+        FAKE="$(echo "$CERT" | grep 'Kubernetes Ingress Controller Fake Certificate')"
+        if [ -z "$FAKE" ]; then
+          echo "verified certificate is not fake"
+          ATTEMPTS=$MAX
+          E=""
+        else
+          ATTEMPTS=$((ATTEMPTS+1))
+          SLEEPTIME=$((INTERVAL*ATTEMPTS))
+          echo "certificate is fake! retrying in $SLEEPTIME seconds..."
+          sleep $SLEEPTIME
+          E="certificate is fake"
+        fi;
+      done
+      if [ -z "$E" ]; then
+        exit 0
+      else
+        echo "$E"
+        timeout 3600 kubectl describe order -n cattle-system
+        timeout 3600 kubectl describe challenge -n cattle-system
+        exit 1
+      fi
     EOT
   }
 }
+
 resource "rancher2_bootstrap" "admin" {
   depends_on = [
     time_sleep.settle_before_rancher,

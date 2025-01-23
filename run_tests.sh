@@ -75,7 +75,7 @@ EOF
     --post-run-command "sh /tmp/${IDENTIFIER}_test-processor" \
     --packages "$REPO_ROOT/$TEST_DIR/$package_pattern" \
     -- \
-    -parallel=10 \
+    -parallel=2 \
     -count=1 \
     -failfast=1 \
     -timeout=300m \

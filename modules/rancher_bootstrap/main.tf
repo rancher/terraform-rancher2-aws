@@ -55,7 +55,6 @@ resource "local_file" "inputs" {
   filename = "${local.deploy_path}/inputs.tfvars"
 }
 
-# this is a one way operation, there is no destroy or update
 resource "terraform_data" "create" {
   depends_on = [
     terraform_data.path,
@@ -68,14 +67,32 @@ resource "terraform_data" "create" {
       TF_DATA_DIR="${local.deploy_path}"
       cd ${local.deploy_path}
       terraform init -upgrade=true
+
+      MAX=2
+
       EXITCODE=1
       ATTEMPTS=0
-      MAX=3
       while [ $EXITCODE -gt 0 ] && [ $ATTEMPTS -lt $MAX ]; do
-        timeout 3600 terraform apply -var-file="inputs.tfvars" -auto-approve -state="${local.deploy_path}/tfstate"
-        EXITCODE=$?
+        E=$EXITCODE
+        A=0
+        while [ $E -gt 0 ] && [ $A -lt $MAX ]; do
+          timeout 3600 terraform apply -var-file="inputs.tfvars" -auto-approve -state="${local.deploy_path}/tfstate"
+          E=$?
+          A=$((A+1))
+        done
+        if [ $E -gt 0 ]; then
+          A1=0
+          E1=$EXITCODE
+          while [ $E1 -gt 0 ] && [ $A1 -lt $MAX ]; do
+            timeout 3600 terraform destroy -var-file="inputs.tfvars" -auto-approve -state="${local.deploy_path}/tfstate"
+            E1=$?
+            A1=$((A1+1))
+          done
+        fi
+        EXITCODE=$((E+E1))
         ATTEMPTS=$((ATTEMPTS+1))
       done
+
       exit $EXITCODE
     EOT
   }
