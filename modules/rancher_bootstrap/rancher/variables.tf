@@ -4,13 +4,6 @@ variable "project_domain" {
     The project domain. An fqdn, eg. "test.example.com".
   EOT
 }
-variable "zone" {
-  type        = string
-  description = <<-EOT
-    The zone within the domain.
-    eg. if the domain is "test.example.com", then this should be "example.com"
-  EOT
-}
 variable "region" {
   type        = string
   description = <<-EOT

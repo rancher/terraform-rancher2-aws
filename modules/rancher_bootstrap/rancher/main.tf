@@ -5,7 +5,6 @@ provider "rancher2" {
 
 locals {
   rancher_domain          = var.project_domain
-  zone                    = var.zone
   region                  = var.region
   email                   = var.email
   rancher_version         = replace(var.rancher_version, "v", "") # don't include the v
