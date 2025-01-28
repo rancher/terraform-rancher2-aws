@@ -5,14 +5,12 @@ provider "rancher2" {
 
 locals {
   rancher_domain          = var.project_domain
-  zone                    = var.zone
   zone_id                 = var.zone_id
   region                  = var.region
   email                   = var.email
   rancher_version         = replace(var.rancher_version, "v", "") # don't include the v
   rancher_helm_repository = var.rancher_helm_repository
   cert_manager_version    = replace(var.cert_manager_version, "v", "") # don't include the v
-  cert_manager_config     = var.cert_manager_configuration
   acme_server             = var.acme_server_url
 }
 

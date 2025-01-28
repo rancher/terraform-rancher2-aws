@@ -4,13 +4,6 @@ variable "project_domain" {
     The project domain. An fqdn, eg. "test.example.com".
   EOT
 }
-variable "zone" {
-  type        = string
-  description = <<-EOT
-    The zone within the domain.
-    eg. if the domain is "test.example.com", then this should be "example.com"
-  EOT
-}
 variable "zone_id" {
   type        = string
   description = <<-EOT
@@ -51,26 +44,6 @@ variable "cert_manager_version" {
     The version of cert manager to install.
   EOT
   default     = "v1.13.1"
-}
-variable "cert_manager_configuration" {
-  type = object({
-    aws_region            = string
-    aws_session_token     = string
-    aws_access_key_id     = string
-    aws_secret_access_key = string
-  })
-  description = <<-EOT
-    The AWS access key information necessary to configure cert-manager.
-    These will be added as environment variables to configure Cert Manager Ambient Credentials.
-    https://cert-manager.io/docs/configuration/acme/dns01/route53/#ambient-credentials
-  EOT
-  default = {
-    aws_region            = ""
-    aws_session_token     = ""
-    aws_access_key_id     = ""
-    aws_secret_access_key = ""
-  }
-  sensitive = true
 }
 variable "acme_server_url" {
   type        = string
