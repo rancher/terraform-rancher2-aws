@@ -37,7 +37,7 @@ locals {
   runner_ip               = chomp(data.http.myip.response_body) # "runner" is the server running Terraform
   rancher_version         = var.rancher_version
   rancher_helm_repository = "https://releases.rancher.com/server-charts/stable"
-  cert_manager_version    = "v1.13.1"
+  cert_manager_version    = "1.16.3" #"1.13.1"
   node_configuration = {
     "initial" = {
       type            = "database"

@@ -5,8 +5,10 @@
 locals {
   rancher_domain          = var.project_domain
   zone                    = var.zone
+  zone_id                 = var.zone_id
   region                  = var.region
   email                   = var.email
+  acme_server_url         = var.acme_server_url
   rancher_version         = replace(var.rancher_version, "v", "") # don't include the v
   rancher_helm_repository = var.rancher_helm_repository
   cert_manager_version    = var.cert_manager_version
@@ -39,16 +41,18 @@ resource "local_file" "inputs" {
   content  = <<-EOT
     project_domain             = "${local.rancher_domain}"
     zone                       = "${local.zone}"
+    zone_id                    = "${local.zone_id}"
     region                     = "${local.region}"
     email                      = "${local.email}"
+    acme_server_url            = "${local.acme_server_url}"
     rancher_version            = "${local.rancher_version}"
     rancher_helm_repository    = "${local.rancher_helm_repository}"
     cert_manager_version       = "${local.cert_manager_version}"
     cert_manager_configuration = {
+      aws_region            = "${local.cert_manager_config.aws_region}"
       aws_access_key_id     = "${local.cert_manager_config.aws_access_key_id}"
       aws_secret_access_key = "${local.cert_manager_config.aws_secret_access_key}"
-      aws_region            = "${local.cert_manager_config.aws_region}"
-      email                 = "${local.cert_manager_config.email}"
+      aws_session_token     = "${local.cert_manager_config.aws_session_token}"
     }
     path                       = "${local.deploy_path}"
   EOT
@@ -80,7 +84,8 @@ resource "terraform_data" "create" {
           E=$?
           A=$((A+1))
         done
-        if [ $E -gt 0 ]; then
+        # don't destroy if the last attempt fails
+        if [ $E -gt 0 ] && [ $ATTEMPTS != $((MAX-1)) ]; then
           A1=0
           E1=$EXITCODE
           while [ $E1 -gt 0 ] && [ $A1 -lt $MAX ]; do

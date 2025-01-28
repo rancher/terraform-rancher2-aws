@@ -11,6 +11,14 @@ variable "zone" {
     eg. if the domain is "test.example.com", then this should be "example.com"
   EOT
 }
+variable "zone_id" {
+  type        = string
+  description = <<-EOT
+    The ID of the zone within the domain.
+    eg. if the domain is "test.example.com", then the zone should be "example.com"
+    The ID of that zone.
+  EOT
+}
 variable "region" {
   type        = string
   description = <<-EOT
@@ -46,22 +54,28 @@ variable "cert_manager_version" {
 }
 variable "cert_manager_configuration" {
   type = object({
+    aws_region            = string
+    aws_session_token     = string
     aws_access_key_id     = string
     aws_secret_access_key = string
-    aws_region            = string
-    email                 = string
   })
   description = <<-EOT
     The AWS access key information necessary to configure cert-manager.
-    This should have the limited access as found in the cert-manager documentation.
-    https://cert-manager.io/docs/configuration/acme/dns01/route53/#iam-user-with-long-term-access-key
-    This is an optional parameter, when not specified we will use the certificate that was generated with the project.
+    These will be added as environment variables to configure Cert Manager Ambient Credentials.
+    https://cert-manager.io/docs/configuration/acme/dns01/route53/#ambient-credentials
   EOT
   default = {
+    aws_region            = ""
+    aws_session_token     = ""
     aws_access_key_id     = ""
     aws_secret_access_key = ""
-    aws_region            = ""
-    email                 = ""
   }
   sensitive = true
+}
+variable "acme_server_url" {
+  type        = string
+  description = <<-EOT
+    The ACME server url to use for issuing certs.
+  EOT
+  default     = "https://acme-v02.api.letsencrypt.org/directory"
 }

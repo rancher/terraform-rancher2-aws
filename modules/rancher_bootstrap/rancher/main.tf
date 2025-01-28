@@ -6,12 +6,14 @@ provider "rancher2" {
 locals {
   rancher_domain          = var.project_domain
   zone                    = var.zone
+  zone_id                 = var.zone_id
   region                  = var.region
   email                   = var.email
   rancher_version         = replace(var.rancher_version, "v", "") # don't include the v
   rancher_helm_repository = var.rancher_helm_repository
   cert_manager_version    = replace(var.cert_manager_version, "v", "") # don't include the v
   cert_manager_config     = var.cert_manager_configuration
+  acme_server             = var.acme_server_url
 }
 
 resource "time_sleep" "settle_before_rancher" {
@@ -47,31 +49,10 @@ resource "kubernetes_namespace" "cattle-system" {
   }
 }
 
-resource "kubernetes_secret" "aws_creds" {
-  depends_on = [
-    time_sleep.settle_before_rancher,
-    kubernetes_namespace.cattle-system,
-  ]
-  metadata {
-    name      = "prod-route53"
-    namespace = "cattle-system"
-  }
-  data = {
-    "secret-access-key" = local.cert_manager_config.aws_secret_access_key
-    "access-key-id"     = local.cert_manager_config.aws_access_key_id
-  }
-  lifecycle {
-    ignore_changes = [
-      metadata,
-    ]
-  }
-}
-
 resource "kubernetes_manifest" "issuer" {
   depends_on = [
     time_sleep.settle_before_rancher,
     kubernetes_namespace.cattle-system,
-    kubernetes_secret.aws_creds,
   ]
   manifest = {
     apiVersion = "cert-manager.io/v1"
@@ -91,31 +72,21 @@ resource "kubernetes_manifest" "issuer" {
     spec = {
       acme = {
         email  = local.email
-        server = "https://acme-v02.api.letsencrypt.org/directory"
+        server = "${local.acme_server}/directory" # "https://acme-v02.api.letsencrypt.org/directory"
         privateKeySecretRef = {
           name = "acme-account-key"
         }
         solvers = [
           # https://cert-manager.io/docs/reference/api-docs/#acme.cert-manager.io/v1.ACMEChallengeSolver
           {
-            # https://cert-manager.io/docs/reference/api-docs/#acme.cert-manager.io/v1.CertificateDNSNameSelector
-            selector = {
-              dnsZones = [
-                local.zone
-              ]
-            }
             # https://cert-manager.io/docs/reference/api-docs/#acme.cert-manager.io/v1.ACMEIssuerDNS01ProviderRoute53
+            # https://cert-manager.io/docs/configuration/acme/dns01/route53/#ambient-credentials
+            # https://docs.aws.amazon.com/sdkref/latest/guide/environment-variables.html
             dns01 = {
               route53 = {
-                region = local.region
-                accessKeyIDSecretRef = {
-                  name = "prod-route53"
-                  key  = "access-key-id"
-                }
-                secretAccessKeySecretRef = {
-                  name = "prod-route53"
-                  key  = "secret-access-key"
-                }
+                ambient      = true
+                region       = local.region
+                hostedZoneId = local.zone_id
               }
             }
           }
@@ -123,21 +94,11 @@ resource "kubernetes_manifest" "issuer" {
       }
     }
   }
-  field_manager {
-    # force field manager conflicts to be overridden
-    force_conflicts = true
-  }
-  lifecycle {
-    ignore_changes = [
-      manifest.metadata,
-    ]
-  }
 }
 
 resource "terraform_data" "wait_for_nginx" {
   depends_on = [
     time_sleep.settle_before_rancher,
-    kubernetes_secret.aws_creds,
     kubernetes_manifest.issuer,
   ]
   provisioner "local-exec" {
@@ -160,7 +121,6 @@ resource "helm_release" "rancher" {
   depends_on = [
     time_sleep.settle_before_rancher,
     kubernetes_manifest.issuer,
-    kubernetes_secret.aws_creds,
     terraform_data.wait_for_nginx,
   ]
   name             = "rancher"
@@ -227,7 +187,6 @@ resource "time_sleep" "settle_after_rancher" {
     time_sleep.settle_before_rancher,
     kubernetes_manifest.issuer,
     helm_release.rancher,
-    kubernetes_secret.aws_creds,
   ]
   create_duration = "120s"
 }
@@ -244,7 +203,6 @@ resource "terraform_data" "get_public_cert_info" {
     kubernetes_manifest.issuer,
     helm_release.rancher,
     time_sleep.settle_after_rancher,
-    kubernetes_secret.aws_creds,
   ]
   provisioner "local-exec" {
     command = <<-EOT
@@ -272,6 +230,8 @@ resource "terraform_data" "get_public_cert_info" {
         exit 0
       else
         echo "$E"
+        timeout 3600 kubectl get order -A
+        timeout 3600 kubectl get challenge -A
         timeout 3600 kubectl describe order -n cattle-system
         timeout 3600 kubectl describe challenge -n cattle-system
         exit 1
@@ -287,7 +247,6 @@ resource "rancher2_bootstrap" "admin" {
     helm_release.rancher,
     time_sleep.settle_after_rancher,
     terraform_data.get_public_cert_info,
-    kubernetes_secret.aws_creds,
   ]
   password  = random_password.password.result
   telemetry = false
