@@ -196,7 +196,9 @@ variable "cert_manager_configuration" {
     aws_access_key_id     = string
     aws_secret_access_key = string
     aws_region            = string
-    email                 = string
+    aws_session_token     = string
+    acme_email            = string
+    acme_server_url       = string
   })
   description = <<-EOT
     The AWS access key information necessary to configure cert-manager.
@@ -208,7 +210,9 @@ variable "cert_manager_configuration" {
     aws_access_key_id     = ""
     aws_secret_access_key = ""
     aws_region            = ""
-    email                 = ""
+    aws_session_token     = ""
+    acme_email            = ""
+    acme_server_url       = ""
   }
   sensitive = true
 }

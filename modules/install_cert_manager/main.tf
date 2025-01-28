@@ -5,6 +5,7 @@
 locals {
   rancher_domain          = var.project_domain
   zone                    = var.zone
+  zone_id                 = var.zone_id
   project_cert_name       = var.project_cert_name
   project_cert_key_id     = var.project_cert_key_id
   path                    = var.path
@@ -12,6 +13,7 @@ locals {
   configure_cert_manager  = var.configure_cert_manager
   cert_manager_configured = (local.configure_cert_manager ? "configured" : "unconfigured")
   cert_manager_path       = "${abspath(path.module)}/${local.cert_manager_configured}"
+  cert_manager_config     = var.cert_manager_configuration
 }
 
 resource "terraform_data" "path" {
@@ -35,10 +37,17 @@ resource "local_file" "inputs" {
   content  = <<-EOT
     project_domain             = "${local.rancher_domain}"
     zone                       = "${local.zone}"
+    zone_id                    = "${local.zone_id}"
     project_cert_name          = "${local.project_cert_name}"
     project_cert_key_id        = "${local.project_cert_key_id}"
     cert_manager_version       = "${local.cert_manager_version}"
     configure_cert_manager     = "${local.configure_cert_manager}"
+    cert_manager_configuration = {
+      aws_region            = "${local.cert_manager_config.aws_region}"
+      aws_session_token     = "${local.cert_manager_config.aws_session_token}"
+      aws_access_key_id     = "${local.cert_manager_config.aws_access_key_id}"
+      aws_secret_access_key = "${local.cert_manager_config.aws_secret_access_key}"
+    }
   EOT
   filename = "${local.path}/install_cert_manager/inputs.tfvars"
 }

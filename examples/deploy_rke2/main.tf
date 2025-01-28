@@ -9,7 +9,7 @@ provider "aws" {
 }
 
 provider "acme" {
-  server_url = "https://acme-v02.api.letsencrypt.org/directory"
+  server_url = "${local.acme_server_url}/directory"
 }
 
 provider "github" {}
@@ -53,12 +53,14 @@ locals {
   runner_ip               = chomp(data.http.myip.response_body) # "runner" is the server running Terraform
   rancher_version         = var.rancher_version
   rancher_helm_repository = "https://releases.rancher.com/server-charts/stable"
-  cert_manager_version    = "1.13.1"
+  cert_manager_version    = "1.16.3" #"1.13.1"
   os                      = "sle-micro-60"
   aws_access_key_id       = var.aws_access_key_id
   aws_secret_access_key   = var.aws_secret_access_key
+  aws_session_token       = var.aws_session_token
   aws_region              = var.aws_region
   email                   = (var.email != "" ? var.email : "${local.identifier}@${local.zone}")
+  acme_server_url         = "https://acme-v02.api.letsencrypt.org"
   private_ip              = replace(module.rancher.private_endpoint, "http://", "")
 }
 
@@ -102,8 +104,10 @@ module "rancher" {
   cert_manager_configuration = {
     aws_access_key_id     = local.aws_access_key_id
     aws_secret_access_key = local.aws_secret_access_key
+    aws_session_token     = local.aws_session_token
     aws_region            = local.aws_region
-    email                 = local.email
+    acme_email            = local.email
+    acme_server_url       = local.acme_server_url
   }
 }
 

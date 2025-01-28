@@ -33,6 +33,10 @@ locals {
   cert_manager_config     = var.cert_manager_configuration
 }
 
+data "aws_route53_zone" "zone" {
+  name = "${local.zone}."
+}
+
 module "cluster" {
   source             = "./modules/cluster"
   identifier         = local.identifier
@@ -58,15 +62,17 @@ module "install_cert_manager" {
   depends_on = [
     module.cluster,
   ]
-  count                  = (local.install_cert_manager ? 1 : 0)
-  source                 = "./modules/install_cert_manager"
-  project_domain         = local.fqdn
-  zone                   = local.zone
-  project_cert_name      = module.cluster.cert.name
-  project_cert_key_id    = module.cluster.cert.key_id
-  path                   = local.local_file_path
-  cert_manager_version   = local.cert_manager_version
-  configure_cert_manager = local.configure_cert_manager
+  count                      = (local.install_cert_manager ? 1 : 0)
+  source                     = "./modules/install_cert_manager"
+  project_domain             = local.fqdn
+  zone                       = local.zone
+  zone_id                    = data.aws_route53_zone.zone.zone_id
+  project_cert_name          = module.cluster.cert.name
+  project_cert_key_id        = module.cluster.cert.key_id
+  path                       = local.local_file_path
+  cert_manager_version       = local.cert_manager_version
+  configure_cert_manager     = local.configure_cert_manager
+  cert_manager_configuration = local.cert_manager_config
 }
 
 module "rancher_bootstrap" {
@@ -79,8 +85,10 @@ module "rancher_bootstrap" {
   path                       = local.local_file_path
   project_domain             = local.fqdn
   zone                       = local.zone
+  zone_id                    = data.aws_route53_zone.zone.zone_id
   region                     = local.cert_manager_config.aws_region
-  email                      = local.cert_manager_config.email
+  email                      = local.cert_manager_config.acme_email
+  acme_server_url            = local.cert_manager_config.acme_server_url
   rancher_version            = local.rancher_version
   rancher_helm_repository    = local.rancher_helm_repository
   cert_manager_version       = local.cert_manager_version

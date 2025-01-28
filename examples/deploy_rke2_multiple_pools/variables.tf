@@ -74,6 +74,15 @@ variable "aws_region" {
   EOT
   sensitive   = true
 }
+variable "aws_session_token" {
+  type        = string
+  description = <<-EOT
+    AWS session token for EC2 services.
+    If left empty the AWS provider will assume you are using permanent AWS credentials.
+  EOT
+  sensitive   = true
+  default     = ""
+}
 variable "email" {
   type        = string
   description = <<-EOT
