@@ -84,7 +84,7 @@ resource "kubernetes_manifest" "issuer" {
               route53 = {
                 ambient      = true
                 region       = local.region
-                hostedZoneId = local.zone_id
+                hostedZoneID = local.zone_id
               }
             }
           }

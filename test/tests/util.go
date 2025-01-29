@@ -320,6 +320,7 @@ func GetRetryableTerraformErrors() map[string]string {
     ".*TLS handshake timeout.*":                         "Failed due to transient network error.",
     ".*Error: disassociating EC2 EIP.*does not exist.*": "Failed to delete EIP because interface is already gone",
     ".*context deadline exceeded.*":                     "Failed due to kubernetes timeout, retrying.",
+    ".*http2: client connection lost.*":                 "Failed due to transient network error.",
   }
   return retryableTerraformErrors
 }
