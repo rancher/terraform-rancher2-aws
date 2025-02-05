@@ -28,7 +28,7 @@ resource "rancher2_bootstrap" "authenticate" {
   initial_password = module.rancher.admin_password
   password         = module.rancher.admin_password
   token_update     = true
-  token_ttl        = 7200 # 2 hours
+  token_ttl        = 86400 # 24 hours
 }
 
 provider "rancher2" {
@@ -133,28 +133,11 @@ resource "aws_route53_record" "modified" {
   allow_overwrite = true
 }
 
-resource "rancher2_cloud_credential" "aws" {
-  depends_on = [
-    rancher2_bootstrap.authenticate,
-    module.rancher,
-    aws_route53_record.modified,
-  ]
-  provider    = rancher2.default
-  name        = "aws"
-  description = "amazon ec2"
-  amazonec2_credential_config {
-    access_key     = local.aws_access_key_id
-    secret_key     = local.aws_secret_access_key
-    default_region = local.aws_region
-  }
-}
-
 resource "rancher2_machine_config_v2" "aio" {
   depends_on = [
     rancher2_bootstrap.authenticate,
     module.rancher,
     aws_route53_record.modified,
-    rancher2_cloud_credential.aws,
   ]
   provider      = rancher2.default
   generate_name = "all-in-one-config"
@@ -169,6 +152,7 @@ resource "rancher2_machine_config_v2" "aio" {
       local.aws_region,
       ""
     )
+    session_token = trimspace(chomp(local.aws_session_token))
     instance_type = "m5.large"
     ssh_user      = "ec2-user"
     userdata      = <<-EOT
@@ -180,14 +164,29 @@ resource "rancher2_machine_config_v2" "aio" {
   }
 }
 
-resource "rancher2_cluster_v2" "rke2_cluster" {
+resource "terraform_data" "patch_machine_config" {
   depends_on = [
     module.rancher,
+    aws_route53_record.modified,
+    rancher2_machine_config_v2.aio,
+  ]
+  triggers_replace = {
+    config = rancher2_machine_config_v2.aio.id
+  }
+  provisioner "local-exec" {
+    command = <<-EOT
+      ${path.module}/addKeyToMachineTemplate.sh "${local.aws_access_key_id}" "${local.aws_secret_access_key}"
+    EOT
+  }
+}
+
+resource "rancher2_cluster_v2" "rke2_cluster" {
+  depends_on = [
     rancher2_bootstrap.authenticate,
     module.rancher,
     aws_route53_record.modified,
-    rancher2_cloud_credential.aws,
     rancher2_machine_config_v2.aio,
+    terraform_data.patch_machine_config,
   ]
   provider              = rancher2.default
   name                  = "${local.project_name}-s1-cluster"
@@ -195,12 +194,11 @@ resource "rancher2_cluster_v2" "rke2_cluster" {
   enable_network_policy = true
   rke_config {
     machine_pools {
-      name                         = "mp1"
-      control_plane_role           = true
-      etcd_role                    = true
-      worker_role                  = true
-      quantity                     = 1
-      cloud_credential_secret_name = rancher2_cloud_credential.aws.id
+      name               = "mp1"
+      control_plane_role = true
+      etcd_role          = true
+      worker_role        = true
+      quantity           = 1
       machine_config {
         kind = rancher2_machine_config_v2.aio.kind
         name = rancher2_machine_config_v2.aio.name
@@ -217,11 +215,9 @@ resource "rancher2_cluster_v2" "rke2_cluster" {
 
 resource "rancher2_cluster_sync" "sync" {
   depends_on = [
-    module.rancher,
     rancher2_bootstrap.authenticate,
     module.rancher,
     aws_route53_record.modified,
-    rancher2_cloud_credential.aws,
     rancher2_machine_config_v2.aio,
     rancher2_cluster_v2.rke2_cluster,
   ]

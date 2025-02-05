@@ -360,6 +360,10 @@ func GetAwsSecretKey() string {
   return secret
 }
 
+func GetAwsSessionToken() string {
+  return os.Getenv("AWS_SESSION_TOKEN")
+}
+
 func GetId() string {
   id := os.Getenv("IDENTIFIER")
   if id == "" {
