@@ -28,7 +28,7 @@ for name in $NAMES; do
 
   KEY="$(kubectl get Amazonec2Config "$name" -n "$NAMESPACE" -o json | jq -r '.accessKey')"
 
-  if [ -z "$KEY" ] || [ "null" == "$KEY" ]; then
+  if [ -z "$KEY" ] || [ "null" = "$KEY" ]; then
     echo "error: key not found on object"
     exit 1
   else
@@ -41,7 +41,7 @@ for name in $NAMES; do
 
   SECRET="$(kubectl get Amazonec2Config "$name" -n "$NAMESPACE" -o json | jq -r '.secretKey')"
 
-  if [ -z "$SECRET" ] || [ "null" == "$SECRET" ]; then
+  if [ -z "$SECRET" ] || [ "null" = "$SECRET" ]; then
     echo "error: secret not found on object"
     exit 1
   else

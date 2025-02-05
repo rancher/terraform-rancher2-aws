@@ -26,7 +26,7 @@ fi
 
 KEY="$(kubectl get Amazonec2Config -n fleet-default -o json | jq -r '.items[].accessKey')"
 
-if [ -z "$KEY" ] || [ "null" == "$KEY" ]; then
+if [ -z "$KEY" ] || [ "null" = "$KEY" ]; then
   echo "error: key not found on object"
   exit 1
 else
@@ -39,7 +39,7 @@ fi
 
 SECRET="$(kubectl get Amazonec2Config -n fleet-default -o json | jq -r '.items[].secretKey')"
 
-if [ -z "$SECRET" ] || [ "null" == "$SECRET" ]; then
+if [ -z "$SECRET" ] || [ "null" = "$SECRET" ]; then
   echo "error: secret not found on object"
   exit 1
 else
