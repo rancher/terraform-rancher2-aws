@@ -189,11 +189,6 @@ resource "time_sleep" "settle_after_rancher" {
   create_duration = "120s"
 }
 
-resource "random_password" "password" {
-  length           = 16
-  special          = true
-  override_special = "!$%&-_=+"
-}
 
 resource "terraform_data" "get_public_cert_info" {
   depends_on = [
@@ -236,6 +231,12 @@ resource "terraform_data" "get_public_cert_info" {
       fi
     EOT
   }
+}
+
+resource "random_password" "password" {
+  length           = 16
+  special          = true
+  override_special = "!-_=+"
 }
 
 resource "rancher2_bootstrap" "admin" {

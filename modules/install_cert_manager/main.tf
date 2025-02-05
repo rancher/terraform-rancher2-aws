@@ -34,6 +34,11 @@ resource "local_file" "inputs" {
   depends_on = [
     terraform_data.path,
   ]
+  lifecycle {
+    replace_triggered_by = [
+      terraform_data.path.id,
+    ]
+  }
   content  = <<-EOT
     project_domain             = "${local.rancher_domain}"
     zone                       = "${local.zone}"
@@ -58,6 +63,10 @@ resource "terraform_data" "create" {
     terraform_data.path,
     local_file.inputs,
   ]
+  triggers_replace = {
+    path_data   = terraform_data.path.id
+    inputs_data = local_file.inputs.id
+  }
   provisioner "local-exec" {
     command = <<-EOT
       export KUBECONFIG=${abspath(local.path)}/kubeconfig

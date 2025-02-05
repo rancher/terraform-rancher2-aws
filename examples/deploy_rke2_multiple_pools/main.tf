@@ -62,7 +62,7 @@ locals {
   aws_session_token       = var.aws_session_token
   email                   = (var.email != "" ? var.email : "${local.identifier}@${local.zone}")
   private_ip              = replace(module.rancher.private_endpoint, "http://", "")
-  hostname_prefix         = "n10y02rke2"
+  hostname_prefix         = local.project_name
 }
 
 data "http" "myip" {
@@ -134,28 +134,11 @@ resource "aws_route53_record" "modified" {
   allow_overwrite = true
 }
 
-resource "rancher2_cloud_credential" "aws" {
-  depends_on = [
-    rancher2_bootstrap.authenticate,
-    module.rancher,
-    aws_route53_record.modified,
-  ]
-  provider    = rancher2.default
-  name        = "aws"
-  description = "amazon ec2"
-  amazonec2_credential_config {
-    access_key     = local.aws_access_key_id
-    secret_key     = local.aws_secret_access_key
-    default_region = local.aws_region
-  }
-}
-
 resource "rancher2_machine_config_v2" "core" {
   depends_on = [
     rancher2_bootstrap.authenticate,
     module.rancher,
     aws_route53_record.modified,
-    rancher2_cloud_credential.aws,
   ]
   provider      = rancher2.default
   generate_name = "core-rke2-template"
@@ -167,9 +150,10 @@ resource "rancher2_machine_config_v2" "core" {
     vpc_id         = module.rancher.vpc.id
     zone = replace( # it is looking for just the last letter of the availability zone, eg. for us-west-2a it just wants 'a'
       module.rancher.subnets[keys(module.rancher.subnets)[0]].availability_zone,
-      local.aws_region,
-      ""
+      local.aws_region, # so we take the full string ^ eg. us-west-2a
+      ""                # and remove the region eg. us-west-2 to get just 'a'
     )
+    session_token = trimspace(chomp(local.aws_session_token))
     instance_type = "m5.large"
     ssh_user      = "ec2-user"
     userdata      = <<-EOT
@@ -185,7 +169,6 @@ resource "rancher2_machine_config_v2" "worker" {
     rancher2_bootstrap.authenticate,
     module.rancher,
     aws_route53_record.modified,
-    rancher2_cloud_credential.aws,
   ]
   provider      = rancher2.default
   generate_name = "worker-rke2-template"
@@ -200,6 +183,7 @@ resource "rancher2_machine_config_v2" "worker" {
       local.aws_region,
       ""
     )
+    session_token = trimspace(chomp(local.aws_session_token))
     instance_type = "m5.large"
     ssh_user      = "ec2-user"
     userdata      = <<-EOT
@@ -211,15 +195,34 @@ resource "rancher2_machine_config_v2" "worker" {
   }
 }
 
+resource "terraform_data" "patch_machine_configs" {
+  depends_on = [
+    rancher2_bootstrap.authenticate,
+    module.rancher,
+    aws_route53_record.modified,
+    rancher2_machine_config_v2.core,
+    rancher2_machine_config_v2.worker,
+  ]
+  triggers_replace = {
+    core_config   = rancher2_machine_config_v2.core.id
+    worker_config = rancher2_machine_config_v2.worker.id
+  }
+  provisioner "local-exec" {
+    command = <<-EOT
+      ${path.module}/addKeyToMachineTemplate.sh "${local.aws_access_key_id}" "${local.aws_secret_access_key}"
+    EOT
+  }
+}
+
 resource "rancher2_cluster_v2" "rke2_cluster" {
   depends_on = [
     module.rancher,
     rancher2_bootstrap.authenticate,
     module.rancher,
     aws_route53_record.modified,
-    rancher2_cloud_credential.aws,
     rancher2_machine_config_v2.core,
     rancher2_machine_config_v2.worker,
+    terraform_data.patch_machine_configs,
   ]
   provider              = rancher2.default
   name                  = "${local.project_name}-s1-cluster"
@@ -227,24 +230,22 @@ resource "rancher2_cluster_v2" "rke2_cluster" {
   enable_network_policy = true
   rke_config {
     machine_pools {
-      name                         = "${local.hostname_prefix}cp001"
-      control_plane_role           = true
-      etcd_role                    = true
-      worker_role                  = true
-      quantity                     = 1
-      cloud_credential_secret_name = rancher2_cloud_credential.aws.id
+      name               = "${local.hostname_prefix}cp"
+      control_plane_role = true
+      etcd_role          = true
+      worker_role        = true
+      quantity           = 1
       machine_config {
         kind = rancher2_machine_config_v2.core.kind
         name = rancher2_machine_config_v2.core.name
       }
     }
     machine_pools {
-      name                         = "${local.hostname_prefix}wk001"
-      control_plane_role           = true
-      etcd_role                    = true
-      worker_role                  = true
-      quantity                     = 1
-      cloud_credential_secret_name = rancher2_cloud_credential.aws.id
+      name               = "${local.hostname_prefix}wk"
+      control_plane_role = true
+      etcd_role          = true
+      worker_role        = true
+      quantity           = 1
       machine_config {
         kind = rancher2_machine_config_v2.worker.kind
         name = rancher2_machine_config_v2.worker.name
@@ -265,9 +266,9 @@ resource "rancher2_cluster_sync" "sync" {
     rancher2_bootstrap.authenticate,
     module.rancher,
     aws_route53_record.modified,
-    rancher2_cloud_credential.aws,
     rancher2_machine_config_v2.core,
     rancher2_machine_config_v2.worker,
+    terraform_data.patch_machine_configs,
     rancher2_cluster_v2.rke2_cluster,
   ]
   provider   = rancher2.default
