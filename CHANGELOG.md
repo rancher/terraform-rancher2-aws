@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.3.0](https://github.com/rancher/terraform-rancher2-aws/compare/v0.2.1...v0.3.0) (2025-02-06)
+
+
+### Features
+
+* ability to use temporary credentials ([#61](https://github.com/rancher/terraform-rancher2-aws/issues/61)) ([ec063b0](https://github.com/rancher/terraform-rancher2-aws/commit/ec063b0553f56daf6c413f6368312c45f0f8587b))
+* Test Downstream Clusters ([#54](https://github.com/rancher/terraform-rancher2-aws/issues/54)) ([402f60d](https://github.com/rancher/terraform-rancher2-aws/commit/402f60d31cd4fbd0bbc3a0b1b505a07ad3f9707f))
+
+
+### Bug Fixes
+
+* add zone back in ([#58](https://github.com/rancher/terraform-rancher2-aws/issues/58)) ([ec3030d](https://github.com/rancher/terraform-rancher2-aws/commit/ec3030dc2d3cbf43ea264f591c2468cb2429fa44))
+* enable ambient credentials ([#59](https://github.com/rancher/terraform-rancher2-aws/issues/59)) ([bec03f6](https://github.com/rancher/terraform-rancher2-aws/commit/bec03f68445de4af883052751905d2c663a275ca))
+* increase attempts for certificate validation ([#57](https://github.com/rancher/terraform-rancher2-aws/issues/57)) ([7227927](https://github.com/rancher/terraform-rancher2-aws/commit/72279273d476d2dc196a839986a5270020735281))
+* retry client connection lost errors ([#60](https://github.com/rancher/terraform-rancher2-aws/issues/60)) ([dd595fd](https://github.com/rancher/terraform-rancher2-aws/commit/dd595fdb2eafb06cc508347955496e356f897a14))
+* set configuration environment variable ([#62](https://github.com/rancher/terraform-rancher2-aws/issues/62)) ([950a237](https://github.com/rancher/terraform-rancher2-aws/commit/950a2378048f1a451d96af600816743941a86fc3))
+* trigger workflow with new permissions ([#56](https://github.com/rancher/terraform-rancher2-aws/issues/56)) ([903f378](https://github.com/rancher/terraform-rancher2-aws/commit/903f378683750dadd85e5ee85c64f644f658b1f2))
+
 ## [0.2.1](https://github.com/rancher/terraform-rancher2-aws/compare/v0.2.0...v0.2.1) (2025-01-13)
 
 
