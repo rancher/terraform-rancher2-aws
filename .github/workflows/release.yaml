@@ -17,7 +17,12 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
+      - uses: googleapis/release-please-action@v4
+        id: release-please
+        with:
+          release-type: terraform-module
       - name: Install Let's Encrypt Roots and Intermediate Certificates
+        if: steps.release-please.outputs.pr
         run: |
           # https://letsencrypt.org/certificates/
           sudo apt-get update -y
@@ -36,6 +41,7 @@ jobs:
           sudo cp e6.pem /usr/local/share/ca-certificates/
           sudo update-ca-certificates
       - name: Verify Lets Encrypt CA Functionality
+        if: steps.release-please.outputs.pr
         run: |
           # Function to check if Let's Encrypt CA is effectively used by openssl
           check_letsencrypt_ca() {
@@ -52,11 +58,8 @@ jobs:
             echo "Error: Let's Encrypt CA is not being used for verification."
             exit 1
           fi
-      - uses: googleapis/release-please-action@v4
-        id: release-please
-        with:
-          release-type: terraform-module
       - uses: actions/github-script@v7
+        if: steps.release-please.outputs.pr
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
@@ -81,6 +84,7 @@ jobs:
           role-duration-seconds: 7200 # 2 hours
           output-credentials: true
       - name: install-nix
+        if: steps.release-please.outputs.pr
         run: |
           curl -L https://nixos.org/nix/install | sh
           source /home/runner/.nix-profile/etc/profile.d/nix.sh
@@ -102,6 +106,7 @@ jobs:
         run: |
           ./run_tests.sh
       - uses: actions/github-script@v7
+        if: steps.release-please.outputs.pr
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
