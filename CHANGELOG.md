@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/rancher/terraform-rancher2-aws/compare/v0.3.0...v0.3.1) (2025-02-10)
+
+
+### Bug Fixes
+
+* upgrade versions, fix spacing, integration ([#63](https://github.com/rancher/terraform-rancher2-aws/issues/63)) ([084713e](https://github.com/rancher/terraform-rancher2-aws/commit/084713e68b127479a9071722e49438b967ca4ad2))
+
 ## [0.3.0](https://github.com/rancher/terraform-rancher2-aws/compare/v0.2.1...v0.3.0) (2025-02-06)
 
 
