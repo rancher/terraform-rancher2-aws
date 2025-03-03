@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/rancher/terraform-rancher2-aws/compare/v0.3.1...v0.3.2) (2025-03-03)
+
+
+### Bug Fixes
+
+* remove version constraints ([#65](https://github.com/rancher/terraform-rancher2-aws/issues/65)) ([ae1f6d3](https://github.com/rancher/terraform-rancher2-aws/commit/ae1f6d3c4c57fcd32353ccb413893e5b6d471dd0))
+
 ## [0.3.1](https://github.com/rancher/terraform-rancher2-aws/compare/v0.3.0...v0.3.1) (2025-02-10)
 
 
