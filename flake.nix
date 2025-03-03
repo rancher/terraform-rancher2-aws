@@ -77,6 +77,7 @@
               updatecli
               vim
               which
+              xan
               yq-go
             ];
           };
