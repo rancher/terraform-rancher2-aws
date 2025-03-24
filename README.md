@@ -35,10 +35,6 @@ These tools will need to be installed on the machine running Terraform:
 You will need write access to the filesystem on the server running Terraform.
 If downloading the files from GitHub, then you will need about 2GB storage space available in the 'local_file_path' location (defaults to ./rke2).
 
-#### Terraform Version
-
-We specify the Terraform version < 1.6 to avoid potential license issues and version > 1.5.7 to enable custom variable validations.
-
 ## Examples
 
 We have a few example implementations to get you started, these examples are tested in our CI before release.
@@ -50,6 +46,9 @@ The specific use case for the example modules is temporary infrastructure for te
 With that in mind, it is not expected that we manage the resources as a team, therefore the state files are all stored locally.
 If you would like to store the state files remotely, add a terraform backend file (`*.name.tfbackend`) to your root module.
 https://www.terraform.io/language/settings/backends/configuration#file
+
+Some of the submodules use internal local state files, but generally those are considered not necessary for the overall project.
+If you are using remote state files and would like to be able to pass a backend file to the sub modules please open an issue.
 
 ## Development and Testing
 
@@ -68,7 +67,7 @@ These tools are not necessary, but they can make it much simpler to collaborate.
 * I use the run_tests.sh script in this directory to run the tests, along with the alias 'tt'
   * eg. `tt -r` will rerun failed tests (once only)
   * eg. `tt -f=BasicTest` will run only the BasicTest
-* I store my credentials in a local files and generate a symlink to them
+* I store my credentials in local files and generate a symlink to them
   * eg. `~/.config/github/default/rc`
   * this will be automatically sourced when you enter the nix environment (and unloaded when you leave)
   * see the `.envrc` and `.rcs` file for the implementation
