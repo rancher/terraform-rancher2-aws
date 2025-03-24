@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.0.0](https://github.com/rancher/terraform-rancher2-aws/compare/v0.3.1...v1.0.0) (2025-03-24)
+
+
+### ⚠ BREAKING CHANGES
+
+* release version one ([#68](https://github.com/rancher/terraform-rancher2-aws/issues/68))
+
+### Features
+
+* release version one ([#68](https://github.com/rancher/terraform-rancher2-aws/issues/68)) ([836ab00](https://github.com/rancher/terraform-rancher2-aws/commit/836ab00bdb7573fcb5b35a5a67c01b2b6ef1f3f4))
+
+
+### Bug Fixes
+
+* remove version constraints ([#65](https://github.com/rancher/terraform-rancher2-aws/issues/65)) ([ae1f6d3](https://github.com/rancher/terraform-rancher2-aws/commit/ae1f6d3c4c57fcd32353ccb413893e5b6d471dd0))
+* update the prep scripts and module versions ([#67](https://github.com/rancher/terraform-rancher2-aws/issues/67)) ([2fe2369](https://github.com/rancher/terraform-rancher2-aws/commit/2fe23696e18934778e858bd6beeb5925879f19cb))
+
 ## [0.3.1](https://github.com/rancher/terraform-rancher2-aws/compare/v0.3.0...v0.3.1) (2025-02-10)
 
 
