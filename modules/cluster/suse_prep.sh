@@ -9,15 +9,16 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 # shellcheck disable=SC2154
 if [ "rpm" = "${install_method}" ]; then
-  wget https://download.opensuse.org/distribution/leap/15.6/repo/oss/repodata/repomd.xml.key || true
-  rpm --import repomd.xml.key || true
-  zypper ar -f https://download.opensuse.org/distribution/leap/15.6/repo/oss/ leap-oss || true
-  zypper install -y curl
 
-  rpm --import https://download.opensuse.org/repositories/security:/SELinux_legacy/15.5/repodata/repomd.xml.key || true
-  zypper ar -f https://download.opensuse.org/repositories/security:/SELinux_legacy/15.5/security:SELinux_legacy.repo || true
+  zypper --gpg-auto-import-keys --non-interactive ar -f https://download.opensuse.org/distribution/leap/15.6/repo/oss/ repo-oss || true
+  zypper --gpg-auto-import-keys --non-interactive ar -f https://download.opensuse.org/distribution/leap/15.6/repo/non-oss/ repo-non-oss || true
+  zypper --gpg-auto-import-keys --non-interactive ar -f https://download.opensuse.org/repositories/security:/SELinux_legacy/15.5/security:SELinux_legacy.repo || true
   rpm --import https://rpm.rancher.io/public.key || true
+
+  timeout 10m zypper --gpg-auto-import-keys --non-interactive refresh
+  timeout 5m zypper --gpg-auto-import-keys --non-interactive install -n -y --force restorecond policycoreutils curl
 fi
+
 # shellcheck disable=SC2154
 if [ "ipv6" = "${ip_family}" ]; then
   IPV6="$(ip -6 a show eth0 | grep inet6 | head -n1 | awk '{ print $2 }' | awk -F/ '{ print $1 }')"

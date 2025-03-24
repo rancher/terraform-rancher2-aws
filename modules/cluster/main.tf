@@ -128,7 +128,7 @@ module "initial" {
     data.aws_availability_zones.available,
   ]
   source                              = "rancher/rke2/aws"
-  version                             = "1.1.11"
+  version                             = "1.2.0"
   for_each                            = local.initial_node
   project_use_strategy                = "create"
   project_vpc_use_strategy            = "create"
