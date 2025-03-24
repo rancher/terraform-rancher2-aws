@@ -57,7 +57,7 @@ data "http" "myip" {
 
 module "${role}_node" {
   source                              = "rancher/rke2/aws"
-  version                             = "1.1.11"
+  version                             = "1.2.0"
   project_use_strategy                = "skip"
   project_domain                      = local.domain
   project_domain_zone                 = local.zone
