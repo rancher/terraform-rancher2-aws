@@ -70,7 +70,15 @@ resource "terraform_data" "create" {
       export KUBE_CONFIG_PATH=${abspath(local.path)}/kubeconfig
       TF_DATA_DIR="${local.deploy_path}"
       cd ${local.deploy_path}
-      terraform init -upgrade=true
+
+      if [ -z "$TF_PLUGIN_CACHE_DIR" ]; then
+        terraform init -upgrade=true
+      else
+        # using a cache directory
+        if [ -n "(ls $TF_PLUGIN_CACHE_DIR/rancher)" ]; then
+          terraform init
+        fi
+      fi
 
       MAX=2
 

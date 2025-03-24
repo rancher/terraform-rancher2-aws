@@ -318,7 +318,6 @@ func GetRetryableTerraformErrors() map[string]string {
     ".*registry service is unreachable.*":               "Failed due to transient network error.",
     ".*connection reset by peer.*":                      "Failed due to transient network error.",
     ".*TLS handshake timeout.*":                         "Failed due to transient network error.",
-    ".*Error: disassociating EC2 EIP.*does not exist.*": "Failed to delete EIP because interface is already gone",
     ".*context deadline exceeded.*":                     "Failed due to kubernetes timeout, retrying.",
     ".*http2: client connection lost.*":                 "Failed due to transient network error.",
   }
@@ -406,7 +405,11 @@ func Teardown(t *testing.T, directory string, options *terraform.Options, keyPai
     }
   }
   if directoryExists {
-    terraform.Destroy(t, options)
+    _, err := terraform.DestroyE(t, options)
+    if err != nil {
+      t.Logf("Failed to destroy: %v", err)
+    }
+
     err := os.RemoveAll(directory)
     if err != nil {
       t.Logf("Failed to delete test data directory: %v", err)
