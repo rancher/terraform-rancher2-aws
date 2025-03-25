@@ -75,7 +75,7 @@ resource "terraform_data" "create" {
         terraform init -upgrade=true
       else
         # using a cache directory
-        if [ -n "(ls $TF_PLUGIN_CACHE_DIR/rancher)" ]; then
+        if [ -n "(ls $TF_PLUGIN_CACHE_DIR/registry.terraform.io/rancher)" ]; then
           terraform init
         fi
       fi
