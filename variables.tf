@@ -216,3 +216,25 @@ variable "cert_manager_configuration" {
   }
   sensitive = true
 }
+variable "install_cert_manager_backend" {
+  type        = string
+  description = <<-EOT
+    Path to a .tfbackend file.
+    This allows the user to pass a backend file to the install_cert_manager submodule.
+    The backend file will be added to the submodule's terraform run and will allow that module's state data to be saved remotely.
+    Please note that this is a separate state file, and this backend should be independent of the main module's state and any other submodules' states.
+    See https://developer.hashicorp.com/terraform/language/backend#file for more information.
+  EOT
+  default     = ""
+}
+variable "rancher_bootstrap_backend" {
+  type        = string
+  description = <<-EOT
+    Path to a .tfbackend file.
+    This allows the user to pass a backend file to the rancher_bootstrap submodule.
+    The backend file will be added to the submodule's terraform run and will allow that module's state data to be saved remotely.
+    Please note that this is a separate state file, and this backend should be independent of the main module's state and any other submodules' states.
+    See https://developer.hashicorp.com/terraform/language/backend#file for more information.
+  EOT
+  default     = ""
+}

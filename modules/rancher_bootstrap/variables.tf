@@ -93,3 +93,14 @@ variable "cert_manager_configuration" {
   }
   sensitive = true
 }
+variable "backend_file" {
+  type        = string
+  description = <<-EOT
+    Path to a .tfbackend file.
+    This allows the user to pass a backend file.
+    The backend file will be added to the terraform run and will allow state data to be saved remotely.
+    Please note that this is a separate state file, and this backend should be independent of the main module's state and any other submodules' states.
+    See https://developer.hashicorp.com/terraform/language/backend#file for more information.
+  EOT
+  default     = ""
+}

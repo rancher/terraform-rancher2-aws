@@ -17,6 +17,7 @@ locals {
   path                    = var.path
   rancher_path            = (local.externalTLS ? "${abspath(path.module)}/rancher_externalTLS" : "${abspath(path.module)}/rancher")
   deploy_path             = "${abspath(local.path)}/rancher_bootstrap"
+  backend_file            = var.backend_file
 }
 
 resource "terraform_data" "path" {
@@ -30,6 +31,8 @@ resource "terraform_data" "path" {
     command = <<-EOT
       install -d ${local.deploy_path}
       cp ${local.rancher_path}/* ${local.deploy_path}/
+      cp ${local.backend_file} ${local.deploy_path}/
+    }
     EOT
   }
 }
@@ -75,7 +78,7 @@ resource "terraform_data" "create" {
         terraform init -upgrade=true
       else
         # using a cache directory
-        if [ -n "(ls $TF_PLUGIN_CACHE_DIR/rancher)" ]; then
+        if [ -n "(ls $TF_PLUGIN_CACHE_DIR/registry.terraform.io/rancher)" ]; then
           terraform init
         fi
       fi

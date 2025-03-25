@@ -14,6 +14,7 @@ locals {
   cert_manager_configured = (local.configure_cert_manager ? "configured" : "unconfigured")
   cert_manager_path       = "${abspath(path.module)}/${local.cert_manager_configured}"
   cert_manager_config     = var.cert_manager_configuration
+  backend_file            = var.backend_file
 }
 
 resource "terraform_data" "path" {
@@ -21,11 +22,13 @@ resource "terraform_data" "path" {
     main_contents      = md5(file("${local.cert_manager_path}/main.tf"))
     variables_contents = md5(file("${local.cert_manager_path}/variables.tf"))
     versions_contents  = md5(file("${local.cert_manager_path}/versions.tf"))
+    backend_contents   = md5(file("${local.backend_file}"))
   }
   provisioner "local-exec" {
     command = <<-EOT
       install -d ${local.path}/install_cert_manager
       cp ${local.cert_manager_path}/* ${local.path}/install_cert_manager/
+      cp ${local.backend_file} ${local.path}/install_cert_manager/
     EOT
   }
 }
