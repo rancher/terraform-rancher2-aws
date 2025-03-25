@@ -31,12 +31,8 @@ resource "terraform_data" "path" {
     command = <<-EOT
       install -d ${local.deploy_path}
       cp ${local.rancher_path}/* ${local.deploy_path}/
-<<<<<<< HEAD
-      cp ${local.backend_file} ${local.deploy_path}/
-    }
-=======
       cp "${abspath(path.root)}/.terraform.lock.hcl" ${local.deploy_path}/
->>>>>>> 907056b (fix: copy lock file (#78))
+      cp ${local.backend_file} ${local.deploy_path}/
     EOT
   }
 }
