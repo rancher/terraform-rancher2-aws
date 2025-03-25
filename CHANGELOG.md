@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/rancher/terraform-rancher2-aws/compare/v1.0.0...v1.0.1) (2025-03-24)
+
+
+### Bug Fixes
+
+* allow module plugin cache ([#69](https://github.com/rancher/terraform-rancher2-aws/issues/69)) ([56cb973](https://github.com/rancher/terraform-rancher2-aws/commit/56cb9739f7bd8be0ec2a92ae2826be49d1453bbc))
+
 ## [1.0.0](https://github.com/rancher/terraform-rancher2-aws/compare/v0.3.1...v1.0.0) (2025-03-24)
 
 
