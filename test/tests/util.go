@@ -410,7 +410,7 @@ func Teardown(t *testing.T, directory string, options *terraform.Options, keyPai
       t.Logf("Failed to destroy: %v", err)
     }
 
-    err := os.RemoveAll(directory)
+    err = os.RemoveAll(directory)
     if err != nil {
       t.Logf("Failed to delete test data directory: %v", err)
     }
