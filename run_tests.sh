@@ -9,7 +9,12 @@ while getopts ":r:t:p:" opt; do
     r) rerun_failed=true ;;
     t) specific_test="$OPTARG" ;;
     p) specific_package="$OPTARG" ;;
-    \?) echo "Invalid option -$OPTARG" >&2 && exit 1 ;;
+    \?) cat <<EOT >&2 && exit 1 ;;
+Invalid option -$OPTARG, valid options are
+  -r to re-run failed tests
+  -t to specify a specific test (eg. TestBase)
+  -p to specify a specific test package (eg. base)
+EOT
   esac
 done
 
