@@ -74,10 +74,7 @@ resource "terraform_data" "create" {
       if [ -z "$TF_PLUGIN_CACHE_DIR" ]; then
         terraform init -upgrade=true
       else
-        # using a cache directory
-        if [ -n "(ls $TF_PLUGIN_CACHE_DIR/registry.terraform.io/rancher)" ]; then
-          terraform init
-        fi
+        echo "skipping terraform init in submodule in favor of plugin cache directory..."
       fi
 
       MAX=2
