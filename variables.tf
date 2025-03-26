@@ -224,6 +224,7 @@ variable "install_cert_manager_backend" {
     The backend file will be added to the submodule's terraform run and will allow that module's state data to be saved remotely.
     Please note that this is a separate state file, and this backend should be independent of the main module's state and any other submodules' states.
     See https://developer.hashicorp.com/terraform/language/backend#file for more information.
+    The default is to use a local state file.
   EOT
   default     = ""
 }
@@ -235,6 +236,7 @@ variable "rancher_bootstrap_backend" {
     The backend file will be added to the submodule's terraform run and will allow that module's state data to be saved remotely.
     Please note that this is a separate state file, and this backend should be independent of the main module's state and any other submodules' states.
     See https://developer.hashicorp.com/terraform/language/backend#file for more information.
+    The default is to use a local state file.
   EOT
   default     = ""
 }

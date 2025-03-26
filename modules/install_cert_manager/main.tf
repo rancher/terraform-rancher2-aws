@@ -91,6 +91,8 @@ resource "terraform_data" "create" {
         timeout 3600 terraform apply -var-file="inputs.tfvars" -auto-approve -state="${abspath(local.path)}/install_cert_manager/tfstate"
         EXITCODE=$?
         ATTEMPTS=$((ATTEMPTS+1))
+        echo "waiting 30 sec before retry..."
+        sleep 30
       done
       exit $EXITCODE
     EOT
