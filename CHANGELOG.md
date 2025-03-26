@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.4](https://github.com/rancher/terraform-rancher2-aws/compare/v1.0.3...v1.0.4) (2025-03-26)
+
+
+### Bug Fixes
+
+* skip initialization when using plugin cache ([#76](https://github.com/rancher/terraform-rancher2-aws/issues/76)) ([9544909](https://github.com/rancher/terraform-rancher2-aws/commit/95449094d2cc030804a9b3622b3575a263ad174b))
+
 ## [1.0.3](https://github.com/rancher/terraform-rancher2-aws/compare/v1.0.2...v1.0.3) (2025-03-25)
 
 
