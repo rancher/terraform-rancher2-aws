@@ -26,6 +26,7 @@ resource "terraform_data" "path" {
     command = <<-EOT
       install -d ${local.path}/install_cert_manager
       cp ${local.cert_manager_path}/* ${local.path}/install_cert_manager/
+      cp "${abspath(path.root)}/.terraform.lock.hcl" ${local.path}/install_cert_manager/
     EOT
   }
 }
@@ -85,6 +86,8 @@ resource "terraform_data" "create" {
         timeout 3600 terraform apply -var-file="inputs.tfvars" -auto-approve -state="${abspath(local.path)}/install_cert_manager/tfstate"
         EXITCODE=$?
         ATTEMPTS=$((ATTEMPTS+1))
+        echo "waiting 30 seconds between attempts..."
+        sleep 30
       done
       exit $EXITCODE
     EOT
