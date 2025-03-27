@@ -14,7 +14,7 @@ locals {
   cert_manager_configured = (local.configure_cert_manager ? "configured" : "unconfigured")
   cert_manager_path       = "${abspath(path.module)}/${local.cert_manager_configured}"
   cert_manager_config     = var.cert_manager_configuration
-  deploy_path             = "${local.path}/install_cert_manager/"
+  deploy_path             = "${abspath(local.path)}/install_cert_manager"
   backend_file            = var.backend_file
 }
 
@@ -68,7 +68,7 @@ resource "local_file" "inputs" {
       aws_secret_access_key = "${local.cert_manager_config.aws_secret_access_key}"
     }
   EOT
-  filename = "${local.path}/install_cert_manager/inputs.tfvars"
+  filename = "${local.deploy_path}/inputs.tfvars"
 }
 
 # this is a one way operation, there is no destroy or update
@@ -83,6 +83,7 @@ resource "terraform_data" "create" {
   }
   provisioner "local-exec" {
     command = <<-EOT
+      cd ${local.deploy_path}
       export KUBECONFIG=${abspath(local.path)}/kubeconfig
       export KUBE_CONFIG_PATH=${abspath(local.path)}/kubeconfig
 
@@ -90,7 +91,7 @@ resource "terraform_data" "create" {
       ATTEMPTS=0
       MAX=1
       while [ $EXITCODE -gt 0 ] && [ $ATTEMPTS -lt $MAX ]; do
-        timeout 3600 terraform apply -var-file="inputs.tfvars" -auto-approve -state="${abspath(local.path)}/install_cert_manager/tfstate"
+        timeout 3600 terraform apply -var-file="inputs.tfvars" -auto-approve -state="${local.deploy_path}/tfstate"
         EXITCODE=$?
         ATTEMPTS=$((ATTEMPTS+1))
         echo "waiting 30 seconds between attempts..."
