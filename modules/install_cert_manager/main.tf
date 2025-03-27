@@ -23,7 +23,7 @@ resource "terraform_data" "path" {
     main_contents      = md5(file("${local.cert_manager_path}/main.tf"))
     variables_contents = md5(file("${local.cert_manager_path}/variables.tf"))
     versions_contents  = md5(file("${local.cert_manager_path}/versions.tf"))
-    backend_contents   = (local.backend_file == "" ? "" : md5(file("${local.backend_file}")))
+    backend_contents   = (local.backend_file == "" ? "" : md5(file(local.backend_file)))
   }
   provisioner "local-exec" {
     command = <<-EOT
