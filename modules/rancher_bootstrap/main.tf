@@ -31,8 +31,12 @@ resource "terraform_data" "path" {
     command = <<-EOT
       install -d ${local.deploy_path}
       cp ${local.rancher_path}/* ${local.deploy_path}/
+<<<<<<< HEAD
       cp ${local.backend_file} ${local.deploy_path}/
     }
+=======
+      cp "${abspath(path.root)}/.terraform.lock.hcl" ${local.deploy_path}/
+>>>>>>> 907056b (fix: copy lock file (#78))
     EOT
   }
 }
@@ -81,7 +85,6 @@ resource "terraform_data" "create" {
       fi
 
       MAX=2
-
       EXITCODE=1
       ATTEMPTS=0
       while [ $EXITCODE -gt 0 ] && [ $ATTEMPTS -lt $MAX ]; do
@@ -104,6 +107,8 @@ resource "terraform_data" "create" {
         fi
         EXITCODE=$((E+E1))
         ATTEMPTS=$((ATTEMPTS+1))
+        echo "wait 30 seconds between attempts..."
+        sleep 30
       done
 
       exit $EXITCODE
