@@ -247,6 +247,5 @@ resource "rancher2_bootstrap" "admin" {
     time_sleep.settle_after_rancher,
     terraform_data.get_public_cert_info,
   ]
-  password  = random_password.password.result
-  telemetry = false
+  password = random_password.password.result
 }
