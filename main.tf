@@ -31,6 +31,11 @@ locals {
   install_cert_manager    = var.install_cert_manager
   configure_cert_manager  = var.configure_cert_manager
   cert_manager_config     = var.cert_manager_configuration
+
+  # remote state files
+  install_cert_manager_backend = var.install_cert_manager_backend
+  rancher_bootstrap_backend    = var.rancher_bootstrap_backend
+  # the cluster submodule uses the main state
 }
 
 data "aws_route53_zone" "zone" {
@@ -73,6 +78,7 @@ module "install_cert_manager" {
   cert_manager_version       = local.cert_manager_version
   configure_cert_manager     = local.configure_cert_manager
   cert_manager_configuration = local.cert_manager_config
+  backend_file               = local.install_cert_manager_backend
 }
 
 module "rancher_bootstrap" {
@@ -94,4 +100,5 @@ module "rancher_bootstrap" {
   cert_manager_version       = local.cert_manager_version
   externalTLS                = (local.configure_cert_manager ? false : true)
   cert_manager_configuration = local.cert_manager_config
+  backend_file               = local.rancher_bootstrap_backend
 }

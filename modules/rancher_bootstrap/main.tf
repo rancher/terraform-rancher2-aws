@@ -17,6 +17,7 @@ locals {
   path                    = var.path
   rancher_path            = (local.externalTLS ? "${abspath(path.module)}/rancher_externalTLS" : "${abspath(path.module)}/rancher")
   deploy_path             = "${abspath(local.path)}/rancher_bootstrap"
+  backend_file            = var.backend_file
 }
 
 resource "terraform_data" "path" {
@@ -25,12 +26,23 @@ resource "terraform_data" "path" {
     variables_contents = md5(file("${local.rancher_path}/variables.tf"))
     versions_contents  = md5(file("${local.rancher_path}/versions.tf"))
     outputs_contents   = md5(file("${local.rancher_path}/outputs.tf"))
+    backend_contents   = (local.backend_file == "" ? "" : md5(file(local.backend_file)))
   }
   provisioner "local-exec" {
     command = <<-EOT
       install -d ${local.deploy_path}
-      cp ${local.rancher_path}/* ${local.deploy_path}/
-      cp "${abspath(path.root)}/.terraform.lock.hcl" ${local.deploy_path}/
+      cp ${local.rancher_path}/* ${local.deploy_path}
+      cp "${abspath(path.root)}/.terraform.lock.hcl" ${local.deploy_path}
+      if [ -f "${local.backend_file}" ]; then
+        cp ${local.backend_file} ${local.deploy_path}
+      fi
+      if [ -z "$TF_DATA_DIR" ]; then
+        cp -r "${abspath(path.root)}/.terraform" ${local.deploy_path}
+      else
+        install -d ${local.deploy_path}/.terraform
+        cp -r $TF_DATA_DIR/modules ${local.deploy_path}/.terraform
+        cp -r $TF_DATA_DIR/providers ${local.deploy_path}/.terraform
+      fi
     EOT
   }
 }
