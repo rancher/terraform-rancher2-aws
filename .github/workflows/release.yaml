@@ -16,6 +16,8 @@ permissions: write-all
 jobs:
   release:
     runs-on: ubuntu-latest
+    outputs:
+      release_pr: ${{ steps.release-please.outputs.pr }}
     steps:
       - uses: googleapis/release-please-action@v4
         id: release-please
@@ -69,14 +71,18 @@ jobs:
               repo: "${{ github.event.repository.name }}",
               body: "Please make sure e2e tests pass before merging this PR! \n ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             })
+
+  test_TestOneBasic:
+    needs: release
+    if: needs.release.outputs.release_pr
+    runs-on: ubuntu-latest
+    steps:
       - uses: actions/checkout@v4
-        if: steps.release-please.outputs.pr
         with:
           token: ${{secrets.GITHUB_TOKEN}}
           fetch-depth: 0
       - id: aws-creds
         uses: aws-actions/configure-aws-credentials@v4
-        if: steps.release-please.outputs.pr
         with:
           role-to-assume: ${{env.AWS_ROLE}}
           role-session-name: ${{github.run_id}}
@@ -84,14 +90,12 @@ jobs:
           role-duration-seconds: 7200 # 2 hours
           output-credentials: true
       - name: install-nix
-        if: steps.release-please.outputs.pr
         run: |
           curl -L https://nixos.org/nix/install | sh
           source /home/runner/.nix-profile/etc/profile.d/nix.sh
           nix --version
           which nix
-      - name: Run Tests
-        if: steps.release-please.outputs.pr
+      - name: run_tests
         shell: '/home/runner/.nix-profile/bin/nix develop --ignore-environment --extra-experimental-features nix-command --extra-experimental-features flakes --keep HOME --keep SSH_AUTH_SOCK --keep IDENTIFIER --keep GITHUB_TOKEN --keep GITHUB_OWNER --keep ZONE --keep AWS_ROLE --keep AWS_REGION --keep AWS_DEFAULT_REGION --keep AWS_ACCESS_KEY_ID --keep AWS_SECRET_ACCESS_KEY --keep AWS_SESSION_TOKEN --keep UPDATECLI_GPGTOKEN --keep UPDATECLI_GITHUB_TOKEN --keep UPDATECLI_GITHUB_ACTOR --keep GPG_SIGNING_KEY --keep NIX_SSL_CERT_FILE --keep NIX_ENV_LOADED --keep TERM --command bash -e {0}'
         env:
           AWS_ACCESS_KEY_ID: ${{ steps.aws-creds.outputs.aws-access-key-id }}
@@ -104,14 +108,138 @@ jobs:
           ACME_SERVER_URL: https://acme-v02.api.letsencrypt.org/directory
           RANCHER_INSECURE: false
         run: |
-          ./run_tests.sh
+          ./run_tests.sh -t TestOneBasic
+
+  test_TestProdBasic:
+    needs: release
+    if: needs.release.outputs.release_pr
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{secrets.GITHUB_TOKEN}}
+          fetch-depth: 0
+      - id: aws-creds
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{env.AWS_ROLE}}
+          role-session-name: ${{github.run_id}}
+          aws-region: ${{env.AWS_REGION}}
+          role-duration-seconds: 7200 # 2 hours
+          output-credentials: true
+      - name: install-nix
+        run: |
+          curl -L https://nixos.org/nix/install | sh
+          source /home/runner/.nix-profile/etc/profile.d/nix.sh
+          nix --version
+          which nix
+      - name: run_tests
+        shell: '/home/runner/.nix-profile/bin/nix develop --ignore-environment --extra-experimental-features nix-command --extra-experimental-features flakes --keep HOME --keep SSH_AUTH_SOCK --keep IDENTIFIER --keep GITHUB_TOKEN --keep GITHUB_OWNER --keep ZONE --keep AWS_ROLE --keep AWS_REGION --keep AWS_DEFAULT_REGION --keep AWS_ACCESS_KEY_ID --keep AWS_SECRET_ACCESS_KEY --keep AWS_SESSION_TOKEN --keep UPDATECLI_GPGTOKEN --keep UPDATECLI_GITHUB_TOKEN --keep UPDATECLI_GITHUB_ACTOR --keep GPG_SIGNING_KEY --keep NIX_SSL_CERT_FILE --keep NIX_ENV_LOADED --keep TERM --command bash -e {0}'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ steps.aws-creds.outputs.aws-access-key-id }}
+          AWS_SECRET_ACCESS_KEY: ${{ steps.aws-creds.outputs.aws-secret-access-key }}
+          AWS_SESSION_TOKEN: ${{ steps.aws-creds.outputs.aws-session-token }}
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          GITHUB_OWNER: rancher
+          IDENTIFIER: ${{github.run_id}}
+          ZONE: ${{secrets.ZONE}}
+          ACME_SERVER_URL: https://acme-v02.api.letsencrypt.org/directory
+          RANCHER_INSECURE: false
+        run: |
+          ./run_tests.sh -t TestProdBasic
+
+  test_TestDownstreamBasic:
+    needs: release
+    if: needs.release.outputs.release_pr
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{secrets.GITHUB_TOKEN}}
+          fetch-depth: 0
+      - id: aws-creds
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{env.AWS_ROLE}}
+          role-session-name: ${{github.run_id}}
+          aws-region: ${{env.AWS_REGION}}
+          role-duration-seconds: 7200 # 2 hours
+          output-credentials: true
+      - name: install-nix
+        run: |
+          curl -L https://nixos.org/nix/install | sh
+          source /home/runner/.nix-profile/etc/profile.d/nix.sh
+          nix --version
+          which nix
+      - name: run_tests
+        shell: '/home/runner/.nix-profile/bin/nix develop --ignore-environment --extra-experimental-features nix-command --extra-experimental-features flakes --keep HOME --keep SSH_AUTH_SOCK --keep IDENTIFIER --keep GITHUB_TOKEN --keep GITHUB_OWNER --keep ZONE --keep AWS_ROLE --keep AWS_REGION --keep AWS_DEFAULT_REGION --keep AWS_ACCESS_KEY_ID --keep AWS_SECRET_ACCESS_KEY --keep AWS_SESSION_TOKEN --keep UPDATECLI_GPGTOKEN --keep UPDATECLI_GITHUB_TOKEN --keep UPDATECLI_GITHUB_ACTOR --keep GPG_SIGNING_KEY --keep NIX_SSL_CERT_FILE --keep NIX_ENV_LOADED --keep TERM --command bash -e {0}'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ steps.aws-creds.outputs.aws-access-key-id }}
+          AWS_SECRET_ACCESS_KEY: ${{ steps.aws-creds.outputs.aws-secret-access-key }}
+          AWS_SESSION_TOKEN: ${{ steps.aws-creds.outputs.aws-session-token }}
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          GITHUB_OWNER: rancher
+          IDENTIFIER: ${{github.run_id}}
+          ZONE: ${{secrets.ZONE}}
+          ACME_SERVER_URL: https://acme-v02.api.letsencrypt.org/directory
+          RANCHER_INSECURE: false
+        run: |
+          ./run_tests.sh -t TestDownstreamBasic
+
+  test_TestDownstreamProd:
+    needs: release
+    if: needs.release.outputs.release_pr
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{secrets.GITHUB_TOKEN}}
+          fetch-depth: 0
+      - id: aws-creds
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{env.AWS_ROLE}}
+          role-session-name: ${{github.run_id}}
+          aws-region: ${{env.AWS_REGION}}
+          role-duration-seconds: 7200 # 2 hours
+          output-credentials: true
+      - name: install-nix
+        run: |
+          curl -L https://nixos.org/nix/install | sh
+          source /home/runner/.nix-profile/etc/profile.d/nix.sh
+          nix --version
+          which nix
+      - name: run_tests
+        shell: '/home/runner/.nix-profile/bin/nix develop --ignore-environment --extra-experimental-features nix-command --extra-experimental-features flakes --keep HOME --keep SSH_AUTH_SOCK --keep IDENTIFIER --keep GITHUB_TOKEN --keep GITHUB_OWNER --keep ZONE --keep AWS_ROLE --keep AWS_REGION --keep AWS_DEFAULT_REGION --keep AWS_ACCESS_KEY_ID --keep AWS_SECRET_ACCESS_KEY --keep AWS_SESSION_TOKEN --keep UPDATECLI_GPGTOKEN --keep UPDATECLI_GITHUB_TOKEN --keep UPDATECLI_GITHUB_ACTOR --keep GPG_SIGNING_KEY --keep NIX_SSL_CERT_FILE --keep NIX_ENV_LOADED --keep TERM --command bash -e {0}'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ steps.aws-creds.outputs.aws-access-key-id }}
+          AWS_SECRET_ACCESS_KEY: ${{ steps.aws-creds.outputs.aws-secret-access-key }}
+          AWS_SESSION_TOKEN: ${{ steps.aws-creds.outputs.aws-session-token }}
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          GITHUB_OWNER: rancher
+          IDENTIFIER: ${{github.run_id}}
+          ZONE: ${{secrets.ZONE}}
+          ACME_SERVER_URL: https://acme-v02.api.letsencrypt.org/directory
+          RANCHER_INSECURE: false
+        run: |
+          ./run_tests.sh -t TestDownstreamProd
+
+  report:
+    needs:
+      - release
+      - test_TestOneBasic
+      - test_TestProdBasic
+      - test_TestDownstreamBasic
+      - test_TestDownstreamProd
+    if: success() && needs.release.outputs.release_pr #Ensure the test jobs succeeded, and that a release PR was created.
+    runs-on: ubuntu-latest
+    steps:
       - uses: actions/github-script@v7
-        if: steps.release-please.outputs.pr
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
             github.rest.issues.createComment({
-              issue_number: ${{ fromJson(steps.release-please.outputs.pr).number }},
+              issue_number: ${{ fromJson(needs.release.outputs.release_pr).number }},
               owner: "${{ github.repository_owner }}",
               repo: "${{ github.event.repository.name }}",
               body: "End to End Tests Passed! \n ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
