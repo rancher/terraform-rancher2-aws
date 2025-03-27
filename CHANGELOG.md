@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.5](https://github.com/rancher/terraform-rancher2-aws/compare/v1.0.4...v1.0.5) (2025-03-26)
+
+
+### Bug Fixes
+
+* copy lock file ([#78](https://github.com/rancher/terraform-rancher2-aws/issues/78)) ([907056b](https://github.com/rancher/terraform-rancher2-aws/commit/907056b2f04254330090191e0aec38f3e7c3eac8))
+
 ## [1.0.4](https://github.com/rancher/terraform-rancher2-aws/compare/v1.0.3...v1.0.4) (2025-03-26)
 
 
