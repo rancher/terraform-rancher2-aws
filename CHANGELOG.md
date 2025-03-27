@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/rancher/terraform-rancher2-aws/compare/v1.0.5...v1.1.0) (2025-03-27)
+
+
+### Features
+
+* enable back ends for sub modules ([b62cde1](https://github.com/rancher/terraform-rancher2-aws/commit/b62cde1cc6dea5e673034489d2360fc1c426aec5))
+
 ## [1.0.5](https://github.com/rancher/terraform-rancher2-aws/compare/v1.0.4...v1.0.5) (2025-03-26)
 
 
