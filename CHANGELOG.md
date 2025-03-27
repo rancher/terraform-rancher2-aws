@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.2](https://github.com/rancher/terraform-rancher2-aws/compare/v1.1.1...v1.1.2) (2025-03-27)
+
+
+### Bug Fixes
+
+* remove telemetry from bootstrap ([#84](https://github.com/rancher/terraform-rancher2-aws/issues/84)) ([2a85f76](https://github.com/rancher/terraform-rancher2-aws/commit/2a85f76c2759000a8109d8470f0080ff44906250))
+
 ## [1.1.1](https://github.com/rancher/terraform-rancher2-aws/compare/v1.1.0...v1.1.1) (2025-03-27)
 
 
