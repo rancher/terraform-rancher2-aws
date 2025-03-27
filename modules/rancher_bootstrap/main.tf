@@ -81,14 +81,7 @@ resource "terraform_data" "create" {
     command = <<-EOT
       export KUBECONFIG=${abspath(local.path)}/kubeconfig
       export KUBE_CONFIG_PATH=${abspath(local.path)}/kubeconfig
-      TF_DATA_DIR="${local.deploy_path}"
       cd ${local.deploy_path}
-
-      if [ -z "$TF_PLUGIN_CACHE_DIR" ]; then
-        terraform init -upgrade=true
-      else
-        echo "skipping terraform init in submodule in favor of plugin cache directory..."
-      fi
 
       MAX=2
       EXITCODE=1
