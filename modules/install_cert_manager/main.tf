@@ -14,6 +14,7 @@ locals {
   cert_manager_configured = (local.configure_cert_manager ? "configured" : "unconfigured")
   cert_manager_path       = "${abspath(path.module)}/${local.cert_manager_configured}"
   cert_manager_config     = var.cert_manager_configuration
+  deploy_path             = "${local.path}/install_cert_manager/"
   backend_file            = var.backend_file
 }
 
@@ -22,14 +23,23 @@ resource "terraform_data" "path" {
     main_contents      = md5(file("${local.cert_manager_path}/main.tf"))
     variables_contents = md5(file("${local.cert_manager_path}/variables.tf"))
     versions_contents  = md5(file("${local.cert_manager_path}/versions.tf"))
-    backend_contents   = md5(file("${local.backend_file}"))
+    backend_contents   = (local.backend_file == "" ? "" : md5(file("${local.backend_file}")))
   }
   provisioner "local-exec" {
     command = <<-EOT
-      install -d ${local.path}/install_cert_manager
-      cp ${local.cert_manager_path}/* ${local.path}/install_cert_manager/
-      cp ${local.backend_file} ${local.path}/install_cert_manager/
-      cp "${abspath(path.root)}/.terraform.lock.hcl" ${local.path}/install_cert_manager/
+      install -d ${local.deploy_path}
+      cp ${local.cert_manager_path}/* ${local.deploy_path}
+      cp "${abspath(path.root)}/.terraform.lock.hcl" ${local.deploy_path}
+      if [ -f "${local.backend_file}" ]; then
+        cp ${local.backend_file} ${local.deploy_path}
+      fi
+      if [ -z "$TF_DATA_DIR" ]; then
+        cp -r "${abspath(path.root)}/.terraform" ${local.deploy_path}
+      else
+        install -d ${local.deploy_path}/.terraform
+        cp -r $TF_DATA_DIR/modules ${local.deploy_path}/.terraform
+        cp -r $TF_DATA_DIR/providers ${local.deploy_path}/.terraform
+      fi
     EOT
   }
 }
