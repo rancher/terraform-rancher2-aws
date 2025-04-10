@@ -8,9 +8,7 @@ locals {
   zone_id              = var.zone_id
   region               = var.region
   email                = var.email
-  rancher_version      = replace(var.rancher_version, "v", "") # don't include the v
-  rancher_minor        = split(".", local.rancher_version)[1]
-  telemetry            = (local.rancher_minor < 11 ? 1 : 0)
+  rancher_version      = replace(var.rancher_version, "v", "")      # don't include the v
   cert_manager_version = replace(var.cert_manager_version, "v", "") # don't include the v
   acme_server          = var.acme_server_url
 }

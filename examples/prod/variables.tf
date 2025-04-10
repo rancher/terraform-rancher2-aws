@@ -45,13 +45,6 @@ variable "rancher_version" {
   EOT
   default     = "2.9.1"
 }
-variable "rancher_channel" {
-  type        = string
-  description = <<-EOT
-    The channel of rancher to install on the rke2 cluster.
-  EOT
-  default     = "latest"
-}
 variable "file_path" {
   type        = string
   description = <<-EOT

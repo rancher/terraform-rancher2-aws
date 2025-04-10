@@ -6,8 +6,6 @@ provider "rancher2" {
 locals {
   rancher_domain  = var.project_domain
   rancher_version = replace(var.rancher_version, "v", "") # don't include the v
-  rancher_minor   = split(".", local.rancher_version)[1]
-  telemetry       = (local.rancher_minor < 11 ? 1 : 0)
 }
 
 resource "time_sleep" "settle_before_rancher" {
