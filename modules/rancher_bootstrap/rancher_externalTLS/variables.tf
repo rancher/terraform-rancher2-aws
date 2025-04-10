@@ -11,10 +11,3 @@ variable "rancher_version" {
   EOT
   default     = "2.9.2"
 }
-variable "rancher_helm_repository" {
-  type        = string
-  description = <<-EOT
-    The helm repository to install rancher from.
-  EOT
-  default     = "https://releases.rancher.com/server-charts/stable"
-}

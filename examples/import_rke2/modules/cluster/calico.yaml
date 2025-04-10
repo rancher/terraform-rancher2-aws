@@ -1,4 +1,0 @@
-cni: calico
-disable:
-  - rke2-canal
-  - rke2-kube-proxy

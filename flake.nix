@@ -65,12 +65,10 @@
               kubernetes-helm
               jq
               kubectl
-              k8sgpt
               leftovers
               less
               openssh
               openssl
-              pup
               shellcheck
               tflint
               tfsec
@@ -78,7 +76,6 @@
               updatecli
               vim
               which
-              xan
               yq-go
             ];
           };

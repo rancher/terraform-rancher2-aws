@@ -16,11 +16,17 @@ We recommend setting the following environment variables for quick personal use:
 
 ```shell
 GITHUB_TOKEN
+GITHUB_OWNER
 AWS_REGION
 AWS_SECRET_ACCESS_KEY
 AWS_ACCESS_KEY_ID
 ZONE
 ```
+
+This module now supports the use of AWS temporary credentials to deploy cert manager.
+At the moment it uses the same credentials supplied to generate the infrastructure,
+ but in the future we intend to add the ability to supply cert manager specific credentials.
+Make sure to set the AWS_SESSION_TOKEN environment variable when using this.
 
 #### Tools
 
@@ -29,6 +35,11 @@ These tools will need to be installed on the machine running Terraform:
 - jq
 - kubectl
 - terraform
+- yq
+- helm (v3)
+- git
+
+Check out the flake.nix file for a list of packages that we use when developing and testing (lines 50-80).
 
 #### Local Filesystem Write Access
 
@@ -74,9 +85,8 @@ These tools are not necessary, but they can make it much simpler to collaborate.
 
 #### Automated Tests
 
-Our continuous integration tests using the GitHub [ubuntu-latest runner](https://github.com/actions/runner-images/blob/main/images/linux/Ubuntu2204-Readme.md), we then rely on Nix to deploy the additional dependencies.
+Our continuous integration tests using the GitHub [ubuntu-latest runner](https://github.com/actions/runner-images/blob/main/images/linux/Ubuntu2204-Readme.md),
+ we then rely on Nix to deploy the additional dependencies.
 
-It also has special integrations with AWS to allow secure authentication, see https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services for more information.
-
-With this tool it is possible to retrieve the aws access key and aws secret key to the temporarily defined access to the AWS account.
-We send these to Rancher when building our tests, this allows us to temporarily and securely setup certmanger and Rancher provisioning.
+It also has special integrations with AWS to allow secure authentication,
+ see https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services for more information.

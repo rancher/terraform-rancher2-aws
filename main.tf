@@ -22,15 +22,14 @@ locals {
   cni                = var.cni
   node_configuration = var.node_configuration
   # rancher
-  cert_manager_version    = var.cert_manager_version
-  rancher_version         = var.rancher_version
-  rancher_helm_repository = var.rancher_helm_repository
-  ip_family               = "ipv4"
-  ingress_controller      = "nginx"
-  bootstrap_rancher       = var.bootstrap_rancher
-  install_cert_manager    = var.install_cert_manager
-  configure_cert_manager  = var.configure_cert_manager
-  cert_manager_config     = var.cert_manager_configuration
+  cert_manager_version   = var.cert_manager_version
+  rancher_version        = var.rancher_version
+  ip_family              = "ipv4"
+  ingress_controller     = "nginx"
+  bootstrap_rancher      = var.bootstrap_rancher
+  install_cert_manager   = var.install_cert_manager
+  configure_cert_manager = var.configure_cert_manager
+  cert_manager_config    = var.cert_manager_configuration
 
   # remote state files
   install_cert_manager_backend = var.install_cert_manager_backend
@@ -96,7 +95,6 @@ module "rancher_bootstrap" {
   email                      = local.cert_manager_config.acme_email
   acme_server_url            = local.cert_manager_config.acme_server_url
   rancher_version            = local.rancher_version
-  rancher_helm_repository    = local.rancher_helm_repository
   cert_manager_version       = local.cert_manager_version
   externalTLS                = (local.configure_cert_manager ? false : true)
   cert_manager_configuration = local.cert_manager_config

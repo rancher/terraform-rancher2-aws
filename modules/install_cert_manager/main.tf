@@ -28,17 +28,19 @@ resource "terraform_data" "path" {
   provisioner "local-exec" {
     command = <<-EOT
       install -d ${local.deploy_path}
-      cp ${local.cert_manager_path}/* ${local.deploy_path}
-      cp "${abspath(path.root)}/.terraform.lock.hcl" ${local.deploy_path}
+      install -d ${local.deploy_path}/.terraform
+      cp --remove-destination ${local.cert_manager_path}/* ${local.deploy_path}
+      cp --remove-destination "${abspath(path.root)}/.terraform.lock.hcl" ${local.deploy_path}
       if [ -f "${local.backend_file}" ]; then
-        cp ${local.backend_file} ${local.deploy_path}
+        cp --remove-destination ${local.backend_file} ${local.deploy_path}
       fi
       if [ -z "$TF_DATA_DIR" ]; then
-        cp -r "${abspath(path.root)}/.terraform" ${local.deploy_path}
+        echo "copying terraform data from default location..."
+        cp -rf --remove-destination "${abspath(path.root)}/.terraform" ${local.deploy_path}
       else
-        install -d ${local.deploy_path}/.terraform
-        cp -r $TF_DATA_DIR/modules ${local.deploy_path}/.terraform
-        cp -r $TF_DATA_DIR/providers ${local.deploy_path}/.terraform
+        echo "copying terraform data from $TF_DATA_DIR..."
+        cp -rf --remove-destination "$TF_DATA_DIR/modules"   ${local.deploy_path}/.terraform
+        cp -rf --remove-destination "$TF_DATA_DIR/providers" ${local.deploy_path}/.terraform
       fi
     EOT
   }

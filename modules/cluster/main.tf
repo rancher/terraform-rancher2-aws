@@ -74,21 +74,30 @@ locals {
       size            = node.size
       image           = node.os
       prep_script = (
-        strcontains(node.os, "sles") ? templatefile("${path.root}/suse_prep.sh", {
+        strcontains(node.os, "sles") ? templatefile("${path.module}/suse_prep.sh", {
           install_method = local.install_method,
           ip_family      = local.ip_family,
           image          = node.os,
         }) :
-        strcontains(node.os, "rhel") ? templatefile("${path.root}/rhel_prep.sh", {
+        strcontains(node.os, "rhel") ? templatefile("${path.module}/rhel_prep.sh", {
           install_method = local.install_method,
           ip_family      = local.ip_family,
           image          = node.os,
         }) :
-        strcontains(node.os, "ubuntu") ? templatefile("${path.root}/ubuntu_prep.sh", {
+        strcontains(node.os, "ubuntu") ? templatefile("${path.module}/ubuntu_prep.sh", {
           install_method = local.install_method,
           ip_family      = local.ip_family,
           image          = node.os,
         }) :
+        (strcontains(node.os, "sle-micro-60") || strcontains(node.os, "sle-micro-61")) ? templatefile("${path.module}/slem60_61_prep.sh", {
+          install_method = local.install_method,
+          ip_family      = local.ip_family,
+          image          = node.os,
+        }) :
+        ""
+      )
+      start_prep_script = (
+        # (strcontains(node.os, "sle-micro-60") || strcontains(node.os, "sle-micro-61")) ? file("${path.module}/slem60_61_start_prep.sh") :
         ""
       )
       initial            = node.initial
@@ -128,7 +137,7 @@ module "initial" {
     data.aws_availability_zones.available,
   ]
   source                              = "rancher/rke2/aws"
-  version                             = "1.2.0"
+  version                             = "1.2.1"
   for_each                            = local.initial_node
   project_use_strategy                = "create"
   project_vpc_use_strategy            = "create"
@@ -217,26 +226,27 @@ module "initial" {
     user_workfolder          = each.value.workfolder
     timeout                  = 10
   }
-  server_add_domain        = false
-  server_domain_name       = each.value.domain
-  server_domain_zone       = local.zone
-  server_add_eip           = false
-  install_use_strategy     = local.install_method
-  local_file_use_strategy  = local.download
-  local_file_path          = each.value.file_path
-  install_rke2_version     = local.rke2_version
-  install_rpm_channel      = "stable"
-  install_remote_file_path = "${each.value.workfolder}/rke2"
-  install_role             = each.value.type
-  install_start            = true
-  install_prep_script      = each.value.prep_script
-  install_start_timeout    = 10
-  config_use_strategy      = each.value.config_strategy
-  config_join_strategy     = "skip"
-  config_default_name      = "50-default-config.yaml"
-  config_supplied_name     = "51-config.yaml"
-  config_supplied_content  = each.value.config
-  retrieve_kubeconfig      = true
+  server_add_domain         = false
+  server_domain_name        = each.value.domain
+  server_domain_zone        = local.zone
+  server_add_eip            = false
+  install_use_strategy      = local.install_method
+  local_file_use_strategy   = local.download
+  local_file_path           = each.value.file_path
+  install_rke2_version      = local.rke2_version
+  install_rpm_channel       = "stable"
+  install_remote_file_path  = "${each.value.workfolder}/rke2"
+  install_role              = each.value.type
+  install_start             = true
+  install_prep_script       = each.value.prep_script
+  install_start_prep_script = each.value.start_prep_script
+  install_start_timeout     = 10
+  config_use_strategy       = each.value.config_strategy
+  config_join_strategy      = "skip"
+  config_default_name       = "50-default-config.yaml"
+  config_supplied_name      = "51-config.yaml"
+  config_supplied_content   = each.value.config
+  retrieve_kubeconfig       = true
 }
 
 # There are many ways to orchestrate Terraform configurations with the goal of breaking it down
