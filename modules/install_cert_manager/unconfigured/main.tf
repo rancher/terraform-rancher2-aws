@@ -59,6 +59,7 @@ resource "kubernetes_secret" "tls_rancher_ingress" {
       ${data.aws_iam_server_certificate.project_cert.certificate_chain}
     EOT
     "tls.key" = data.aws_secretsmanager_secret_version.project_cert_key.secret_string,
+    "tls-ca"  = data.aws_iam_server_certificate.project_cert.certificate_chain,
   }
   lifecycle {
     ignore_changes = [

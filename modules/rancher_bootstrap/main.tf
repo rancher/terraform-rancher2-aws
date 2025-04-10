@@ -3,21 +3,20 @@
 # I felt this was the best way to accomplish the goal without incurring additional dependencies
 
 locals {
-  rancher_domain          = var.project_domain
-  zone                    = var.zone
-  zone_id                 = var.zone_id
-  region                  = var.region
-  email                   = var.email
-  acme_server_url         = var.acme_server_url
-  rancher_version         = replace(var.rancher_version, "v", "") # don't include the v
-  rancher_helm_repository = var.rancher_helm_repository
-  cert_manager_version    = var.cert_manager_version
-  cert_manager_config     = var.cert_manager_configuration
-  externalTLS             = var.externalTLS
-  path                    = var.path
-  rancher_path            = (local.externalTLS ? "${abspath(path.module)}/rancher_externalTLS" : "${abspath(path.module)}/rancher")
-  deploy_path             = "${abspath(local.path)}/rancher_bootstrap"
-  backend_file            = var.backend_file
+  rancher_domain       = var.project_domain
+  zone                 = var.zone
+  zone_id              = var.zone_id
+  region               = var.region
+  email                = var.email
+  acme_server_url      = var.acme_server_url
+  rancher_version      = replace(var.rancher_version, "v", "") # don't include the v
+  cert_manager_version = var.cert_manager_version
+  cert_manager_config  = var.cert_manager_configuration
+  externalTLS          = var.externalTLS
+  path                 = var.path
+  rancher_path         = (local.externalTLS ? "${abspath(path.module)}/rancher_externalTLS" : "${abspath(path.module)}/rancher")
+  deploy_path          = "${abspath(local.path)}/rancher_bootstrap"
+  backend_file         = var.backend_file
 }
 
 resource "terraform_data" "path" {
@@ -31,17 +30,19 @@ resource "terraform_data" "path" {
   provisioner "local-exec" {
     command = <<-EOT
       install -d ${local.deploy_path}
-      cp ${local.rancher_path}/* ${local.deploy_path}
-      cp "${abspath(path.root)}/.terraform.lock.hcl" ${local.deploy_path}
+      install -d ${local.deploy_path}/.terraform
+      cp --remove-destination ${local.rancher_path}/* ${local.deploy_path}
+      cp --remove-destination "${abspath(path.root)}/.terraform.lock.hcl" ${local.deploy_path}
       if [ -f "${local.backend_file}" ]; then
-        cp ${local.backend_file} ${local.deploy_path}
+        cp --remove-destination ${local.backend_file} ${local.deploy_path}
       fi
       if [ -z "$TF_DATA_DIR" ]; then
-        cp -r "${abspath(path.root)}/.terraform" ${local.deploy_path}
+        echo "copying terraform data from default location..."
+        cp -rf --remove-destination "${abspath(path.root)}/.terraform" ${local.deploy_path}
       else
-        install -d ${local.deploy_path}/.terraform
-        cp -r $TF_DATA_DIR/modules ${local.deploy_path}/.terraform
-        cp -r $TF_DATA_DIR/providers ${local.deploy_path}/.terraform
+        echo "copying terraform data from $TF_DATA_DIR..."
+        cp -rf --remove-destination "$TF_DATA_DIR/modules"   ${local.deploy_path}/.terraform
+        cp -rf --remove-destination "$TF_DATA_DIR/providers" ${local.deploy_path}/.terraform
       fi
     EOT
   }
@@ -59,7 +60,6 @@ resource "local_file" "inputs" {
     email                      = "${local.email}"
     acme_server_url            = "${local.acme_server_url}"
     rancher_version            = "${local.rancher_version}"
-    rancher_helm_repository    = "${local.rancher_helm_repository}"
     cert_manager_version       = "${local.cert_manager_version}"
     cert_manager_configuration = {
       aws_region            = "${local.cert_manager_config.aws_region}"

@@ -58,7 +58,6 @@ resource "helm_release" "cert_manager_configured" {
     name  = "crds.enabled"
     value = "true"
   }
-
   set {
     name  = "extraEnv[0].name"
     value = "AWS_REGION"
@@ -67,7 +66,6 @@ resource "helm_release" "cert_manager_configured" {
     name  = "extraEnv[0].value"
     value = local.cert_manager_config.aws_region
   }
-
   set {
     name  = "extraEnv[1].name"
     value = "AWS_ACCESS_KEY_ID"
@@ -76,7 +74,6 @@ resource "helm_release" "cert_manager_configured" {
     name  = "extraEnv[1].value"
     value = local.cert_manager_config.aws_access_key_id
   }
-
   set {
     name  = "extraEnv[2].name"
     value = "AWS_SECRET_ACCESS_KEY"
@@ -85,7 +82,6 @@ resource "helm_release" "cert_manager_configured" {
     name  = "extraEnv[2].value"
     value = local.cert_manager_config.aws_secret_access_key
   }
-
   set {
     name  = "extraEnv[3].name"
     value = (local.cert_manager_config.aws_session_token != "" ? "AWS_SESSION_TOKEN" : "DUMMY")
@@ -94,7 +90,6 @@ resource "helm_release" "cert_manager_configured" {
     name  = "extraEnv[3].value"
     value = local.cert_manager_config.aws_session_token
   }
-
   set {
     name  = "extraEnv[4].name"
     value = "AWS_HOSTED_ZONE"
@@ -103,7 +98,6 @@ resource "helm_release" "cert_manager_configured" {
     name  = "extraEnv[4].value"
     value = local.zone
   }
-
   set {
     name  = "extraEnv[5].name"
     value = "AWS_HOSTED_ZONE_ID"
@@ -112,7 +106,6 @@ resource "helm_release" "cert_manager_configured" {
     name  = "extraEnv[5].value"
     value = local.zone_id
   }
-
   set {
     name  = "extraArgs[0]"
     value = "--issuer-ambient-credentials"

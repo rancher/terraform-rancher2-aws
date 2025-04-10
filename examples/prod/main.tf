@@ -22,22 +22,21 @@ provider "rancher2" {
 }
 
 locals {
-  identifier              = var.identifier
-  example                 = "prod"
-  project_name            = "tf-${substr(md5(join("-", [local.example, local.identifier])), 0, 5)}"
-  username                = local.project_name
-  domain                  = local.project_name
-  zone                    = var.zone
-  key_name                = var.key_name
-  key                     = var.key
-  owner                   = var.owner
-  rke2_version            = var.rke2_version
-  local_file_path         = var.file_path
-  os                      = "sle-micro-60"
-  runner_ip               = chomp(data.http.myip.response_body) # "runner" is the server running Terraform
-  rancher_version         = var.rancher_version
-  rancher_helm_repository = "https://releases.rancher.com/server-charts/stable"
-  cert_manager_version    = "1.16.3" #"1.13.1"
+  identifier           = var.identifier
+  example              = "prod"
+  project_name         = "tf-${substr(md5(join("-", [local.example, local.identifier])), 0, 5)}"
+  username             = local.project_name
+  domain               = local.project_name
+  zone                 = var.zone
+  key_name             = var.key_name
+  key                  = var.key
+  owner                = var.owner
+  rke2_version         = var.rke2_version
+  local_file_path      = var.file_path
+  os                   = "sle-micro-61"
+  runner_ip            = chomp(data.http.myip.response_body) # "runner" is the server running Terraform
+  rancher_version      = var.rancher_version
+  cert_manager_version = "1.16.3" #"1.13.1"
   node_configuration = {
     "initial" = {
       type            = "database"
@@ -110,24 +109,23 @@ data "http" "myip" {
 }
 
 module "this" {
-  source                  = "../../"
-  identifier              = local.identifier
-  owner                   = local.owner
-  project_name            = local.project_name
-  domain                  = local.domain
-  zone                    = local.zone
-  key_name                = local.key_name
-  key                     = local.key
-  username                = local.username
-  admin_ip                = local.runner_ip
-  rke2_version            = local.rke2_version
-  local_file_path         = local.local_file_path
-  install_method          = "rpm" # rpm only for now, need to figure out local helm chart installs otherwise
-  cni                     = "canal"
-  node_configuration      = local.node_configuration
-  cert_manager_version    = local.cert_manager_version
-  rancher_version         = local.rancher_version
-  rancher_helm_repository = local.rancher_helm_repository
+  source               = "../../"
+  identifier           = local.identifier
+  owner                = local.owner
+  project_name         = local.project_name
+  domain               = local.domain
+  zone                 = local.zone
+  key_name             = local.key_name
+  key                  = local.key
+  username             = local.username
+  admin_ip             = local.runner_ip
+  rke2_version         = local.rke2_version
+  local_file_path      = local.local_file_path
+  install_method       = "rpm" # rpm only for now, need to figure out local helm chart installs otherwise
+  cni                  = "canal"
+  node_configuration   = local.node_configuration
+  cert_manager_version = local.cert_manager_version
+  rancher_version      = local.rancher_version
 }
 
 # this will fail if the default self signed cert is found

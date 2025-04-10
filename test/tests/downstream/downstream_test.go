@@ -52,9 +52,13 @@ func TestDownstreamBasic(t *testing.T) {
     sshAgent.Stop()
     t.Fatalf("Error getting Rke2 release version: %s", err)
   }
-  
-  // use latest Rancher, due to community patch issue
-  rancherVersion, _, _, err := util.GetRancherReleases()
+
+  rancherVersion := os.Getenv("RANCHER_VERSION")
+  if rancherVersion == "" {
+    // use stable version if not specified
+    // using stable prevents problems where the Rancher provider hasn't released to fit the latest Rancher
+    _, rancherVersion, _, err = util.GetRancherReleases()
+  }
   if err != nil {
     os.RemoveAll(testDir)
     aws.DeleteEC2KeyPair(t, keyPair)
@@ -159,8 +163,12 @@ func TestDownstreamProd(t *testing.T) {
     t.Fatalf("Error getting Rke2 release version: %s", err)
   }
   
-  // use latest Rancher, due to community patch issue
-  rancherVersion, _, _, err := util.GetRancherReleases()
+  rancherVersion := os.Getenv("RANCHER_VERSION")
+  if rancherVersion == "" {
+    // use stable version if not specified
+    // using stable prevents problems where the Rancher provider hasn't released to fit the latest Rancher
+    _, rancherVersion, _, err = util.GetRancherReleases()
+  }
   if err != nil {
     os.RemoveAll(testDir)
     aws.DeleteEC2KeyPair(t, keyPair)
