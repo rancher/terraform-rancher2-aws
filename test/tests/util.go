@@ -16,6 +16,7 @@ import (
   aws "github.com/gruntwork-io/terratest/modules/aws"
   g "github.com/gruntwork-io/terratest/modules/git"
   "github.com/gruntwork-io/terratest/modules/random"
+  "github.com/gruntwork-io/terratest/modules/shell"
   "github.com/gruntwork-io/terratest/modules/terraform"
   "golang.org/x/oauth2"
 )
@@ -416,4 +417,53 @@ func Teardown(t *testing.T, directory string, options *terraform.Options, keyPai
     }
   }
   aws.DeleteEC2KeyPair(t, keyPair)
+}
+
+func GetErrorLogs(t *testing.T, kubeconfigPath string) {
+  repoRoot, err := filepath.Abs(g.GetRepoRoot(t))
+  if err != nil {
+    t.Logf("Error getting git root directory: %v", err)
+  }
+  script, err := os.ReadFile(repoRoot + "/test/scripts/getLogs.sh")
+	if err != nil {
+		t.Logf("Error reading script: %v", err)
+	}
+	errorLogsScript := shell.Command{
+		Command: "bash",
+		Args:    []string{"-c", string(script)},
+		Env: map[string]string{
+			"KUBECONFIG": kubeconfigPath,
+		},
+	}
+	out, err := shell.RunCommandAndGetOutputE(t, errorLogsScript)
+  if err != nil {
+    t.Logf("Error running script: %s", err)
+  }
+	t.Logf("Log script output: %s", out)
+}
+
+func CheckReady(t *testing.T, kubeconfigPath string) {
+  repoRoot, err := filepath.Abs(g.GetRepoRoot(t))
+  if err != nil {
+    t.Logf("Error getting git root directory: %v", err)
+    t.Fail()
+  }
+  script, err := os.ReadFile(repoRoot + "/test/scripts/readyNodes.sh")
+	if err != nil {
+		t.Logf("Error reading script: %v", err)
+    t.Fail()
+	}
+	readyScript := shell.Command{
+		Command: "bash",
+		Args:    []string{"-c", string(script)},
+		Env: map[string]string{
+			"KUBECONFIG": kubeconfigPath,
+		},
+	}
+	out, err := shell.RunCommandAndGetOutputE(t, readyScript)
+  if err != nil {
+    t.Logf("Error running script: %s", err)
+    t.Fail()
+  }
+	t.Logf("Ready script output: %s", out)
 }
