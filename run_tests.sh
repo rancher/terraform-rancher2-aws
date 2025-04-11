@@ -3,20 +3,27 @@
 rerun_failed=false
 specific_test=""
 specific_package=""
+cleanup_id=""
 
-while getopts ":r:t:p:" opt; do
+while getopts ":r:t:p:c:" opt; do
   case $opt in
     r) rerun_failed=true ;;
     t) specific_test="$OPTARG" ;;
     p) specific_package="$OPTARG" ;;
+    c) cleanup_id="$OPTARG" ;;
     \?) cat <<EOT >&2 && exit 1 ;;
 Invalid option -$OPTARG, valid options are
   -r to re-run failed tests
   -t to specify a specific test (eg. TestBase)
   -p to specify a specific test package (eg. base)
+  -c to run clean up only with the given id (eg. abc123)
 EOT
   esac
 done
+
+if [ -n "$cleanup_id" ]; then
+  export IDENTIFIER="$cleanup_id"
+fi
 
 run_tests() {
   local rerun=$1
@@ -99,13 +106,15 @@ if [ -z "$GITHUB_TOKEN" ]; then echo "GITHUB_TOKEN isn't set"; else echo "GITHUB
 if [ -z "$GITHUB_OWNER" ]; then echo "GITHUB_OWNER isn't set"; else echo "GITHUB_OWNER is set"; fi
 if [ -z "$ZONE" ]; then echo "ZONE isn't set"; else echo "ZONE is set"; fi
 
-# Run tests initially
-run_tests false
+if [ -z "$cleanup_id" ]; then
+  # Run tests initially
+  run_tests false
 
-# Check if we need to rerun failed tests
-if [ "$rerun_failed" = true ] && [ -f "/tmp/${IDENTIFIER}_failed_tests.txt" ]; then
-  echo "Rerunning failed tests..."
-  run_tests true
+  # Check if we need to rerun failed tests
+  if [ "$rerun_failed" = true ] && [ -f "/tmp/${IDENTIFIER}_failed_tests.txt" ]; then
+    echo "Rerunning failed tests..."
+    run_tests true
+  fi
 fi
 
 echo "Clearing leftovers with Id $IDENTIFIER in $AWS_REGION..."

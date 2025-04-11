@@ -67,10 +67,10 @@ resource "helm_release" "rancher" {
   chart            = "${path.root}/rancher-${local.rancher_version}.tgz" #"${local.rancher_helm_repository}/${local.rancher_channel}/rancher-${local.rancher_version}.tgz"
   namespace        = "cattle-system"
   create_namespace = false
-  wait             = true
-  wait_for_jobs    = true
+  wait             = false
+  wait_for_jobs    = false
   force_update     = true
-  timeout          = 2400 # 40m
+  timeout          = 1800 # 30m
 
   set {
     name  = "hostname"

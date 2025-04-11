@@ -1,4 +1,5 @@
 #!/bin/bash
+set -x
 
 JSONPATH="'{range .items[*]}
   {.metadata.name}{\"\\t\"} \
@@ -46,6 +47,13 @@ while notReady; do
   fi
 done
 
+echo "Nodes are ready..."
+
+echo "nodes..."
 kubectl get nodes || true
+echo "all..."
 kubectl get all -A || true
+echo "pods..."
+kubectl get pods -A || true
+
 exit 0
