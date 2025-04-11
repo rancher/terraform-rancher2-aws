@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.2.0](https://github.com/rancher/terraform-rancher2-aws/compare/v1.1.1...v1.2.0) (2025-04-11)
+
+
+### Features
+
+* build helm chart, update modules ([#86](https://github.com/rancher/terraform-rancher2-aws/issues/86)) ([8c1226f](https://github.com/rancher/terraform-rancher2-aws/commit/8c1226f6b7defeee2a5f353c9ce8dd9846f443a3))
+
+
+### Bug Fixes
+
+* add ready check, error log, and manual test ([#87](https://github.com/rancher/terraform-rancher2-aws/issues/87)) ([f00468f](https://github.com/rancher/terraform-rancher2-aws/commit/f00468fe007db503e76f561287913a85685dbe10))
+* remove telemetry from bootstrap ([#84](https://github.com/rancher/terraform-rancher2-aws/issues/84)) ([2a85f76](https://github.com/rancher/terraform-rancher2-aws/commit/2a85f76c2759000a8109d8470f0080ff44906250))
+
 ## [1.1.1](https://github.com/rancher/terraform-rancher2-aws/compare/v1.1.0...v1.1.1) (2025-03-27)
 
 
