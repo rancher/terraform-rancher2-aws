@@ -103,6 +103,7 @@ func TestOneBasic(t *testing.T) {
     t.Fatalf("Error creating cluster: %s", err)
   }
   util.CheckReady(t, testDir + "/kubeconfig")
+  util.CheckRunning(t, testDir + "/kubeconfig")
   if t.Failed() {
     t.Log("Test failed...")
   } else {
