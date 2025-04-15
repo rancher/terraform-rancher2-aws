@@ -32,12 +32,12 @@ TIMEOUT=5 # 5 minutes
 TIMEOUT_MINUTES=$((TIMEOUT * 60))
 INTERVAL=10 # 10 seconds
 MAX=$((TIMEOUT_MINUTES / INTERVAL))
-INDEX=0
+ATTEMPTS=0
 
 while notReady; do
-  if [[ $INDEX -lt $MAX ]]; then
+  if [[ $ATTEMPTS -lt $MAX ]]; then
     echo "Waiting for nodes to be ready..."
-    INDEX=$((INDEX + 1))
+    ATTEMPTS=$((ATTEMPTS + 1))
     sleep $INTERVAL;
   else
     echo "Timeout reached. Nodes are not ready..."

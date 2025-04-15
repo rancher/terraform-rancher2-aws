@@ -20,35 +20,41 @@ notReady() {
   fi
 }
 
-TIMEOUT=10 # 10 minutes
-TIMEOUT_MINUTES=$((TIMEOUT * 60))
-INTERVAL=30 # 30 seconds
-MAX=$((TIMEOUT_MINUTES / INTERVAL))
-INDEX=0
+readyWait() {
+  TIMEOUT=10 # 10 minutes
+  TIMEOUT_MINUTES=$((TIMEOUT * 60))
+  INTERVAL=30 # 30 seconds
+  MAX=$((TIMEOUT_MINUTES / INTERVAL))
+  ATTEMPTS=0
 
-while notReady; do
-  if [[ $INDEX -lt $MAX ]]; then
-    echo "Waiting for pods to be ready..."
-    INDEX=$((INDEX + 1))
-    sleep $INTERVAL;
-  else
-    echo "Timeout reached. Pods are not ready..."
-    echo "nodes..."
-    kubectl get nodes || true
-    echo "all..."
-    kubectl get all -A || true
-    echo "pods..."
-    kubectl get pods -A || true
-    exit 1
-  fi
+  while notReady; do
+    if [ "$ATTEMPTS" -lt "$MAX" ]; then
+      ATTEMPTS=$((ATTEMPTS + 1))
+      sleep "$INTERVAL";
+    else
+      return 1
+    fi
+  done
+  return 0
+}
+
+SUCCESSES=0
+SUCCESSES_NEEDED=3 # require three successes to make sure everything is settled
+
+while readyWait && [ "$SUCCESSES" -lt "$SUCCESSES_NEEDED" ]; do
+  SUCCESSES=$((SUCCESSES + 1))
+  echo "succeeeded $SUCCESSES times..."
+  sleep 30
 done
 
 echo "Pods are ready..."
 
 echo "nodes..."
 kubectl get nodes || true
+
 echo "all..."
 kubectl get all -A || true
+
 echo "pods..."
 kubectl get pods -A || true
 

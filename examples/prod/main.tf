@@ -16,10 +16,30 @@ provider "kubernetes" {} # make sure you set the env variable KUBE_CONFIG_PATH t
 provider "helm" {}       # make sure you set the env variable KUBE_CONFIG_PATH to local_file_path (file_path variable)
 
 provider "rancher2" {
+  alias     = "default"
   api_url   = "https://${local.domain}.${local.zone}"
   token_key = module.this.admin_token
   timeout   = "300s"
 }
+
+provider "rancher2" {
+  alias     = "authenticate"
+  bootstrap = true
+  api_url   = "https://${local.domain}.${local.zone}"
+  timeout   = "300s"
+}
+
+resource "rancher2_bootstrap" "authenticate" {
+  depends_on = [
+    module.this,
+  ]
+  provider         = rancher2.authenticate
+  initial_password = module.this.admin_password
+  password         = module.this.admin_password
+  token_update     = true
+  token_ttl        = 7200 # 2 hours
+}
+
 
 locals {
   identifier           = var.identifier
@@ -149,11 +169,11 @@ resource "terraform_data" "get_cert_info" {
   }
 }
 
-# test catalog entry
-resource "rancher2_catalog" "foo" {
+data "rancher2_cluster" "local" {
   depends_on = [
     module.this,
+    rancher2_bootstrap.authenticate,
   ]
-  name = "test"
-  url  = "http://foo.com:8080"
+  provider = rancher2.default
+  name     = "local"
 }
