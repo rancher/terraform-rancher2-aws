@@ -16,4 +16,7 @@ output "admin_password" {
   value     = module.this.admin_password
   sensitive = true
 }
-
+output "cluster_data" {
+  value     = jsonencode(data.rancher2_cluster.local)
+  sensitive = true
+}

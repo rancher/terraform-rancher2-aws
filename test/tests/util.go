@@ -22,11 +22,13 @@ import (
 )
 
 func GetRancherReleases() (string, string, string, error) {
-  releases, err := getRancherReleases()
+  releases, err := getReleases("rancher", "rancher")
   if err != nil {
     return "", "", "", err
   }
-  versions := filterPrerelease(releases)
+  filterPrerelease(&releases)
+  filterPrimeOnly(&releases)
+  versions := getVersionsFromReleases(&releases)
   if len(versions) == 0 {
     return "", "", "", errors.New("no eligible versions found")
   }
@@ -44,37 +46,15 @@ func GetRancherReleases() (string, string, string, error) {
     lts = versions[2]
   }
   return latest, stable, lts, nil
-}
-
-func getRancherReleases() ([]*github.RepositoryRelease, error) {
-  githubToken := os.Getenv("GITHUB_TOKEN")
-  if githubToken == "" {
-    fmt.Println("GITHUB_TOKEN environment variable not set")
-    return nil, errors.New("GITHUB_TOKEN environment variable not set")
-  }
-
-  // Create a new OAuth2 token using the GitHub token
-  tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: githubToken})
-  tokenClient := oauth2.NewClient(context.Background(), tokenSource)
-
-  // Create a new GitHub client using the authenticated HTTP client
-  client := github.NewClient(tokenClient)
-
-  var releases []*github.RepositoryRelease
-  releases, _, err := client.Repositories.ListReleases(context.Background(), "rancher", "rancher", &github.ListOptions{})
-  if err != nil {
-    return nil, err
-  }
-
-  return releases, nil
 }
 
 func GetRke2Releases() (string, string, string, error) {
-  releases, err := getRke2Releases()
+  releases, err := getReleases("rancher", "rke2")
   if err != nil {
     return "", "", "", err
   }
-  versions := filterPrerelease(releases)
+  filterPrerelease(&releases)
+  versions := getVersionsFromReleases(&releases)
   if len(versions) == 0 {
     return "", "", "", errors.New("no eligible versions found")
   }
@@ -94,7 +74,7 @@ func GetRke2Releases() (string, string, string, error) {
   return latest, stable, lts, nil
 }
 
-func getRke2Releases() ([]*github.RepositoryRelease, error) {
+func getReleases(org string, repo string) ([]*github.RepositoryRelease, error) {
   githubToken := os.Getenv("GITHUB_TOKEN")
   if githubToken == "" {
     fmt.Println("GITHUB_TOKEN environment variable not set")
@@ -109,30 +89,46 @@ func getRke2Releases() ([]*github.RepositoryRelease, error) {
   client := github.NewClient(tokenClient)
 
   var releases []*github.RepositoryRelease
-  releases, _, err := client.Repositories.ListReleases(context.Background(), "rancher", "rke2", &github.ListOptions{})
+  releases, _, err := client.Repositories.ListReleases(context.Background(), org, repo, &github.ListOptions{})
   if err != nil {
     return nil, err
   }
+
   return releases, nil
 }
 
-func filterReleaseCandidate(v *[]string) {
-  var fv []string
-  versions := *v
-  for i := 1; i < len(versions); i++ {
-    if strings.Contains(versions[i], "-") != true {
-      fv = append(fv, versions[i])
+func filterPrimeOnly(r *[]*github.RepositoryRelease) {
+  var fr []*github.RepositoryRelease
+  releases := *r
+  for i := 0; i < len(releases); i++ {
+    if len(releases[i].Assets) > 2 { // source zip and tar are always there
+      // prime only releases won't have artifacts
+      // so we only add releases with more than 2 artifacts
+      fr = append(fr, releases[i])
     }
   }
-  *v = fv
+  *r = fr
 }
 
-func filterPrerelease(r []*github.RepositoryRelease) []string {
+// this effectively removes release candidates as well as pending releases
+func filterPrerelease(r *[]*github.RepositoryRelease) {
+  var fr []*github.RepositoryRelease
+  releases := *r
+  for i := 0; i < len(releases); i++ {
+    if !releases[i].GetPrerelease() {
+      fr = append(fr, releases[i])
+    }
+  }
+  *r = fr
+}
+
+func getVersionsFromReleases(r *[]*github.RepositoryRelease) []string {
   var versions []string
-  for _, release := range r {
-    version := release.GetTagName()
-    if !release.GetPrerelease() {
-      versions = append(versions, version)
+  releases := *r
+  for i := 0; i < len(releases); i++ {
+    versions = append(versions, *releases[i].TagName)
+  }
+  return versions
       // [
       //   "v1.28.14+rke2r1",
       //   "v1.30.1+rke2r3",
@@ -145,9 +141,6 @@ func filterPrerelease(r []*github.RepositoryRelease) []string {
       //   "v1.29.5+rke2r1",
       //   "v1.28.17+rke2r1",
       // ]
-    }
-  }
-  return versions
 }
 
 func sortVersions(v *[]string) {
@@ -449,6 +442,32 @@ func CheckReady(t *testing.T, kubeconfigPath string) {
     t.Fail()
   }
   script, err := os.ReadFile(repoRoot + "/test/scripts/readyNodes.sh")
+	if err != nil {
+		t.Logf("Error reading script: %v", err)
+    t.Fail()
+	}
+	readyScript := shell.Command{
+		Command: "bash",
+		Args:    []string{"-c", string(script)},
+		Env: map[string]string{
+			"KUBECONFIG": kubeconfigPath,
+		},
+	}
+	out, err := shell.RunCommandAndGetOutputE(t, readyScript)
+  if err != nil {
+    t.Logf("Error running script: %s", err)
+    t.Fail()
+  }
+	t.Logf("Ready script output: %s", out)
+}
+
+func CheckRunning(t *testing.T, kubeconfigPath string) {
+  repoRoot, err := filepath.Abs(g.GetRepoRoot(t))
+  if err != nil {
+    t.Logf("Error getting git root directory: %v", err)
+    t.Fail()
+  }
+  script, err := os.ReadFile(repoRoot + "/test/scripts/runningPods.sh")
 	if err != nil {
 		t.Logf("Error reading script: %v", err)
     t.Fail()

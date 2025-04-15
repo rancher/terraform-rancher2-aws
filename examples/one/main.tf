@@ -23,6 +23,9 @@ provider "rancher2" {
 }
 
 resource "rancher2_bootstrap" "authenticate" {
+  depends_on = [
+    module.rancher,
+  ]
   provider         = rancher2.authenticate
   initial_password = module.rancher.admin_password
   password         = module.rancher.admin_password
@@ -92,12 +95,11 @@ module "rancher" {
   rancher_version      = local.rancher_version
 }
 
-# test catalog entry
-resource "rancher2_catalog" "foo" {
+data "rancher2_cluster" "local" {
   depends_on = [
     module.rancher,
+    rancher2_bootstrap.authenticate,
   ]
   provider = rancher2.default
-  name     = "test"
-  url      = "http://foo.com:8080"
+  name     = "local"
 }
