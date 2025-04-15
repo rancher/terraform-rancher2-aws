@@ -86,30 +86,46 @@ resource "terraform_data" "create" {
       MAX=2
       EXITCODE=1
       ATTEMPTS=0
+      E=1
+      E1=0
       while [ $EXITCODE -gt 0 ] && [ $ATTEMPTS -lt $MAX ]; do
-        E=$EXITCODE
         A=0
         while [ $E -gt 0 ] && [ $A -lt $MAX ]; do
-          timeout 3600 terraform apply -var-file="inputs.tfvars" -auto-approve -state="${local.deploy_path}/tfstate"
+          timeout 1h terraform apply -var-file="inputs.tfvars" -auto-approve -state="${local.deploy_path}/tfstate"
           E=$?
+          if [ $E -eq 124 ]; then echo "Apply timed out after 1 hour"; fi
           A=$((A+1))
         done
         # don't destroy if the last attempt fails
         if [ $E -gt 0 ] && [ $ATTEMPTS != $((MAX-1)) ]; then
           A1=0
-          E1=$EXITCODE
           while [ $E1 -gt 0 ] && [ $A1 -lt $MAX ]; do
-            timeout 3600 terraform destroy -var-file="inputs.tfvars" -auto-approve -state="${local.deploy_path}/tfstate"
+            timeout 1h terraform destroy -var-file="inputs.tfvars" -auto-approve -state="${local.deploy_path}/tfstate"
             E1=$?
+            if [ $E1 -eq 124 ]; then echo "Apply timed out after 1 hour"; fi
             A1=$((A1+1))
           done
         fi
-        EXITCODE=$((E+E1))
+        if [ $E -gt 0 ]; then
+          echo "apply failed..."
+        fi
+        if [ $E1 -gt 0 ]; then
+          echo "destroy failed..."
+        fi
+        if [ $E -gt 0 ] || [ $E1 -gt 0 ]; then
+          EXITCODE=1
+        else
+          EXITCODE=0
+        fi
         ATTEMPTS=$((ATTEMPTS+1))
-        echo "wait 30 seconds between attempts..."
-        sleep 30
+        if [ $EXITCODE -gt 0 ] && [ $ATTEMPTS -lt $MAX ]; then
+          echo "wait 30 seconds between attempts..."
+          sleep 30
+        fi
       done
-
+      if [ $ATTEMPTS -eq $MAX ]; then echo "max attempts reached..."; fi
+      if [ $EXITCODE -ne 0 ]; then echo "failure, exit code $EXITCODE..."; fi
+      if [ $EXITCODE -eq 0 ]; then echo "success..."; fi
       exit $EXITCODE
     EOT
   }

@@ -108,17 +108,24 @@ func TestDownstreamBasic(t *testing.T) {
 
   _, err = terraform.InitAndApplyE(t, terraformOptions)
   if err != nil {
+    t.Log("Test failed, tearing down...")
+    util.GetErrorLogs(t, testDir + "/kubeconfig")
     util.Teardown(t, testDir, terraformOptions, keyPair)
     os.Remove(exampleDir + ".terraform.lock.hcl")
     sshAgent.Stop()
     t.Fatalf("Error creating cluster: %s", err)
   }
-  t.Log("Test passed, tearing down...")
+  util.CheckReady(t, testDir + "/kubeconfig")
+  util.CheckRunning(t, testDir + "/kubeconfig")
+  if t.Failed() {
+    t.Log("Test failed...")
+  } else {
+    t.Log("Test passed...")
+  }
   util.Teardown(t, testDir, terraformOptions, keyPair)
-  os.Remove(exampleDir + ".terraform.lock.hcl")
+  os.Remove(exampleDir + "/.terraform.lock.hcl")
   sshAgent.Stop()
 }
-
 
 
 
@@ -214,13 +221,21 @@ func TestDownstreamProd(t *testing.T) {
 
   _, err = terraform.InitAndApplyE(t, terraformOptions)
   if err != nil {
+    t.Log("Test failed, tearing down...")
+    util.GetErrorLogs(t, testDir + "/kubeconfig")
     util.Teardown(t, testDir, terraformOptions, keyPair)
     os.Remove(exampleDir + ".terraform.lock.hcl")
     sshAgent.Stop()
     t.Fatalf("Error creating cluster: %s", err)
   }
-  t.Log("Test passed, tearing down...")
+  util.CheckReady(t, testDir + "/kubeconfig")
+  util.CheckRunning(t, testDir + "/kubeconfig")
+  if t.Failed() {
+    t.Log("Test failed...")
+  } else {
+    t.Log("Test passed...")
+  }
   util.Teardown(t, testDir, terraformOptions, keyPair)
-  os.Remove(exampleDir + ".terraform.lock.hcl")
+  os.Remove(exampleDir + "/.terraform.lock.hcl")
   sshAgent.Stop()
 }

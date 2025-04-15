@@ -110,6 +110,6 @@ func TestOneBasic(t *testing.T) {
     t.Log("Test passed...")
   }
   util.Teardown(t, testDir, terraformOptions, keyPair)
-  os.Remove(exampleDir + ".terraform.lock.hcl")
+  os.Remove(exampleDir + "/.terraform.lock.hcl")
   sshAgent.Stop()
 }
