@@ -231,7 +231,7 @@ jobs:
       - test_TestProdBasic
       - test_TestDownstreamBasic
       - test_TestDownstreamProd
-    if: needs.release.outputs.release_pr
+    if: always() && needs.release.outputs.release_pr
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

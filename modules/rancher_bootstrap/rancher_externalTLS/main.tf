@@ -67,8 +67,8 @@ resource "helm_release" "rancher" {
   chart            = "${path.root}/rancher-${local.rancher_version}.tgz" #"${local.rancher_helm_repository}/${local.rancher_channel}/rancher-${local.rancher_version}.tgz"
   namespace        = "cattle-system"
   create_namespace = false
-  wait             = true
-  wait_for_jobs    = true
+  wait             = false
+  wait_for_jobs    = false
   force_update     = true
   timeout          = 1800 # 30m
 
@@ -106,12 +106,19 @@ resource "helm_release" "rancher" {
   }
 }
 
-resource "time_sleep" "settle_after_rancher" {
+resource "terraform_data" "wait_for_rancher" {
   depends_on = [
     time_sleep.settle_before_rancher,
     helm_release.rancher,
   ]
-  create_duration = "120s"
+  provisioner "local-exec" {
+    command = <<-EOT
+      cd ${abspath(path.root)} || true
+      chmod +x ${abspath(path.module)}/runningPods.sh
+      echo "using kubeconfig located at $KUBECONFIG"
+      ${abspath(path.module)}/runningPods.sh
+    EOT
+  }
 }
 
 resource "random_password" "password" {
@@ -125,7 +132,7 @@ resource "terraform_data" "get_public_cert_info" {
     random_password.password,
     time_sleep.settle_before_rancher,
     helm_release.rancher,
-    time_sleep.settle_after_rancher,
+    terraform_data.wait_for_rancher,
   ]
   provisioner "local-exec" {
     command = <<-EOT
@@ -148,7 +155,7 @@ resource "terraform_data" "get_ping" {
     random_password.password,
     time_sleep.settle_before_rancher,
     helm_release.rancher,
-    time_sleep.settle_after_rancher,
+    terraform_data.wait_for_rancher,
     terraform_data.get_public_cert_info,
   ]
   provisioner "local-exec" {
@@ -181,7 +188,7 @@ resource "rancher2_bootstrap" "admin" {
     random_password.password,
     time_sleep.settle_before_rancher,
     helm_release.rancher,
-    time_sleep.settle_after_rancher,
+    terraform_data.wait_for_rancher,
     terraform_data.get_public_cert_info,
     terraform_data.get_ping,
   ]
