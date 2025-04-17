@@ -10,7 +10,8 @@ env:
   AWS_ROLE: arn:aws:iam::270074865685:role/terraform-module-ci-test
   GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
   ACME_SERVER_URL: https://acme-v02.api.letsencrypt.org/directory
-  AWS_MAX_ATTEMPTS: 50
+  AWS_MAX_ATTEMPTS: 100
+  AWS_RETRY_MODE: adaptive
 
 permissions: write-all
 
@@ -72,7 +73,8 @@ jobs:
               repo: "${{ github.event.repository.name }}",
               body: "Please make sure e2e tests pass before merging this PR! \n ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             })
-
+  # WARNING! Tests need to run one at a time because AWS is throttling our requests.
+  # 4 hours is the current maximum session time for the token
   test_TestOneBasic:
     needs: release
     if: needs.release.outputs.release_pr
@@ -88,7 +90,7 @@ jobs:
           role-to-assume: ${{env.AWS_ROLE}}
           role-session-name: ${{github.run_id}}
           aws-region: ${{env.AWS_REGION}}
-          role-duration-seconds: 7200 # 2 hours
+          role-duration-seconds: 14400 # 4 hours
           output-credentials: true
       - name: install-nix
         run: |
@@ -102,7 +104,8 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ steps.aws-creds.outputs.aws-access-key-id }}
           AWS_SECRET_ACCESS_KEY: ${{ steps.aws-creds.outputs.aws-secret-access-key }}
           AWS_SESSION_TOKEN: ${{ steps.aws-creds.outputs.aws-session-token }}
-          AWS_MAX_ATTEMPTS: 50
+          AWS_MAX_ATTEMPTS: 100
+          AWS_RETRY_MODE: adaptive
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
           GITHUB_OWNER: rancher
           IDENTIFIER: ${{github.run_id}}
@@ -113,7 +116,9 @@ jobs:
           ./run_tests.sh -t TestOneBasic
 
   test_TestProdBasic:
-    needs: release
+    needs:
+      - release
+      - test_TestOneBasic
     if: needs.release.outputs.release_pr
     runs-on: ubuntu-latest
     steps:
@@ -127,7 +132,7 @@ jobs:
           role-to-assume: ${{env.AWS_ROLE}}
           role-session-name: ${{github.run_id}}
           aws-region: ${{env.AWS_REGION}}
-          role-duration-seconds: 7200 # 2 hours
+          role-duration-seconds: 14400 # 4 hours
           output-credentials: true
       - name: install-nix
         run: |
@@ -141,7 +146,8 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ steps.aws-creds.outputs.aws-access-key-id }}
           AWS_SECRET_ACCESS_KEY: ${{ steps.aws-creds.outputs.aws-secret-access-key }}
           AWS_SESSION_TOKEN: ${{ steps.aws-creds.outputs.aws-session-token }}
-          AWS_MAX_ATTEMPTS: 50
+          AWS_MAX_ATTEMPTS: 100
+          AWS_RETRY_MODE: adaptive
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
           GITHUB_OWNER: rancher
           IDENTIFIER: ${{github.run_id}}
@@ -152,7 +158,10 @@ jobs:
           ./run_tests.sh -t TestProdBasic
 
   test_TestDownstreamBasic:
-    needs: release
+    needs:
+      - release
+      - test_TestOneBasic
+      - test_TestProdBasic
     if: needs.release.outputs.release_pr
     runs-on: ubuntu-latest
     steps:
@@ -166,7 +175,7 @@ jobs:
           role-to-assume: ${{env.AWS_ROLE}}
           role-session-name: ${{github.run_id}}
           aws-region: ${{env.AWS_REGION}}
-          role-duration-seconds: 7200 # 2 hours
+          role-duration-seconds: 14400 # 4 hours
           output-credentials: true
       - name: install-nix
         run: |
@@ -180,7 +189,8 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ steps.aws-creds.outputs.aws-access-key-id }}
           AWS_SECRET_ACCESS_KEY: ${{ steps.aws-creds.outputs.aws-secret-access-key }}
           AWS_SESSION_TOKEN: ${{ steps.aws-creds.outputs.aws-session-token }}
-          AWS_MAX_ATTEMPTS: 50
+          AWS_MAX_ATTEMPTS: 100
+          AWS_RETRY_MODE: adaptive
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
           GITHUB_OWNER: rancher
           IDENTIFIER: ${{github.run_id}}
@@ -191,7 +201,11 @@ jobs:
           ./run_tests.sh -t TestDownstreamBasic
 
   test_TestDownstreamProd:
-    needs: release
+    needs:
+      - release
+      - test_TestOneBasic
+      - test_TestProdBasic
+      - test_TestDownstreamBasic
     if: needs.release.outputs.release_pr
     runs-on: ubuntu-latest
     steps:
@@ -205,7 +219,7 @@ jobs:
           role-to-assume: ${{env.AWS_ROLE}}
           role-session-name: ${{github.run_id}}
           aws-region: ${{env.AWS_REGION}}
-          role-duration-seconds: 7200 # 2 hours
+          role-duration-seconds: 14400 # 4 hours
           output-credentials: true
       - name: install-nix
         run: |
@@ -219,7 +233,8 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ steps.aws-creds.outputs.aws-access-key-id }}
           AWS_SECRET_ACCESS_KEY: ${{ steps.aws-creds.outputs.aws-secret-access-key }}
           AWS_SESSION_TOKEN: ${{ steps.aws-creds.outputs.aws-session-token }}
-          AWS_MAX_ATTEMPTS: 50
+          AWS_MAX_ATTEMPTS: 100
+          AWS_RETRY_MODE: adaptive
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
           GITHUB_OWNER: rancher
           IDENTIFIER: ${{github.run_id}}
@@ -249,7 +264,7 @@ jobs:
           role-to-assume: ${{env.AWS_ROLE}}
           role-session-name: ${{github.run_id}}
           aws-region: ${{env.AWS_REGION}}
-          role-duration-seconds: 7200 # 2 hours
+          role-duration-seconds: 3600 # 1 hour
           output-credentials: true
       - name: install-nix
         run: |
@@ -263,7 +278,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ steps.aws-creds.outputs.aws-access-key-id }}
           AWS_SECRET_ACCESS_KEY: ${{ steps.aws-creds.outputs.aws-secret-access-key }}
           AWS_SESSION_TOKEN: ${{ steps.aws-creds.outputs.aws-session-token }}
-          AWS_MAX_ATTEMPTS: 50
+          AWS_MAX_ATTEMPTS: 100
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
           GITHUB_OWNER: rancher
           IDENTIFIER: ${{github.run_id}}
