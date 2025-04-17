@@ -10,6 +10,7 @@ env:
   AWS_ROLE: arn:aws:iam::270074865685:role/terraform-module-ci-test
   GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
   ACME_SERVER_URL: https://acme-v02.api.letsencrypt.org/directory
+  AWS_MAX_ATTEMPTS: 50
 
 permissions: write-all
 
@@ -101,6 +102,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ steps.aws-creds.outputs.aws-access-key-id }}
           AWS_SECRET_ACCESS_KEY: ${{ steps.aws-creds.outputs.aws-secret-access-key }}
           AWS_SESSION_TOKEN: ${{ steps.aws-creds.outputs.aws-session-token }}
+          AWS_MAX_ATTEMPTS: 50
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
           GITHUB_OWNER: rancher
           IDENTIFIER: ${{github.run_id}}
@@ -139,6 +141,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ steps.aws-creds.outputs.aws-access-key-id }}
           AWS_SECRET_ACCESS_KEY: ${{ steps.aws-creds.outputs.aws-secret-access-key }}
           AWS_SESSION_TOKEN: ${{ steps.aws-creds.outputs.aws-session-token }}
+          AWS_MAX_ATTEMPTS: 50
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
           GITHUB_OWNER: rancher
           IDENTIFIER: ${{github.run_id}}
@@ -177,6 +180,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ steps.aws-creds.outputs.aws-access-key-id }}
           AWS_SECRET_ACCESS_KEY: ${{ steps.aws-creds.outputs.aws-secret-access-key }}
           AWS_SESSION_TOKEN: ${{ steps.aws-creds.outputs.aws-session-token }}
+          AWS_MAX_ATTEMPTS: 50
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
           GITHUB_OWNER: rancher
           IDENTIFIER: ${{github.run_id}}
@@ -215,6 +219,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ steps.aws-creds.outputs.aws-access-key-id }}
           AWS_SECRET_ACCESS_KEY: ${{ steps.aws-creds.outputs.aws-secret-access-key }}
           AWS_SESSION_TOKEN: ${{ steps.aws-creds.outputs.aws-session-token }}
+          AWS_MAX_ATTEMPTS: 50
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
           GITHUB_OWNER: rancher
           IDENTIFIER: ${{github.run_id}}
@@ -258,6 +263,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ steps.aws-creds.outputs.aws-access-key-id }}
           AWS_SECRET_ACCESS_KEY: ${{ steps.aws-creds.outputs.aws-secret-access-key }}
           AWS_SESSION_TOKEN: ${{ steps.aws-creds.outputs.aws-session-token }}
+          AWS_MAX_ATTEMPTS: 50
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
           GITHUB_OWNER: rancher
           IDENTIFIER: ${{github.run_id}}
