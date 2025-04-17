@@ -137,7 +137,7 @@ module "initial" {
     data.aws_availability_zones.available,
   ]
   source                              = "rancher/rke2/aws"
-  version                             = "1.2.1"
+  version                             = "1.2.2"
   for_each                            = local.initial_node
   project_use_strategy                = "create"
   project_vpc_use_strategy            = "create"
@@ -341,11 +341,16 @@ resource "terraform_data" "create" {
       ATTEMPTS=0
       MAX=3
       while [ $EXITCODE -gt 0 ] && [ $ATTEMPTS -lt $MAX ]; do
-        echo "Starting attempt $ATTEMPTS..."
-        timeout 3600 terraform apply -var-file="inputs.tfvars" -auto-approve -state="${self.triggers_replace.path}/tfstate"
+        echo "Starting attempt $((ATTEMPTS + 1))..."
+        timeout 1h terraform apply -var-file="inputs.tfvars" -auto-approve -state="${self.triggers_replace.path}/tfstate"
         EXITCODE=$?
+        if [ $EXITCODE -eq 124 ]; then echo "Apply timed out after 1 hour"; fi
         ATTEMPTS=$((ATTEMPTS + 1))
         echo "Exit code $EXITCODE..."
+        if [ $EXITCODE -gt 0 ] && [ $ATTEMPTS -lt $MAX ]; then
+          echo "wait 30 seconds between attempts..."
+          sleep 30
+        fi
       done
       exit $EXITCODE
     EOT
@@ -354,17 +359,23 @@ resource "terraform_data" "create" {
     # warning! this is only triggered on destroy, not refresh/taint
     when    = destroy
     command = <<-EOT
+      set -x
       cd ${self.triggers_replace.path}
       TF_DATA_DIR="${self.triggers_replace.path}"
       EXITCODE=1
       ATTEMPTS=0
       MAX=3
       while [ $EXITCODE -gt 0 ] && [ $ATTEMPTS -lt $MAX ]; do
-        echo "Starting attempt $ATTEMPTS..."
-        timeout 3600 terraform destroy -var-file="inputs.tfvars" -no-color -auto-approve -state="${self.triggers_replace.path}/tfstate"
+        echo "Starting attempt $((ATTEMPTS + 1))..."
+        timeout 1h terraform destroy -var-file="inputs.tfvars" -no-color -auto-approve -state="${self.triggers_replace.path}/tfstate"
         EXITCODE=$?
+        if [ $EXITCODE -eq 124 ]; then echo "Apply timed out after 1 hour"; fi
         ATTEMPTS=$((ATTEMPTS + 1))
         echo "Exit code $EXITCODE..."
+        if [ $EXITCODE -gt 0 ] && [ $ATTEMPTS -lt $MAX ]; then
+          echo "wait 30 seconds between attempts..."
+          sleep 30
+        fi
       done
       exit $EXITCODE
     EOT

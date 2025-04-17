@@ -48,10 +48,10 @@ while readyWait && [ "$SUCCESSES" -lt "$SUCCESSES_NEEDED" ]; do
 done
 
 if [ "$SUCCESSES" -eq "$SUCCESSES_NEEDED" ]; then
-  echo "$SUCCESSES_NEEDED reached, passed.."
+  echo "$SUCCESSES_NEEDED successes reached, passed.."
   EXITCODE=0
 else
-  echo "$SUCCESSES_NEEDED not reached, failed.."
+  echo "$SUCCESSES_NEEDED successes not reached, failed.."
   EXITCODE=1
 fi
 
