@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.2.0](https://github.com/rancher/terraform-rancher2-aws/compare/v1.1.1...v1.2.0) (2025-04-17)
+
+
+### Features
+
+* build helm chart, update modules ([#86](https://github.com/rancher/terraform-rancher2-aws/issues/86)) ([8c1226f](https://github.com/rancher/terraform-rancher2-aws/commit/8c1226f6b7defeee2a5f353c9ce8dd9846f443a3))
+
+
+### Bug Fixes
+
+* add ready check, error log, and manual test ([#87](https://github.com/rancher/terraform-rancher2-aws/issues/87)) ([f00468f](https://github.com/rancher/terraform-rancher2-aws/commit/f00468fe007db503e76f561287913a85685dbe10))
+* filter prime releases from testing ([#88](https://github.com/rancher/terraform-rancher2-aws/issues/88)) ([d25e002](https://github.com/rancher/terraform-rancher2-aws/commit/d25e002e9abea4199f5614962e517f8d142a28cc))
+* increase max attempts ([#91](https://github.com/rancher/terraform-rancher2-aws/issues/91)) ([851feb9](https://github.com/rancher/terraform-rancher2-aws/commit/851feb95107bbdf67f3e8729576be6f3b0878805))
+* remove telemetry from bootstrap ([#84](https://github.com/rancher/terraform-rancher2-aws/issues/84)) ([2a85f76](https://github.com/rancher/terraform-rancher2-aws/commit/2a85f76c2759000a8109d8470f0080ff44906250))
+* replace wait with a test for Rancher ([#89](https://github.com/rancher/terraform-rancher2-aws/issues/89)) ([c106e4e](https://github.com/rancher/terraform-rancher2-aws/commit/c106e4ebd332d742229abdc155debaac575e885a))
+* serialize tests, increase timing ([#92](https://github.com/rancher/terraform-rancher2-aws/issues/92)) ([210c4ce](https://github.com/rancher/terraform-rancher2-aws/commit/210c4ceddc2d75263d931f5bed831765a71972a7))
+* update timeout function and module ([#90](https://github.com/rancher/terraform-rancher2-aws/issues/90)) ([53ca6ea](https://github.com/rancher/terraform-rancher2-aws/commit/53ca6ea592e2018c1cb6de6a90c706e9087ff6a9))
+
 ## [1.1.1](https://github.com/rancher/terraform-rancher2-aws/compare/v1.1.0...v1.1.1) (2025-03-27)
 
 
