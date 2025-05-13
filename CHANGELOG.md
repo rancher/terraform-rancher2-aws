@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/rancher/terraform-rancher2-aws/compare/v1.2.0...v1.2.1) (2025-05-13)
+
+
+### Bug Fixes
+
+* update connection method ([#93](https://github.com/rancher/terraform-rancher2-aws/issues/93)) ([624c182](https://github.com/rancher/terraform-rancher2-aws/commit/624c182bb30c08bb9a21b9c97a4cd448ac69812c))
+
 ## [1.2.0](https://github.com/rancher/terraform-rancher2-aws/compare/v1.1.1...v1.2.0) (2025-04-17)
 
 
