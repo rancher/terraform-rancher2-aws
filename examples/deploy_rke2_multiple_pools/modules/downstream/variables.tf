@@ -73,12 +73,6 @@ variable "load_balancer_security_groups" {
     The security groups for the load balancer.
   EOT
 }
-# variable "server_security_group_id" {
-#   type = string
-#   description = <<-EOT
-#     The id of the security group to add the downstream cluster's security group to.
-#   EOT
-# }
 variable "subnet_id" {
   type        = string
   description = <<-EOT

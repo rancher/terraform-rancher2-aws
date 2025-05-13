@@ -19,7 +19,7 @@ provider "helm" {}       # make sure you set the env variable KUBE_CONFIG_PATH t
 provider "rancher2" {
   api_url   = "https://${local.domain}.${local.zone}"
   token_key = module.rancher.admin_token
-  timeout   = "3000s"
+  timeout   = "300s"
 }
 
 locals {

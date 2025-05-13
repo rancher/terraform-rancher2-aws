@@ -46,7 +46,7 @@ func TestDownstreamBasic(t *testing.T) {
 		os.RemoveAll(testDir)
 		t.Fatalf("Error creating test key pair: %s", err)
 	}
-  sshAgent := ssh.SshAgentWithKeyPair(t, keyPair.KeyPair)
+	sshAgent := ssh.SshAgentWithKeyPair(t, keyPair.KeyPair)
 	t.Logf("Key %s created and added to agent", keyPair.Name)
 
 	// use oldest RKE2, remember it releases much more than Rancher
@@ -162,7 +162,7 @@ func TestDownstreamRoles(t *testing.T) {
 		t.Fatalf("Error creating test key pair: %s", err)
 	}
 
-  err = os.WriteFile(testDir+"/id_rsa", []byte(keyPair.KeyPair.PrivateKey), 0600)
+	err = os.WriteFile(testDir+"/id_rsa", []byte(keyPair.KeyPair.PrivateKey), 0600)
 	if err != nil {
 		os.RemoveAll(testDir)
 		t.Fatalf("Error creating test key pair: %s", err)
@@ -232,7 +232,7 @@ func TestDownstreamRoles(t *testing.T) {
 	_, err = terraform.InitAndApplyE(t, terraformOptions)
 	if err != nil {
 		t.Log("Test failed, tearing down...")
-		util.GetErrorLogs(t, testDir + "/kubeconfig")
+		util.GetErrorLogs(t, testDir+"/kubeconfig")
 		util.Teardown(t, testDir, terraformOptions, keyPair)
 		os.Remove(exampleDir + ".terraform.lock.hcl")
 		sshAgent.Stop()
