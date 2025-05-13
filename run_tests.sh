@@ -25,6 +25,8 @@ if [ -n "$cleanup_id" ]; then
   export IDENTIFIER="$cleanup_id"
 fi
 
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+
 run_tests() {
   local rerun=$1
   REPO_ROOT="$(git rev-parse --show-toplevel)"
@@ -107,6 +109,26 @@ if [ -z "$GITHUB_OWNER" ]; then echo "GITHUB_OWNER isn't set"; else echo "GITHUB
 if [ -z "$ZONE" ]; then echo "ZONE isn't set"; else echo "ZONE is set"; fi
 
 if [ -z "$cleanup_id" ]; then
+  echo "checking tests for compile errors..."
+  D="$(pwd)"
+
+  cd "$REPO_ROOT/test/tests" || exit
+  if ! go mod tidy; then C=$?; echo "failed to tidy, exit code $C"; exit $C; fi
+  echo "completed tidy..."
+
+  while IFS= read -r file; do
+    echo "found $file";
+    if ! go test -c "$file" -o "${file}.test"; then C=$?; echo "failed to compile $file, exit code $C"; exit $C; fi
+    rm -rf "${file}.test"
+  done <<< "$(find "$REPO_ROOT/test" -not \( -path "$REPO_ROOT/test/tests/data" -prune \) -name '*.go')"
+  echo "compile checks passed..."
+
+  cd "$D" || exit
+
+  echo "checking terraform configs for errors..."
+  if ! tflint --recursive; then C=$?; echo "tflint failed, exit code $C"; exit $C; fi
+  echo "terraform configs valid..."
+
   # Run tests initially
   run_tests false
 
@@ -135,8 +157,8 @@ if [ -n "$IDENTIFIER" ]; then
 
   attempts=0
   # shellcheck disable=SC2143
-  while [ -n "$(leftovers -d --iaas=aws --aws-region="$AWS_REGION" --type="ec2-key-pair" --filter="tf-$IDENTIFIER" | grep -v 'AccessDenied')" ] && [ $attempts -lt 3 ]; do
-    leftovers --iaas=aws --aws-region="$AWS_REGION" --type="ec2-key-pair" --filter="tf-$IDENTIFIER" --no-confirm | grep -v 'AccessDenied' || true
+  while [ -n "$(leftovers -d --iaas=aws --aws-region="$AWS_REGION" --type="ec2-key-pair" --filter="terraform-ci-$IDENTIFIER" | grep -v 'AccessDenied')" ] && [ $attempts -lt 3 ]; do
+    leftovers --iaas=aws --aws-region="$AWS_REGION" --type="ec2-key-pair" --filter="terraform-ci-$IDENTIFIER" --no-confirm | grep -v 'AccessDenied' || true
     sleep 10
     attempts=$((attempts + 1))
   done

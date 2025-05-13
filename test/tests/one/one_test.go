@@ -38,6 +38,12 @@ func TestOneBasic(t *testing.T) {
     os.RemoveAll(testDir)
     t.Fatalf("Error creating test key pair: %s", err)
   }
+
+  err = os.WriteFile(testDir+"/id_rsa", []byte(keyPair.KeyPair.PrivateKey), 0600)
+	if err != nil {
+		os.RemoveAll(testDir)
+		t.Fatalf("Error creating test key pair: %s", err)
+	}
   sshAgent := ssh.SshAgentWithKeyPair(t, keyPair.KeyPair)
   t.Logf("Key %s created and added to agent", keyPair.Name)
 

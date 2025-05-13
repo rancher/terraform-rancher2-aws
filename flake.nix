@@ -67,6 +67,7 @@
               kubectl
               leftovers
               less
+              mkpasswd
               openssh
               openssl
               shellcheck

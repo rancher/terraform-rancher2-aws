@@ -368,26 +368,22 @@ func GetId() string {
 
 func CreateTestDirectories(t *testing.T, id string) error {
   gwd := g.GetRepoRoot(t)
-  fwd, err := filepath.Abs(gwd)
-  if err != nil {
+	fwd, err := filepath.Abs(gwd)
+	if err != nil {
     return err
-  }
-  tdd := fwd + "/test/tests/data"
-  err = os.Mkdir(tdd, 0755)
-  if err != nil && !os.IsExist(err) {
-    return err
-  }
-  tdd = fwd + "/test/tests/data/" + id
-  err = os.Mkdir(tdd, 0755)
-  if err != nil && !os.IsExist(err) {
-    return err
-  }
-  tdd = fwd + "/test/tests/data/" + id + "/data"
-  err = os.Mkdir(tdd, 0755)
-  if err != nil && !os.IsExist(err) {
-    return err
-  }
-  return nil
+	}
+	paths := []string{
+    filepath.Join(fwd, "test/tests/data"),
+		filepath.Join(fwd, "test/tests/data", id),
+		filepath.Join(fwd, "test/tests/data", id, "data"),
+	}
+	for _, path := range paths {
+    err = os.Mkdir(path, 0755)
+		if err != nil && !os.IsExist(err) {
+      return err
+		}
+	}
+	return nil
 }
 
 func Teardown(t *testing.T, directory string, options *terraform.Options, keyPair *aws.Ec2Keypair) {

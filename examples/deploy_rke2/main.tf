@@ -17,30 +17,14 @@ provider "kubernetes" {} # make sure you set the env variable KUBE_CONFIG_PATH t
 provider "helm" {}       # make sure you set the env variable KUBE_CONFIG_PATH to local_file_path (file_path variable)
 
 provider "rancher2" {
-  alias     = "authenticate"
-  bootstrap = true
   api_url   = "https://${local.domain}.${local.zone}"
-  timeout   = "300s"
-}
-
-resource "rancher2_bootstrap" "authenticate" {
-  provider         = rancher2.authenticate
-  initial_password = module.rancher.admin_password
-  password         = module.rancher.admin_password
-  token_update     = true
-  token_ttl        = 86400 # 24 hours
-}
-
-provider "rancher2" {
-  alias     = "default"
-  api_url   = "https://${local.domain}.${local.zone}"
-  token_key = rancher2_bootstrap.authenticate.token
-  timeout   = "300s"
+  token_key = module.rancher.admin_token
+  timeout   = "3000s"
 }
 
 locals {
   identifier            = var.identifier
-  example               = "basic"
+  example               = "downstream"
   project_name          = "tf-${substr(md5(join("-", [local.example, local.identifier])), 0, 5)}"
   username              = local.project_name
   domain                = local.project_name
@@ -56,11 +40,12 @@ locals {
   os                    = "sle-micro-61"
   aws_access_key_id     = var.aws_access_key_id
   aws_secret_access_key = var.aws_secret_access_key
-  aws_session_token     = var.aws_session_token
   aws_region            = var.aws_region
+  aws_session_token     = var.aws_session_token
+  aws_instance_type     = "m5.large"
+  node_count            = 3
   email                 = (var.email != "" ? var.email : "${local.identifier}@${local.zone}")
   acme_server_url       = "https://acme-v02.api.letsencrypt.org"
-  private_ip            = replace(module.rancher.private_endpoint, "http://", "")
 }
 
 data "http" "myip" {
@@ -114,111 +99,46 @@ module "rke2_image" {
   version             = "v1.4.0"
   server_use_strategy = "skip"
   image_use_strategy  = "find"
-  image_type          = local.os
+  image_type          = local.os # this is not required to match Rancher, it just seemed easier in this example
 }
 
-# this adds the private (10.) IP to the domain
-# the private IP communicates to the agents where to find Rancher
-resource "aws_route53_record" "modified" {
+# you can add this one multiple times, or use a loop to deploy multiple clusters
+module "downstream" {
   depends_on = [
     module.rancher,
+    module.rke2_image,
   ]
-  zone_id         = module.rancher.domain_object.zone_id
-  name            = module.rancher.domain_object.name
-  type            = module.rancher.domain_object.type
-  ttl             = 30
-  records         = concat([local.private_ip], tolist(module.rancher.domain_object.records))
-  allow_overwrite = true
-}
-
-resource "rancher2_machine_config_v2" "aio" {
-  depends_on = [
-    rancher2_bootstrap.authenticate,
-    module.rancher,
-    aws_route53_record.modified,
-  ]
-  provider      = rancher2.default
-  generate_name = "all-in-one-config"
-  amazonec2_config {
-    ami            = module.rke2_image.image.id
-    region         = local.aws_region
-    security_group = [module.rancher.security_group.name]
-    subnet_id      = module.rancher.subnets[keys(module.rancher.subnets)[0]].id
-    vpc_id         = module.rancher.vpc.id
-    zone = replace( # it is looking for just the last letter of the availability zone, eg. for us-west-2a it just wants 'a'
-      module.rancher.subnets[keys(module.rancher.subnets)[0]].availability_zone,
-      local.aws_region,
-      ""
-    )
-    session_token = trimspace(chomp(local.aws_session_token))
-    instance_type = "m5.large"
-    ssh_user      = "ec2-user"
-    userdata      = <<-EOT
-      #cloud-config
-      bootcmd:
-        - echo ${local.private_ip} ${local.domain}.${local.zone} >> /etc/hosts
-    EOT
-    tags          = join(",", ["Id", local.identifier, "Owner", local.owner])
+  source = "./modules/downstream"
+  # general
+  name       = "tf-all-in-one-config"
+  identifier = local.identifier
+  owner      = local.owner
+  # aws access
+  aws_access_key_id     = local.aws_access_key_id
+  aws_secret_access_key = local.aws_secret_access_key
+  aws_session_token     = trimspace(chomp(local.aws_session_token))
+  aws_region            = local.aws_region
+  aws_region_letter = replace(
+    module.rancher.subnets[keys(module.rancher.subnets)[0]].availability_zone,
+    local.aws_region,
+    ""
+  )
+  # aws project info
+  vpc_id                        = module.rancher.vpc.id
+  security_group_id             = module.rancher.security_group.id
+  load_balancer_security_groups = module.rancher.load_balancer_security_groups
+  subnet_id                     = module.rancher.subnets[keys(module.rancher.subnets)[0]].id
+  # node info
+  aws_instance_type = local.aws_instance_type
+  ami_id            = module.rke2_image.image.id
+  ami_ssh_user      = module.rke2_image.image.user
+  ami_admin_group   = module.rke2_image.image.admin_group
+  node_count        = local.node_count
+  direct_node_access = {
+    runner_ip       = local.runner_ip
+    ssh_access_key  = local.key
+    ssh_access_user = local.project_name
   }
-}
-
-resource "terraform_data" "patch_machine_config" {
-  depends_on = [
-    module.rancher,
-    aws_route53_record.modified,
-    rancher2_machine_config_v2.aio,
-  ]
-  triggers_replace = {
-    config = rancher2_machine_config_v2.aio.id
-  }
-  provisioner "local-exec" {
-    command = <<-EOT
-      ${path.module}/addKeyToMachineTemplate.sh "${local.aws_access_key_id}" "${local.aws_secret_access_key}"
-    EOT
-  }
-}
-
-resource "rancher2_cluster_v2" "rke2_cluster" {
-  depends_on = [
-    rancher2_bootstrap.authenticate,
-    module.rancher,
-    aws_route53_record.modified,
-    rancher2_machine_config_v2.aio,
-    terraform_data.patch_machine_config,
-  ]
-  provider              = rancher2.default
-  name                  = "${local.project_name}-s1-cluster"
-  kubernetes_version    = local.rke2_version
-  enable_network_policy = true
-  rke_config {
-    machine_pools {
-      name               = "mp1"
-      control_plane_role = true
-      etcd_role          = true
-      worker_role        = true
-      quantity           = 1
-      machine_config {
-        kind = rancher2_machine_config_v2.aio.kind
-        name = rancher2_machine_config_v2.aio.name
-      }
-    }
-    rotate_certificates {
-      generation = 1
-    }
-  }
-  timeouts {
-    create = "120m" # 2 hours
-  }
-}
-
-resource "rancher2_cluster_sync" "sync" {
-  depends_on = [
-    rancher2_bootstrap.authenticate,
-    module.rancher,
-    aws_route53_record.modified,
-    rancher2_machine_config_v2.aio,
-    rancher2_cluster_v2.rke2_cluster,
-  ]
-  provider   = rancher2.default
-  cluster_id = rancher2_cluster_v2.rke2_cluster.cluster_v1_id
+  # rke2 info
+  rke2_version = local.rke2_version
 }
