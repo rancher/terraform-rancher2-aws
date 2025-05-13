@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.2](https://github.com/rancher/terraform-rancher2-aws/compare/v1.2.1...v1.2.2) (2025-05-13)
+
+
+### Bug Fixes
+
+* update the test name ([#95](https://github.com/rancher/terraform-rancher2-aws/issues/95)) ([3aaffa2](https://github.com/rancher/terraform-rancher2-aws/commit/3aaffa21bbd8539c4e06a40515515e0a7ceba9fa))
+
 ## [1.2.1](https://github.com/rancher/terraform-rancher2-aws/compare/v1.2.0...v1.2.1) (2025-05-13)
 
 
