@@ -219,6 +219,7 @@ resource "terraform_data" "wait_for_rancher" {
       chmod +x ${abspath(path.module)}/runningPods.sh
       echo "using kubeconfig located at $KUBECONFIG"
       ${abspath(path.module)}/runningPods.sh
+      ${abspath(path.module)}/runningDeployments.sh
     EOT
   }
 }

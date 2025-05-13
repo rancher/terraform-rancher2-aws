@@ -37,3 +37,6 @@ output "project_domain_object" {
 output "project_security_group" {
   value = module.initial[keys(local.initial_node)[0]].project_security_group
 }
+output "load_balancer_security_groups" {
+  value = module.initial[keys(local.initial_node)[0]].project_load_balancer.security_groups
+}

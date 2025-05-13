@@ -39,6 +39,9 @@ output "subnets" {
 output "security_group" {
   value = module.cluster.project_security_group
 }
+output "load_balancer_security_groups" {
+  value = module.cluster.load_balancer_security_groups
+}
 output "private_endpoint" {
   value = replace(replace(module.cluster.join_url, ":9345", ""), "https", "http")
 }
