@@ -200,7 +200,7 @@ jobs:
         run: |
           ./run_tests.sh -t TestDownstreamBasic
 
-  test_TestDownstreamProd:
+  test_TestDownstreamRoles:
     needs:
       - release
       - test_TestOneBasic
@@ -242,7 +242,7 @@ jobs:
           ACME_SERVER_URL: https://acme-v02.api.letsencrypt.org/directory
           RANCHER_INSECURE: false
         run: |
-          ./run_tests.sh -t TestDownstreamProd
+          ./run_tests.sh -t TestDownstreamRoles
 
   test_Cleanup:
     needs:
@@ -250,7 +250,7 @@ jobs:
       - test_TestOneBasic
       - test_TestProdBasic
       - test_TestDownstreamBasic
-      - test_TestDownstreamProd
+      - test_TestDownstreamRoles
     if: always() && needs.release.outputs.release_pr
     runs-on: ubuntu-latest
     steps:
@@ -294,7 +294,7 @@ jobs:
       - test_TestOneBasic
       - test_TestProdBasic
       - test_TestDownstreamBasic
-      - test_TestDownstreamProd
+      - test_TestDownstreamRoles
       - test_Cleanup
     if: success() && needs.release.outputs.release_pr #Ensure the test jobs succeeded, and that a release PR was created.
     runs-on: ubuntu-latest
