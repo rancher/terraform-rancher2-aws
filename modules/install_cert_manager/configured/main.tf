@@ -9,17 +9,15 @@ resource "time_sleep" "settle_before_cert_manager" {
   create_duration = "30s"
 }
 
-resource "kubernetes_namespace" "cert_manager" {
+# uses kubectl to idempotentenly create cert-manager namespace
+resource "terraform_data" "cert_manager" {
   depends_on = [
     time_sleep.settle_before_cert_manager,
   ]
-  metadata {
-    name = "cert-manager"
-  }
-  lifecycle {
-    ignore_changes = [
-      metadata,
-    ]
+  provisioner "local-exec" {
+    command = <<-EOT
+      kubectl get namespace cert-manager || kubectl create namespace cert-manager
+    EOT
   }
   provisioner "local-exec" {
     command = <<-EOT
@@ -42,6 +40,7 @@ resource "kubernetes_namespace" "cert_manager" {
 resource "helm_release" "cert_manager_configured" {
   depends_on = [
     time_sleep.settle_before_cert_manager,
+    terraform_data.cert_manager,
   ]
   name             = "cert-manager"
   repository       = "https://charts.jetstack.io"

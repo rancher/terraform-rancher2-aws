@@ -3,20 +3,20 @@ variable "project_domain" {
   description = <<-EOT
     The project domain. An fqdn, eg. "test.example.com".
   EOT
-}
-variable "zone" {
-  type        = string
-  description = <<-EOT
-    The zone within the domain.
-    eg. if the domain is "test.example.com", then this should be "example.com"
-  EOT
+  validation {
+    condition = can(regex(
+      "^(?:https?://)?[[:alpha:]](?:[[:alnum:]\\p{Pd}]{1,63}\\.)+[[:alnum:]\\p{Pd}]{1,62}[[:alnum:]](?::[[:digit:]]{1,5})?$",
+      var.project_domain
+    ))
+    error_message = "Must be a fully qualified domain name."
+  }
 }
 variable "zone_id" {
   type        = string
   description = <<-EOT
     The ID of the zone within the domain.
     eg. if the domain is "test.example.com", then the zone should be "example.com"
-    The ID of that zone.
+    The AWS ID of that zone.
   EOT
 }
 variable "region" {
@@ -43,7 +43,7 @@ variable "rancher_version" {
   description = <<-EOT
     The version of rancher to install.
   EOT
-  default     = "2.8.4"
+  default     = "2.11.2"
 }
 variable "cert_manager_version" {
   type        = string
@@ -65,35 +65,4 @@ variable "path" {
   description = <<-EOT
     The local file path to stage files for the deployment.
   EOT
-}
-variable "cert_manager_configuration" {
-  type = object({
-    aws_region            = string
-    aws_session_token     = string
-    aws_access_key_id     = string
-    aws_secret_access_key = string
-  })
-  description = <<-EOT
-    The AWS access key information necessary to configure cert-manager.
-    These will be added as environment variables to configure Cert Manager Ambient Credentials.
-    https://cert-manager.io/docs/configuration/acme/dns01/route53/#ambient-credentials
-  EOT
-  default = {
-    aws_region            = ""
-    aws_session_token     = ""
-    aws_access_key_id     = ""
-    aws_secret_access_key = ""
-  }
-  sensitive = true
-}
-variable "backend_file" {
-  type        = string
-  description = <<-EOT
-    Path to a .tfbackend file.
-    This allows the user to pass a backend file.
-    The backend file will be added to the terraform run and will allow state data to be saved remotely.
-    Please note that this is a separate state file, and this backend should be independent of the main module's state and any other submodules' states.
-    See https://developer.hashicorp.com/terraform/language/backend#file for more information.
-  EOT
-  default     = ""
 }

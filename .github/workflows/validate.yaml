@@ -87,7 +87,7 @@ jobs:
           # This format enables automatic generation of changelogs and versioning
           filter() {
             COMMIT="$1"
-            ouput="$(echo "$COMMIT" | grep -e '^fix: ' -e '^feature: ' -e '^feat: ' -e 'refactor!: ' -e 'feature!: ' -e 'feat!: ' -e '^chore(main): ')"
+            output="$(echo "$COMMIT" | grep -e '^fix: ' -e '^feature: ' -e '^feat: ' -e 'refactor!: ' -e 'feature!: ' -e 'feat!: ' -e '^chore(main): ')"
             echo "$output"
           }
           prefix_check() {

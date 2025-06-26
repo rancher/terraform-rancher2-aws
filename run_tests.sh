@@ -131,16 +131,17 @@ if [ -z "$cleanup_id" ]; then
 
   # Run tests initially
   run_tests false
+  sleep 60
 
   # Check if we need to rerun failed tests
   if [ "$rerun_failed" = true ] && [ -f "/tmp/${IDENTIFIER}_failed_tests.txt" ]; then
     echo "Rerunning failed tests..."
     run_tests true
+    sleep 60
   fi
 fi
 
 echo "Clearing leftovers with Id $IDENTIFIER in $AWS_REGION..."
-sleep 60
 
 if [ -n "$IDENTIFIER" ]; then
   attempts=0

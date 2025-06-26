@@ -112,12 +112,17 @@ variable "ip_family" {
   type        = string
   description = "The IP family to use. Must be 'ipv4', 'ipv6', or 'dualstack'."
 }
-variable "ingress_controller" {
-  type        = string
-  description = "The ingress controller to use. Must be 'nginx' or 'traefik'. Currently only supports 'nginx'."
-}
+# variable "ingress_controller" {
+#   type        = string
+#   description = "The ingress controller to use. Must be 'nginx' or 'traefik'. Currently only supports 'nginx'."
+# }
 variable "skip_cert_creation" {
   type        = bool
   description = "Skip the generation of a certificate, useful when configuring cert manager."
   default     = false
+}
+variable "acme_server_url" {
+  type        = string
+  description = "Server URL to make ACME requests to."
+  default     = "https://acme-v02.api.letsencrypt.org/directory"
 }

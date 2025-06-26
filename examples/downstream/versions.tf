@@ -3,7 +3,7 @@ terraform {
   required_providers {
     local = {
       source  = "hashicorp/local"
-      version = ">= 2.4"
+      version = ">= 2.5"
     }
     random = {
       source  = "hashicorp/random"
@@ -39,7 +39,7 @@ terraform {
     }
     helm = {
       source  = "hashicorp/helm"
-      version = ">= 2.14"
+      version = "2.14"
     }
     rancher2 = {
       source  = "rancher/rancher2"

@@ -12,7 +12,7 @@ import (
 	util "github.com/rancher/terraform-rancher2-aws/test/tests"
 )
 
-func TestOneBasic(t *testing.T) {
+func TestOne(t *testing.T) {
 	t.Parallel()
 	id := util.GetId()
 	region := util.GetRegion()

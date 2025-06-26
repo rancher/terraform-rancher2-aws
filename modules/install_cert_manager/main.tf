@@ -12,50 +12,23 @@ locals {
   cert_manager_version    = var.cert_manager_version
   configure_cert_manager  = var.configure_cert_manager
   cert_manager_configured = (local.configure_cert_manager ? "configured" : "unconfigured")
-  cert_manager_path       = "${abspath(path.module)}/${local.cert_manager_configured}"
+  cert_manager_path       = "${path.module}/${local.cert_manager_configured}"
   cert_manager_config     = var.cert_manager_configuration
-  deploy_path             = "${abspath(local.path)}/install_cert_manager"
-  backend_file            = var.backend_file
+  deploy_path             = "${local.path}/install_cert_manager"
 }
 
-resource "terraform_data" "path" {
-  triggers_replace = {
-    main_contents      = md5(file("${local.cert_manager_path}/main.tf"))
-    variables_contents = md5(file("${local.cert_manager_path}/variables.tf"))
-    versions_contents  = md5(file("${local.cert_manager_path}/versions.tf"))
-    backend_contents   = (local.backend_file == "" ? "" : md5(file(local.backend_file)))
-  }
-  provisioner "local-exec" {
-    command = <<-EOT
-      install -d ${local.deploy_path}
-      install -d ${local.deploy_path}/.terraform
-      cp --remove-destination ${local.cert_manager_path}/* ${local.deploy_path}
-      cp --remove-destination "${abspath(path.root)}/.terraform.lock.hcl" ${local.deploy_path}
-      if [ -f "${local.backend_file}" ]; then
-        cp --remove-destination ${local.backend_file} ${local.deploy_path}
-      fi
-      if [ -z "$TF_DATA_DIR" ]; then
-        echo "copying terraform data from default location..."
-        cp -rf --remove-destination "${abspath(path.root)}/.terraform" ${local.deploy_path}
-      else
-        echo "copying terraform data from $TF_DATA_DIR..."
-        cp -rf --remove-destination "$TF_DATA_DIR/modules"   ${local.deploy_path}/.terraform
-        cp -rf --remove-destination "$TF_DATA_DIR/providers" ${local.deploy_path}/.terraform
-      fi
-    EOT
-  }
-}
-
-resource "local_file" "inputs" {
+module "deploy_cert_manager" {
+  source = "../deploy"
   depends_on = [
-    terraform_data.path,
   ]
-  lifecycle {
-    replace_triggered_by = [
-      terraform_data.path.id,
-    ]
+  deploy_path   = local.deploy_path
+  data_path     = local.deploy_path
+  template_path = local.cert_manager_path
+  environment_variables = {
+    KUBE_CONFIG_PATH = "${abspath(local.path)}/kubeconfig"
+    KUBECONFIG       = "${abspath(local.path)}/kubeconfig"
   }
-  content  = <<-EOT
+  inputs = <<-EOT
     project_domain             = "${local.rancher_domain}"
     zone                       = "${local.zone}"
     zone_id                    = "${local.zone_id}"
@@ -70,36 +43,4 @@ resource "local_file" "inputs" {
       aws_secret_access_key = "${local.cert_manager_config.aws_secret_access_key}"
     }
   EOT
-  filename = "${local.deploy_path}/inputs.tfvars"
-}
-
-# this is a one way operation, there is no destroy or update
-resource "terraform_data" "create" {
-  depends_on = [
-    terraform_data.path,
-    local_file.inputs,
-  ]
-  triggers_replace = {
-    path_data   = terraform_data.path.id
-    inputs_data = local_file.inputs.id
-  }
-  provisioner "local-exec" {
-    command = <<-EOT
-      cd ${local.deploy_path}
-      export KUBECONFIG=${abspath(local.path)}/kubeconfig
-      export KUBE_CONFIG_PATH=${abspath(local.path)}/kubeconfig
-
-      EXITCODE=1
-      ATTEMPTS=0
-      MAX=1
-      while [ $EXITCODE -gt 0 ] && [ $ATTEMPTS -lt $MAX ]; do
-        timeout 3600 terraform apply -var-file="inputs.tfvars" -auto-approve -state="${local.deploy_path}/tfstate"
-        EXITCODE=$?
-        ATTEMPTS=$((ATTEMPTS+1))
-        echo "waiting 30 seconds between attempts..."
-        sleep 30
-      done
-      exit $EXITCODE
-    EOT
-  }
 }
