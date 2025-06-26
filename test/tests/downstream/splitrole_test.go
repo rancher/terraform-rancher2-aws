@@ -1,4 +1,4 @@
-package one
+package downstream
 
 import (
 	"os"
@@ -12,11 +12,14 @@ import (
 	util "github.com/rancher/terraform-rancher2-aws/test/tests"
 )
 
-func TestThree(t *testing.T) {
+func TestDownstreamSplitrole(t *testing.T) {
 	t.Parallel()
 	id := util.GetId()
 	region := util.GetRegion()
-	directory := "three"
+	accessKey := util.GetAwsAccessKey()
+	secretKey := util.GetAwsSecretKey()
+	sessionToken := util.GetAwsSessionToken()
+	directory := "downstream_splitrole"
 	owner := "terraform-ci@suse.com"
 	util.SetAcmeServer()
 
@@ -44,6 +47,7 @@ func TestThree(t *testing.T) {
 		os.RemoveAll(testDir)
 		t.Fatalf("Error creating test key pair: %s", err)
 	}
+
 	sshAgent := ssh.SshAgentWithKeyPair(t, keyPair.KeyPair)
 	t.Logf("Key %s created and added to agent", keyPair.Name)
 
@@ -73,14 +77,18 @@ func TestThree(t *testing.T) {
 		TerraformDir: exampleDir,
 		// Variables to pass to our Terraform code using -var options
 		Vars: map[string]interface{}{
-			"identifier":      id,
-			"owner":           owner,
-			"key_name":        keyPair.Name,
-			"key":             keyPair.KeyPair.PublicKey,
-			"zone":            os.Getenv("ZONE"),
-			"rke2_version":    rke2Version,
-			"rancher_version": rancherVersion,
-			"file_path":       testDir,
+			"identifier":            id,
+			"owner":                 owner,
+			"key_name":              keyPair.Name,
+			"key":                   keyPair.KeyPair.PublicKey,
+			"zone":                  os.Getenv("ZONE"),
+			"rke2_version":          rke2Version,
+			"rancher_version":       rancherVersion,
+			"file_path":             testDir,
+			"aws_access_key_id":     accessKey,
+			"aws_secret_access_key": secretKey,
+			"aws_session_token":     sessionToken,
+			"aws_region":            region,
 		},
 		// Environment variables to set when running Terraform
 		EnvVars: map[string]string{
@@ -88,6 +96,8 @@ func TestThree(t *testing.T) {
 			"AWS_REGION":          region,
 			"TF_DATA_DIR":         testDir,
 			"TF_IN_AUTOMATION":    "1",
+			"KUBECONFIG":          testDir + "/kubeconfig",
+			"KUBE_CONFIG_PATH":    testDir,
 			"TF_CLI_ARGS_plan":    "-no-color -state=" + testDir + "/tfstate",
 			"TF_CLI_ARGS_apply":   "-no-color -state=" + testDir + "/tfstate",
 			"TF_CLI_ARGS_destroy": "-no-color -state=" + testDir + "/tfstate",
