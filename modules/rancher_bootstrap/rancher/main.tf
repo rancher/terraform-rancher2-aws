@@ -4,11 +4,37 @@ provider "rancher2" {
 }
 
 locals {
-  rancher_domain       = var.project_domain
+  rancher_domain            = var.project_domain
+  rancher_helm_repo         = var.rancher_helm_repo
+  rancher_helm_channel      = var.rancher_helm_channel
+  rancher_version           = replace(var.rancher_version, "v", "") # don't include the v
+  helm_chart_use_strategy   = var.rancher_helm_chart_use_strategy
+  rancher_helm_chart_values = var.rancher_helm_chart_values
+  default_hc_values = {
+    "hostname"                                            = local.rancher_domain
+    "replicas"                                            = "1"
+    "bootstrapPassword"                                   = "admin"
+    "ingress.enabled"                                     = "true"
+    "ingress.tls.source"                                  = "letsEncrypt"
+    "tls"                                                 = "ingress"
+    "letsEncrypt.ingress.class"                           = "nginx"
+    "letsEncrypt.environment"                             = "production"
+    "letsEncrypt.email"                                   = local.email
+    "certmanager.version"                                 = local.cert_manager_version
+    "agentTLSMode"                                        = "system-store"
+    "ingress.extraAnnotations.cert-manager\\.io\\/issuer" = "rancher"
+  }
+  helm_chart_values = coalesce( # using coalesce like this essentially gives us a switch function
+    (local.helm_chart_use_strategy == "merge" ?
+    merge(local.default_hc_values, local.rancher_helm_chart_values) : null),
+    (local.helm_chart_use_strategy == "default" ?
+    local.default_hc_values : null),
+    (local.helm_chart_use_strategy == "provide" ?
+    local.rancher_helm_chart_values : null)
+  ) # WARNING! Some config is necessary, if the result is an empty string the coalesce will fail
   zone_id              = var.zone_id
   region               = var.region
   email                = var.email
-  rancher_version      = replace(var.rancher_version, "v", "")      # don't include the v
   cert_manager_version = replace(var.cert_manager_version, "v", "") # don't include the v
   acme_server          = var.acme_server_url
 }
@@ -17,17 +43,15 @@ resource "time_sleep" "settle_before_rancher" {
   create_duration = "30s"
 }
 
-resource "kubernetes_namespace" "cattle-system" {
+# uses kubectl to idempotentenly create cattle-system namespace
+resource "terraform_data" "cattle-system" {
   depends_on = [
     time_sleep.settle_before_rancher,
   ]
-  metadata {
-    name = "cattle-system"
-  }
-  lifecycle {
-    ignore_changes = [
-      metadata,
-    ]
+  provisioner "local-exec" {
+    command = <<-EOT
+      kubectl get namespace cattle-system || kubectl create namespace cattle-system
+    EOT
   }
   provisioner "local-exec" {
     command = <<-EOT
@@ -49,7 +73,7 @@ resource "kubernetes_namespace" "cattle-system" {
 resource "kubernetes_manifest" "issuer" {
   depends_on = [
     time_sleep.settle_before_rancher,
-    kubernetes_namespace.cattle-system,
+    terraform_data.cattle-system,
   ]
   manifest = {
     apiVersion = "cert-manager.io/v1"
@@ -96,6 +120,7 @@ resource "kubernetes_manifest" "issuer" {
 resource "terraform_data" "wait_for_nginx" {
   depends_on = [
     time_sleep.settle_before_rancher,
+    terraform_data.cattle-system,
     kubernetes_manifest.issuer,
   ]
   provisioner "local-exec" {
@@ -116,38 +141,39 @@ resource "terraform_data" "wait_for_nginx" {
   }
 }
 
-# WARNING! This adds git, yq, and helm to the dependency list!
-resource "terraform_data" "build_chart" {
-  depends_on = [
-    time_sleep.settle_before_rancher,
-  ]
-  provisioner "local-exec" {
-    command = <<-EOT
-      cd ${abspath(path.root)} || true
-      if [ -d chart ]; then
-        rm -rf chart
-      fi
-      mkdir chart
-      cd chart || exit 1
-      ${abspath(path.module)}/build_chart.sh "${local.rancher_version}"
-      cd ${abspath(path.root)} || true
-      mv chart/rancher-${local.rancher_version}.tgz .
-      rm -rf chart
-      ls ${abspath(path.root)}/rancher-${local.rancher_version}.tgz
-    EOT
-  }
-}
+# # WARNING! This adds git, yq, and helm to the dependency list!
+# resource "terraform_data" "build_chart" {
+#   depends_on = [
+#     time_sleep.settle_before_rancher,
+#   ]
+#   provisioner "local-exec" {
+#     command = <<-EOT
+#       cd ${abspath(path.root)} || true
+#       if [ -d chart ]; then
+#         rm -rf chart
+#       fi
+#       mkdir chart
+#       cd chart || exit 1
+#       ${abspath(path.module)}/build_chart.sh "${local.rancher_version}"
+#       cd ${abspath(path.root)} || true
+#       mv chart/rancher-${local.rancher_version}.tgz .
+#       rm -rf chart
+#       ls ${abspath(path.root)}/rancher-${local.rancher_version}.tgz
+#     EOT
+#   }
+# }
 
 # https://github.com/rancher/rancher/blob/main/chart/values.yaml
 resource "helm_release" "rancher" {
   depends_on = [
     time_sleep.settle_before_rancher,
+    terraform_data.cattle-system,
     kubernetes_manifest.issuer,
     terraform_data.wait_for_nginx,
-    terraform_data.build_chart,
+    # terraform_data.build_chart,
   ]
   name             = "rancher"
-  chart            = "${path.root}/rancher-${local.rancher_version}.tgz" # "${local.rancher_helm_repository}/${local.rancher_channel}/rancher-${local.rancher_version}.tgz"
+  chart            = "${local.rancher_helm_repo}/${local.rancher_helm_channel}/rancher-${local.rancher_version}.tgz" # "${path.root}/rancher-${local.rancher_version}.tgz"
   namespace        = "cattle-system"
   create_namespace = false
   wait             = false
@@ -155,63 +181,23 @@ resource "helm_release" "rancher" {
   force_update     = true
   timeout          = 1800 # 30m
 
-  set {
-    name  = "hostname"
-    value = local.rancher_domain
-  }
-  set {
-    name  = "replicas"
-    value = "1"
-  }
-  set {
-    name  = "bootstrapPassword"
-    value = "admin"
-  }
-  set {
-    name  = "ingress.enabled"
-    value = "true"
-  }
-  set {
-    name  = "ingress.tls.source"
-    value = "letsEncrypt"
-  }
-  set {
-    name  = "tls"
-    value = "ingress"
-  }
-  set {
-    name  = "letsEncrypt.ingress.class"
-    value = "nginx"
-  }
-  set {
-    name  = "letsEncrypt.environment"
-    value = "production"
-  }
-  set {
-    name  = "letsEncrypt.email"
-    value = local.email
-  }
-  set {
-    name  = "certmanager.version"
-    value = local.cert_manager_version
-  }
-  set {
-    name  = "ingress.extraAnnotations.cert-manager\\.io\\/issuer"
-    value = "rancher"
-  }
-  set {
-    name  = "agentTLSMode"
-    value = "system-store"
+  dynamic "set" {
+    for_each = local.helm_chart_values
+    content {
+      name  = set.key
+      value = set.value
+    }
   }
 }
 
 resource "terraform_data" "wait_for_rancher" {
   depends_on = [
     time_sleep.settle_before_rancher,
+    terraform_data.cattle-system,
     kubernetes_manifest.issuer,
     terraform_data.wait_for_nginx,
-    terraform_data.build_chart,
     helm_release.rancher,
+    # terraform_data.build_chart,
   ]
   provisioner "local-exec" {
     command = <<-EOT
@@ -227,11 +213,12 @@ resource "terraform_data" "wait_for_rancher" {
 resource "terraform_data" "get_public_cert_info" {
   depends_on = [
     time_sleep.settle_before_rancher,
+    terraform_data.cattle-system,
     kubernetes_manifest.issuer,
     terraform_data.wait_for_nginx,
-    terraform_data.build_chart,
     helm_release.rancher,
     terraform_data.wait_for_rancher,
+    # terraform_data.build_chart,
   ]
   provisioner "local-exec" {
     command = <<-EOT
@@ -261,6 +248,8 @@ resource "terraform_data" "get_public_cert_info" {
         echo "$E"
         timeout 3600 kubectl get order -A
         timeout 3600 kubectl get challenge -A
+        timeout 3600 kubectl get CertificateRequest -A
+        timeout 3600 kubectl get Certificate -A
         timeout 3600 kubectl describe order -n cattle-system
         timeout 3600 kubectl describe challenge -n cattle-system
         exit 1
@@ -278,12 +267,13 @@ resource "random_password" "password" {
 resource "rancher2_bootstrap" "admin" {
   depends_on = [
     time_sleep.settle_before_rancher,
+    terraform_data.cattle-system,
     kubernetes_manifest.issuer,
     terraform_data.wait_for_nginx,
-    terraform_data.build_chart,
     helm_release.rancher,
     terraform_data.wait_for_rancher,
     terraform_data.get_public_cert_info,
+    # terraform_data.build_chart,
   ]
   password = random_password.password.result
 }

@@ -4,8 +4,30 @@ provider "rancher2" {
 }
 
 locals {
-  rancher_domain  = var.project_domain
-  rancher_version = replace(var.rancher_version, "v", "") # don't include the v
+  rancher_domain            = var.project_domain
+  rancher_helm_repo         = var.rancher_helm_repo
+  rancher_helm_channel      = var.rancher_helm_channel
+  rancher_version           = replace(var.rancher_version, "v", "") # don't include the v
+  helm_chart_use_strategy   = var.rancher_helm_chart_use_strategy
+  rancher_helm_chart_values = var.rancher_helm_chart_values
+  default_hc_values = {
+    "hostname"               = local.rancher_domain
+    "replicas"               = "1"
+    "bootstrapPassword"      = "admin"
+    "ingress.enabled"        = "true"
+    "ingress.tls.source"     = "secret"
+    "ingress.tls.secretName" = "tls-rancher-ingress"
+    "privateCA"              = "true"
+    "agentTLSMode"           = "system-store"
+  }
+  helm_chart_values = coalesce( # using coalesce like this essentially gives us a switch function
+    (local.helm_chart_use_strategy == "merge" ?
+    merge(local.default_hc_values, local.rancher_helm_chart_values) : null),
+    (local.helm_chart_use_strategy == "default" ?
+    local.default_hc_values : null),
+    (local.helm_chart_use_strategy == "provide" ?
+    local.rancher_helm_chart_values : null)
+  ) # WARNING! Some config is necessary, if the result is an empty string the coalesce will fail
 }
 
 resource "time_sleep" "settle_before_rancher" {
@@ -34,37 +56,37 @@ resource "terraform_data" "wait_for_nginx" {
   }
 }
 
-# WARNING! This adds git, yq, and helm to the dependency list!
-resource "terraform_data" "build_chart" {
-  depends_on = [
-    time_sleep.settle_before_rancher,
-  ]
-  provisioner "local-exec" {
-    command = <<-EOT
-      cd ${abspath(path.root)} || true
-      if [ -d chart ]; then
-        rm -rf chart
-      fi
-      mkdir chart
-      cd chart || exit 1
-      ${abspath(path.module)}/build_chart.sh "${local.rancher_version}"
-      cd ${abspath(path.root)} || true
-      mv chart/rancher-${local.rancher_version}.tgz .
-      rm -rf chart
-      ls ${abspath(path.root)}/rancher-${local.rancher_version}.tgz
-    EOT
-  }
-}
+# # WARNING! This adds git, yq, and helm to the dependency list!
+# resource "terraform_data" "build_chart" {
+#   depends_on = [
+#     time_sleep.settle_before_rancher,
+#   ]
+#   provisioner "local-exec" {
+#     command = <<-EOT
+#       cd ${abspath(path.root)} || true
+#       if [ -d chart ]; then
+#         rm -rf chart
+#       fi
+#       mkdir chart
+#       cd chart || exit 1
+#       ${abspath(path.module)}/build_chart.sh "${local.rancher_version}"
+#       cd ${abspath(path.root)} || true
+#       mv chart/rancher-${local.rancher_version}.tgz .
+#       rm -rf chart
+#       ls ${abspath(path.root)}/rancher-${local.rancher_version}.tgz
+#     EOT
+#   }
+# }
 
 # https://github.com/rancher/rancher/blob/main/chart/values.yaml
 resource "helm_release" "rancher" {
   depends_on = [
     time_sleep.settle_before_rancher,
     terraform_data.wait_for_nginx,
-    terraform_data.build_chart,
+    # terraform_data.build_chart,
   ]
   name             = "rancher"
-  chart            = "${path.root}/rancher-${local.rancher_version}.tgz" #"${local.rancher_helm_repository}/${local.rancher_channel}/rancher-${local.rancher_version}.tgz"
+  chart            = "${local.rancher_helm_repo}/${local.rancher_helm_channel}/rancher-${local.rancher_version}.tgz" # "${path.root}/rancher-${local.rancher_version}.tgz"
   namespace        = "cattle-system"
   create_namespace = false
   wait             = false
@@ -72,43 +94,19 @@ resource "helm_release" "rancher" {
   force_update     = true
   timeout          = 1800 # 30m
 
-  set {
-    name  = "hostname"
-    value = local.rancher_domain
-  }
-  set {
-    name  = "replicas"
-    value = "2" # this should be variable on number of nodes deployed
-  }
-  set {
-    name  = "bootstrapPassword"
-    value = "admin"
-  }
-  set {
-    name  = "ingress.enabled"
-    value = "true"
-  }
-  set {
-    name  = "ingress.tls.source"
-    value = "secret"
-  }
-  set {
-    name  = "ingress.tls.secretName"
-    value = "tls-rancher-ingress"
-  }
-  set {
-    name  = "privateCA"
-    value = "true"
-  }
-  set {
-    name  = "agentTLSMode"
-    value = "system-store"
+  dynamic "set" {
+    for_each = local.helm_chart_values
+    content {
+      name  = set.key
+      value = set.value
+    }
   }
 }
 
 resource "terraform_data" "wait_for_rancher" {
   depends_on = [
     time_sleep.settle_before_rancher,
+    terraform_data.wait_for_nginx,
     helm_release.rancher,
   ]
   provisioner "local-exec" {
@@ -131,6 +129,7 @@ resource "terraform_data" "get_public_cert_info" {
   depends_on = [
     random_password.password,
     time_sleep.settle_before_rancher,
+    terraform_data.wait_for_nginx,
     helm_release.rancher,
     terraform_data.wait_for_rancher,
   ]
@@ -154,6 +153,7 @@ resource "terraform_data" "get_ping" {
   depends_on = [
     random_password.password,
     time_sleep.settle_before_rancher,
+    terraform_data.wait_for_nginx,
     helm_release.rancher,
     terraform_data.wait_for_rancher,
     terraform_data.get_public_cert_info,
@@ -187,6 +187,7 @@ resource "rancher2_bootstrap" "admin" {
   depends_on = [
     random_password.password,
     time_sleep.settle_before_rancher,
+    terraform_data.wait_for_nginx,
     helm_release.rancher,
     terraform_data.wait_for_rancher,
     terraform_data.get_public_cert_info,

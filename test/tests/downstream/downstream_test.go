@@ -19,7 +19,7 @@ func TestDownstreamBasic(t *testing.T) {
 	accessKey := util.GetAwsAccessKey()
 	secretKey := util.GetAwsSecretKey()
 	sessionToken := util.GetAwsSessionToken()
-	directory := "deploy_rke2"
+	directory := "downstream"
 	owner := "terraform-ci@suse.com"
 	util.SetAcmeServer()
 
@@ -132,14 +132,14 @@ func TestDownstreamBasic(t *testing.T) {
 	sshAgent.Stop()
 }
 
-func TestDownstreamRoles(t *testing.T) {
+func TestDownstreamSplitrole(t *testing.T) {
 	t.Parallel()
 	id := util.GetId()
 	region := util.GetRegion()
 	accessKey := util.GetAwsAccessKey()
 	secretKey := util.GetAwsSecretKey()
 	sessionToken := util.GetAwsSessionToken()
-	directory := "deploy_rke2_multiple_pools"
+	directory := "downstream_splitrole"
 	owner := "terraform-ci@suse.com"
 	util.SetAcmeServer()
 

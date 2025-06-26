@@ -15,17 +15,16 @@ data "aws_secretsmanager_secret_version" "project_cert_key" {
 resource "time_sleep" "settle_before_cert_manager" {
   create_duration = "30s"
 }
-resource "kubernetes_namespace" "cattle_system" {
+
+# uses kubectl to idempotentenly create cattle-system namespace
+resource "terraform_data" "cattle-system" {
   depends_on = [
     time_sleep.settle_before_cert_manager,
   ]
-  metadata {
-    name = "cattle-system"
-  }
-  lifecycle {
-    ignore_changes = [
-      metadata,
-    ]
+  provisioner "local-exec" {
+    command = <<-EOT
+      kubectl get namespace cattle-system || kubectl create namespace cattle-system
+    EOT
   }
   provisioner "local-exec" {
     command = <<-EOT
@@ -43,10 +42,11 @@ resource "kubernetes_namespace" "cattle_system" {
     when    = destroy
   }
 }
+
 resource "kubernetes_secret" "tls_rancher_ingress" {
   depends_on = [
     time_sleep.settle_before_cert_manager,
-    kubernetes_namespace.cattle_system,
+    terraform_data.cattle-system,
   ]
   metadata {
     name      = "tls-rancher-ingress"
@@ -67,10 +67,11 @@ resource "kubernetes_secret" "tls_rancher_ingress" {
     ]
   }
 }
+
 resource "kubernetes_secret" "tls_rancher_ca" {
   depends_on = [
     time_sleep.settle_before_cert_manager,
-    kubernetes_namespace.cattle_system,
+    terraform_data.cattle-system,
     kubernetes_secret.tls_rancher_ingress,
   ]
   metadata {
@@ -87,11 +88,12 @@ resource "kubernetes_secret" "tls_rancher_ca" {
     ]
   }
 }
+
 # https://github.com/cert-manager/cert-manager/blob/master/deploy/charts/cert-manager/values.yaml
 resource "helm_release" "cert_manager_unconfigured" {
   depends_on = [
     time_sleep.settle_before_cert_manager,
-    kubernetes_namespace.cattle_system,
+    terraform_data.cattle-system,
     kubernetes_secret.tls_rancher_ingress,
     kubernetes_secret.tls_rancher_ca,
   ]

@@ -29,3 +29,5 @@ examples/basic/rancher_bootstrap
 .terraform.lock.hcl
 run.sh
 *.test
+static_files.txt
+* copy

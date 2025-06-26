@@ -1,4 +1,4 @@
-package prod
+package one
 
 import (
 	"os"
@@ -12,11 +12,11 @@ import (
 	util "github.com/rancher/terraform-rancher2-aws/test/tests"
 )
 
-func TestProd(t *testing.T) {
+func TestThree(t *testing.T) {
 	t.Parallel()
 	id := util.GetId()
 	region := util.GetRegion()
-	directory := "prod"
+	directory := "three"
 	owner := "terraform-ci@suse.com"
 	util.SetAcmeServer()
 
@@ -44,7 +44,6 @@ func TestProd(t *testing.T) {
 		os.RemoveAll(testDir)
 		t.Fatalf("Error creating test key pair: %s", err)
 	}
-
 	sshAgent := ssh.SshAgentWithKeyPair(t, keyPair.KeyPair)
 	t.Logf("Key %s created and added to agent", keyPair.Name)
 
@@ -99,6 +98,7 @@ func TestProd(t *testing.T) {
 		SshAgent:                 sshAgent,
 		Upgrade:                  true,
 	})
+
 	_, err = terraform.InitAndApplyE(t, terraformOptions)
 	if err != nil {
 		t.Log("Test failed, tearing down...")

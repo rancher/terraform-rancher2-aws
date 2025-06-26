@@ -3,7 +3,7 @@ terraform {
   required_providers {
     helm = {
       source  = "hashicorp/helm"
-      version = ">= 2.14"
+      version = "2.14"
     }
     kubernetes = {
       source  = "hashicorp/kubernetes"
@@ -11,7 +11,7 @@ terraform {
     }
     local = {
       source  = "hashicorp/local"
-      version = ">= 2.5.2"
+      version = ">= 2.5"
     }
     time = {
       source  = "hashicorp/time"
