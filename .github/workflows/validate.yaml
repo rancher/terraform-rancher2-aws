@@ -87,17 +87,19 @@ jobs:
           # This format enables automatic generation of changelogs and versioning
           filter() {
             COMMIT="$1"
-            output="$(echo "$COMMIT" | grep -e '^fix: ' -e '^feature: ' -e '^feat: ' -e 'refactor!: ' -e 'feature!: ' -e 'feat!: ' -e '^chore(main): ')"
+            output="$(echo "$COMMIT" | grep -e '^fix: ' -e '^feature: ' -e '^feat: ' -e '^refactor!: ' -e '^feature!: ' -e '^feat!: ' -e '^chore(main): ')"
             echo "$output"
           }
           prefix_check() {
             message="$1"
-            if [ "" != "$(filter "$message")" ]; then
-              echo "...Commit message does not start with the required prefix.
+            if [ -z "$(filter "$message")" ]; then
+              cat <<-EOT
+              ...Commit message does not start with the required prefix.
               Please use one of the following prefixes: fix:, feature:, feat:, refactor!:, feature!:, feat:!.
               'chore(main): ' is also allowed for release PRs.
               This enables release-please to automatically determine the type of release (major, minor, patch) based on the commit message.
-              $message"
+              $message
+              EOT
               exit 1
             else
               echo "...Commit message starts with the required prefix."
@@ -105,7 +107,7 @@ jobs:
           }
           empty_check() {
             message="$1"
-            if [ "" == "$message" ]; then
+            if [ -z "$message" ]; then
               echo "...Empty commit message."
               exit 1
             else
@@ -141,9 +143,9 @@ jobs:
 
           while read -r message; do
             echo "checking message ^$message\$"
-            prefix_check "$message"
             empty_check "$message"
             length_check "$message"
+            prefix_check "$message"
             spell_check "$message"
             echo "message ^$message\$ passed all checks"
           done <<<"$COMMIT_MESSAGES"
