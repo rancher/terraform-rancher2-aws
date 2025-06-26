@@ -93,13 +93,12 @@ jobs:
           prefix_check() {
             message="$1"
             if [ -z "$(filter "$message")" ]; then
-              cat <<-EOT
+              echo "
               ...Commit message does not start with the required prefix.
               Please use one of the following prefixes: fix:, feature:, feat:, refactor!:, feature!:, feat:!.
               'chore(main): ' is also allowed for release PRs.
               This enables release-please to automatically determine the type of release (major, minor, patch) based on the commit message.
-              $message
-              EOT
+              $message"
               exit 1
             else
               echo "...Commit message starts with the required prefix."
