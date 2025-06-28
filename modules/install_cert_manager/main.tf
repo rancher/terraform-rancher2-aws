@@ -24,6 +24,7 @@ module "deploy_cert_manager" {
   deploy_path   = local.deploy_path
   data_path     = local.deploy_path
   template_path = local.cert_manager_path
+  skip_destroy  = true # this is a one way operation, uninstall is not supported
   environment_variables = {
     KUBE_CONFIG_PATH = "${abspath(local.path)}/kubeconfig"
     KUBECONFIG       = "${abspath(local.path)}/kubeconfig"

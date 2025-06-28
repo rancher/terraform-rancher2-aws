@@ -22,6 +22,16 @@ provider "rancher2" {
   timeout   = "300s"
 }
 
+terraform {
+  backend "s3" {
+    # This needs to be set in the backend configs on the command line.
+    # bucket = local.identifier
+    # https://developer.hashicorp.com/terraform/language/backend/s3
+    # https://developer.hashicorp.com/terraform/language/backend#partial-configuration
+    key = "tfstate"
+  }
+}
+
 resource "rancher2_bootstrap" "authenticate" {
   depends_on = [
     module.rancher,

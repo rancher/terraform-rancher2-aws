@@ -23,6 +23,7 @@ module "deploy_rancher" {
   deploy_path   = local.deploy_path
   data_path     = local.deploy_path
   template_path = local.rancher_path
+  skip_destroy  = true # this is a one way operation, uninstall not supported
   environment_variables = {
     KUBECONFIG       = "${local.path}/kubeconfig"
     KUBE_CONFIG_PATH = "${local.path}/kubeconfig"

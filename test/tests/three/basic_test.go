@@ -3,6 +3,7 @@ package one
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	aws "github.com/gruntwork-io/terratest/modules/aws"
@@ -38,23 +39,31 @@ func TestThreeBasic(t *testing.T) {
 		os.RemoveAll(testDir)
 		t.Fatalf("Error creating test key pair: %s", err)
 	}
-
 	err = os.WriteFile(testDir+"/id_rsa", []byte(keyPair.KeyPair.PrivateKey), 0600)
 	if err != nil {
+		err = aws.DeleteEC2KeyPairE(t, keyPair)
+		if err != nil {
+			t.Logf("Failed to destroy key pair: %v", err)
+		}
 		os.RemoveAll(testDir)
 		t.Fatalf("Error creating test key pair: %s", err)
 	}
-  sshAgent := ssh.SshAgentWithKeyPair(t, keyPair.KeyPair)
+	sshAgent := ssh.SshAgentWithKeyPair(t, keyPair.KeyPair)
 	t.Logf("Key %s created and added to agent", keyPair.Name)
 
-  // here we need to create an object storage to hold the remote state
+	var tfOptions []*terraform.Options
+	backendTerraformOptions, err := util.CreateObjectStorageBackend(t, testDir, id, owner, region)
+	tfOptions = append(tfOptions, backendTerraformOptions)
+	if err != nil {
+		t.Log("Test failed, tearing down...")
+		util.Teardown(t, testDir, exampleDir, tfOptions, keyPair, sshAgent)
+		t.Fatalf("Error creating cluster: %s", err)
+	}
 
 	// use oldest RKE2, remember it releases much more than Rancher
 	_, _, rke2Version, err := util.GetRke2Releases()
 	if err != nil {
-		os.RemoveAll(testDir)
-		aws.DeleteEC2KeyPair(t, keyPair)
-		sshAgent.Stop()
+		util.Teardown(t, testDir, exampleDir, tfOptions, keyPair, sshAgent)
 		t.Fatalf("Error getting Rke2 release version: %s", err)
 	}
 
@@ -65,9 +74,7 @@ func TestThreeBasic(t *testing.T) {
 		_, rancherVersion, _, err = util.GetRancherReleases()
 	}
 	if err != nil {
-		os.RemoveAll(testDir)
-		aws.DeleteEC2KeyPair(t, keyPair)
-		sshAgent.Stop()
+		util.Teardown(t, testDir, exampleDir, tfOptions, keyPair, sshAgent)
 		t.Fatalf("Error getting Rancher release version: %s", err)
 	}
 
@@ -90,24 +97,25 @@ func TestThreeBasic(t *testing.T) {
 			"AWS_REGION":          region,
 			"TF_DATA_DIR":         testDir,
 			"TF_IN_AUTOMATION":    "1",
-			"TF_CLI_ARGS_plan":    "-no-color -state=" + testDir + "/tfstate",
-			"TF_CLI_ARGS_apply":   "-no-color -state=" + testDir + "/tfstate",
-			"TF_CLI_ARGS_destroy": "-no-color -state=" + testDir + "/tfstate",
-			"TF_CLI_ARGS_output":  "-no-color -state=" + testDir + "/tfstate",
+			"TF_CLI_ARGS_init":    "-backend-config=\"bucket=" + strings.ToLower(id) + "\"",
+			"TF_CLI_ARGS_plan":    "-no-color",
+			"TF_CLI_ARGS_apply":   "-no-color",
+			"TF_CLI_ARGS_destroy": "-no-color",
+			"TF_CLI_ARGS_output":  "-no-color",
 		},
 		RetryableTerraformErrors: util.GetRetryableTerraformErrors(),
 		NoColor:                  true,
 		SshAgent:                 sshAgent,
 		Upgrade:                  true,
 	})
-
+	// we need to prepend the main options because we need to destroy it before the backend
+	tfOptions = append([]*terraform.Options{terraformOptions}, tfOptions...)
+	t.Logf("tfOptions: %v", tfOptions)
 	_, err = terraform.InitAndApplyE(t, terraformOptions)
 	if err != nil {
 		t.Log("Test failed, tearing down...")
 		util.GetErrorLogs(t, testDir+"/kubeconfig")
-		util.Teardown(t, testDir, terraformOptions, keyPair)
-		os.Remove(exampleDir + ".terraform.lock.hcl")
-		sshAgent.Stop()
+		util.Teardown(t, testDir, exampleDir, tfOptions, keyPair, sshAgent)
 		t.Fatalf("Error creating cluster: %s", err)
 	}
 	util.CheckReady(t, testDir+"/kubeconfig")
@@ -117,7 +125,5 @@ func TestThreeBasic(t *testing.T) {
 	} else {
 		t.Log("Test passed...")
 	}
-	util.Teardown(t, testDir, terraformOptions, keyPair)
-	os.Remove(exampleDir + "/.terraform.lock.hcl")
-	sshAgent.Stop()
+	util.Teardown(t, testDir, exampleDir, tfOptions, keyPair, sshAgent)
 }

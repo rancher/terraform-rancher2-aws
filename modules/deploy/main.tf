@@ -76,11 +76,11 @@ resource "terraform_data" "destroy" {
   provisioner "local-exec" {
     when = destroy
     command = templatefile("${path.module}/destroy.sh.tpl", {
-      export_hash  = self.triggers_replace.env
-      tf_data_dir  = self.triggers_replace.dd
-      deploy_path  = self.triggers_replace.dp
-      skip_destroy = self.triggers_replace.sd
-      timeout      = self.triggers_replace.to
+      export_contents = self.triggers_replace.ec
+      tf_data_dir     = self.triggers_replace.dd
+      deploy_path     = self.triggers_replace.dp
+      skip_destroy    = self.triggers_replace.sd
+      timeout         = self.triggers_replace.to
     })
   }
 }
@@ -92,9 +92,7 @@ resource "terraform_data" "create" {
     terraform_data.destroy,
   ]
   triggers_replace = {
-    inputs = local.inputs_hash
-    files  = local.template_files_hash
-    env    = local.export_hash
+    files = local.template_files_hash
   }
   provisioner "local-exec" {
     command = templatefile("${path.module}/create.sh.tpl", {
@@ -135,6 +133,36 @@ module "persist_outputs" {
   recreate   = terraform_data.create.id
 }
 
+# during initial create this should be an extra apply that has no effect
+# when the inputs change and the template needs to be rebuilt this will allow the persist
+#  to rebuild the template before running the create script
+resource "terraform_data" "create_after_persist" {
+  depends_on = [
+    module.persist_template,
+    module.persist_inputs,
+    terraform_data.destroy,
+    terraform_data.create,
+    module.persist_state,
+    module.persist_outputs,
+  ]
+  triggers_replace = {
+    inputs = local.inputs_hash
+    files  = local.template_files_hash
+    env    = local.export_hash
+  }
+  provisioner "local-exec" {
+    command = templatefile("${path.module}/create.sh.tpl", {
+      export_contents = local.export_contents
+      deploy_path     = local.deploy_path
+      tf_data_dir     = local.tf_data_dir
+      init_script     = local.init_script
+      attempts        = local.attempts
+      timeout         = local.timeout
+      interval        = local.interval
+    })
+  }
+}
+
 resource "terraform_data" "destroy_end" {
   depends_on = [
     module.persist_template,
@@ -143,6 +171,7 @@ resource "terraform_data" "destroy_end" {
     terraform_data.create,
     module.persist_state,
     module.persist_outputs,
+    terraform_data.create_after_persist,
   ]
   triggers_replace = {
     inputs = local.inputs_hash
@@ -157,11 +186,11 @@ resource "terraform_data" "destroy_end" {
   provisioner "local-exec" {
     when = destroy
     command = templatefile("${path.module}/destroy.sh.tpl", {
-      export_hash  = self.triggers_replace.env
-      tf_data_dir  = self.triggers_replace.dd
-      deploy_path  = self.triggers_replace.dp
-      skip_destroy = self.triggers_replace.sd
-      timeout      = self.triggers_replace.to
+      export_contents = self.triggers_replace.ec
+      tf_data_dir     = self.triggers_replace.dd
+      deploy_path     = self.triggers_replace.dp
+      skip_destroy    = self.triggers_replace.sd
+      timeout         = self.triggers_replace.to
     })
   }
 }
