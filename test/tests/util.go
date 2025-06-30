@@ -3,6 +3,7 @@ package tests
 import (
 	"cmp"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -399,6 +400,11 @@ func Teardown(t *testing.T, dataDir string, exampleDir string, options []*terraf
 	if directoryExists {
 		for _, option := range options {
 			t.Logf("Tearing down %v", option.TerraformDir)
+			jsonOptions, err := json.Marshal(option)
+			if err != nil {
+				t.Logf("Failed to marshal options for destroy log: %v", err)
+			}
+			fmt.Println(string(jsonOptions))
 			_, err = terraform.InitE(t, option)
 			if err != nil {
 				t.Logf("Failed to init for destroy: %v", err)
@@ -514,15 +520,15 @@ func CreateObjectStorageBackend(t *testing.T, testDir string, id string, owner s
 		EnvVars: map[string]string{
 			"AWS_DEFAULT_REGION":  region,
 			"AWS_REGION":          region,
-			"TF_DATA_DIR":         testDir,
+			"TF_DATA_DIR":         testDir + "/backend",
 			"TF_IN_AUTOMATION":    "1",
-			"TF_CLI_ARGS_init":    "-reconfigure",
 			"TF_CLI_ARGS_plan":    "-state=" + testDir + "/backend/tfstate",
 			"TF_CLI_ARGS_apply":   "-state=" + testDir + "/backend/tfstate",
 			"TF_CLI_ARGS_destroy": "-state=" + testDir + "/backend/tfstate",
 			"TF_CLI_ARGS_output":  "-state=" + testDir + "/backend/tfstate",
 		},
 		RetryableTerraformErrors: GetRetryableTerraformErrors(),
+		Reconfigure:              true,
 		NoColor:                  true,
 		Upgrade:                  true,
 	})

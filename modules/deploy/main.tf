@@ -34,7 +34,7 @@ locals {
   interval     = var.interval
   timeout      = var.timeout
   init         = var.init
-  init_script  = (local.init ? "terraform init -upgrade" : "")
+  init_script  = (local.init ? "terraform init -reconfigure -upgrade" : "")
   tf_data_dir  = var.data_path != null ? var.data_path : path.root
   skip_destroy = (var.skip_destroy ? "true" : "")
 }

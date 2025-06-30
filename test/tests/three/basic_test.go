@@ -51,9 +51,8 @@ func TestThreeBasic(t *testing.T) {
 	sshAgent := ssh.SshAgentWithKeyPair(t, keyPair.KeyPair)
 	t.Logf("Key %s created and added to agent", keyPair.Name)
 
-	var tfOptions []*terraform.Options
 	backendTerraformOptions, err := util.CreateObjectStorageBackend(t, testDir, id, owner, region)
-	tfOptions = append(tfOptions, backendTerraformOptions)
+	tfOptions := []*terraform.Options{backendTerraformOptions}
 	if err != nil {
 		t.Log("Test failed, tearing down...")
 		util.Teardown(t, testDir, exampleDir, tfOptions, keyPair, sshAgent)
@@ -93,29 +92,25 @@ func TestThreeBasic(t *testing.T) {
 		},
 		// Environment variables to set when running Terraform
 		EnvVars: map[string]string{
-			"AWS_DEFAULT_REGION":  region,
-			"AWS_REGION":          region,
-			"TF_DATA_DIR":         testDir,
-			"TF_IN_AUTOMATION":    "1",
-			"TF_CLI_ARGS_init":    "-backend-config=\"bucket=" + strings.ToLower(id) + "\"",
-			"TF_CLI_ARGS_plan":    "-no-color",
-			"TF_CLI_ARGS_apply":   "-no-color",
-			"TF_CLI_ARGS_destroy": "-no-color",
-			"TF_CLI_ARGS_output":  "-no-color",
+			"AWS_DEFAULT_REGION": region,
+			"AWS_REGION":         region,
+			"TF_DATA_DIR":        testDir,
+			"TF_IN_AUTOMATION":   "1",
+			"TF_CLI_ARGS_init":   "-backend-config=\"bucket=" + strings.ToLower(id) + "\"",
 		},
 		RetryableTerraformErrors: util.GetRetryableTerraformErrors(),
 		NoColor:                  true,
 		SshAgent:                 sshAgent,
+		Reconfigure:              true,
 		Upgrade:                  true,
 	})
 	// we need to prepend the main options because we need to destroy it before the backend
-	tfOptions = append([]*terraform.Options{terraformOptions}, tfOptions...)
-	t.Logf("tfOptions: %v", tfOptions)
+	newTfOptions := []*terraform.Options{terraformOptions, backendTerraformOptions}
 	_, err = terraform.InitAndApplyE(t, terraformOptions)
 	if err != nil {
 		t.Log("Test failed, tearing down...")
 		util.GetErrorLogs(t, testDir+"/kubeconfig")
-		util.Teardown(t, testDir, exampleDir, tfOptions, keyPair, sshAgent)
+		util.Teardown(t, testDir, exampleDir, newTfOptions, keyPair, sshAgent)
 		t.Fatalf("Error creating cluster: %s", err)
 	}
 	util.CheckReady(t, testDir+"/kubeconfig")
@@ -125,5 +120,5 @@ func TestThreeBasic(t *testing.T) {
 	} else {
 		t.Log("Test passed...")
 	}
-	util.Teardown(t, testDir, exampleDir, tfOptions, keyPair, sshAgent)
+	util.Teardown(t, testDir, exampleDir, newTfOptions, keyPair, sshAgent)
 }
