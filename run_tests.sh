@@ -21,6 +21,7 @@ EOT
   esac
 done
 
+# shellcheck disable=SC2143
 if [ -n "$cleanup_id" ]; then
   export IDENTIFIER="$cleanup_id"
 fi
@@ -72,11 +73,13 @@ EOF
   fi
 
   local specific_test_flag=""
+  # shellcheck disable=SC2143
   if [ -n "$specific_test" ]; then
     specific_test_flag="-run=$specific_test"
   fi
 
   local package_pattern=""
+  # shellcheck disable=SC2143
   if [ -n "$specific_package" ]; then
     package_pattern="$specific_package"
   else
@@ -143,6 +146,7 @@ fi
 
 echo "Clearing leftovers with Id $IDENTIFIER in $AWS_REGION..."
 
+# shellcheck disable=SC2143
 if [ -n "$IDENTIFIER" ]; then
   attempts=0
   # shellcheck disable=SC2143
@@ -171,8 +175,8 @@ if [ -n "$IDENTIFIER" ]; then
 
   # remove s3 storage
   attempts=0
-  # shellcheck disable=SC2143
   ID="$(aws s3 ls | grep -i "$IDENTIFIER" | awk '{print $3}')"
+  # shellcheck disable=SC2143
   while [ -n "$(aws s3 ls | grep -i "$IDENTIFIER")" ] && [ $attempts -lt 3 ]; do
     echo "found s3 bucket $ID, removing..."
     while read -r v; do
@@ -202,11 +206,11 @@ if [ -n "$IDENTIFIER" ]; then
     while read -r line; do
       if [ -z "$line" ]; then continue; fi
       echo "removing load balancer target group, $line..."
-      aws elbv2 delete-target-group --target-group-arn $line;
+      aws elbv2 delete-target-group --target-group-arn "$line";
     done <<<"$(
       while read -r line; do
         if [ -z "$line" ]; then continue; fi
-        aws elbv2 describe-tags --resource-arns $line | jq -r --arg id "$IDENTIFIER" '.TagDescriptions[] | select(any(.Tags[]; .Key == "Id" and .Value == $id)) | .ResourceArn // ""';
+        aws elbv2 describe-tags --resource-arns "$line" | jq -r --arg id "$IDENTIFIER" '.TagDescriptions[] | select(any(.Tags[]; .Key == "Id" and .Value == $id)) | .ResourceArn // ""';
       done <<<"$(aws elbv2 describe-target-groups | jq -r '.TargetGroups[]?.TargetGroupArn')"
     )"
     sleep 10
