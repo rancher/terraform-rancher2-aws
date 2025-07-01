@@ -34,7 +34,7 @@ locals {
   interval     = var.interval
   timeout      = var.timeout
   init         = var.init
-  init_script  = (local.init ? "terraform init -upgrade" : "")
+  init_script  = (local.init ? "terraform init -reconfigure -upgrade" : "")
   tf_data_dir  = var.data_path != null ? var.data_path : path.root
   skip_destroy = (var.skip_destroy ? "true" : "")
 }
@@ -74,18 +74,14 @@ resource "terraform_data" "destroy" {
     sd     = local.skip_destroy
   }
   provisioner "local-exec" {
-    when    = destroy
-    command = <<-EOT
-      ${self.triggers_replace.ec}
-      cd ${self.triggers_replace.dp}
-      export TF_DATA_DIR="${self.triggers_replace.dd}"
-      if [ -z "${self.triggers_replace.sd}" ]; then
-        timeout -k 1m ${self.triggers_replace.to} terraform init -upgrade
-        timeout -k 1m ${self.triggers_replace.to} terraform destroy -var-file="${self.triggers_replace.dp}/inputs.tfvars" -auto-approve -state="${self.triggers_replace.dp}/tfstate" || true
-      else
-        echo "Not destroying deployed module, it will no longer be managed here."
-      fi
-    EOT
+    when = destroy
+    command = templatefile("${path.module}/destroy.sh.tpl", {
+      export_contents = self.triggers_replace.ec
+      tf_data_dir     = self.triggers_replace.dd
+      deploy_path     = self.triggers_replace.dp
+      skip_destroy    = self.triggers_replace.sd
+      timeout         = self.triggers_replace.to
+    })
   }
 }
 
@@ -96,66 +92,18 @@ resource "terraform_data" "create" {
     terraform_data.destroy,
   ]
   triggers_replace = {
-    inputs = local.inputs_hash
-    files  = local.template_files_hash
-    env    = local.export_hash
+    files = local.template_files_hash
   }
   provisioner "local-exec" {
-    command = <<-EOT
-      ${local.export_contents}
-      cd ${local.deploy_path}
-      export TF_DATA_DIR="${local.tf_data_dir}"
-
-      ${local.init_script}
-
-      MAX=${local.attempts}
-      EXITCODE=1
-      ATTEMPTS=0
-      E=1
-      E1=0
-      while [ $EXITCODE -gt 0 ] && [ $ATTEMPTS -lt $MAX ]; do
-        A=0
-        while [ $E -gt 0 ] && [ $A -lt $MAX ]; do
-          timeout -k 1m ${local.timeout} terraform apply -var-file="${local.deploy_path}/inputs.tfvars" -auto-approve -state="${local.deploy_path}/tfstate"
-          E=$?
-          if [ $E -eq 124 ]; then echo "Apply timed out after ${local.timeout}"; fi
-          A=$((A+1))
-        done
-        # don't destroy if the last attempt fails
-        if [ $E -gt 0 ] && [ $ATTEMPTS != $((MAX-1)) ]; then
-          A1=0
-          while [ $E1 -gt 0 ] && [ $A1 -lt $MAX ]; do
-            timeout -k 1m ${local.timeout} terraform destroy -var-file="${local.deploy_path}/inputs.tfvars" -auto-approve -state="${local.deploy_path}/tfstate"
-            E1=$?
-            if [ $E1 -eq 124 ]; then echo "Apply timed out after ${local.timeout}"; fi
-            A1=$((A1+1))
-          done
-        fi
-        if [ $E -gt 0 ]; then
-          echo "apply failed..."
-        fi
-        if [ $E1 -gt 0 ]; then
-          echo "destroy failed..."
-        fi
-        if [ $E -gt 0 ] || [ $E1 -gt 0 ]; then
-          EXITCODE=1
-        else
-          EXITCODE=0
-        fi
-        ATTEMPTS=$((ATTEMPTS+1))
-        if [ $EXITCODE -gt 0 ] && [ $ATTEMPTS -lt $MAX ]; then
-          echo "wait ${local.interval} seconds between attempts..."
-          sleep ${local.interval}
-        fi
-      done
-      if [ $ATTEMPTS -eq $MAX ]; then echo "max attempts reached..."; fi
-      if [ $EXITCODE -ne 0 ]; then echo "failure, exit code $EXITCODE..."; fi
-      if [ $EXITCODE -eq 0 ]; then 
-        echo "success...";
-        terraform output -json -state="${local.deploy_path}/tfstate" > ${local.deploy_path}/outputs.json
-      fi
-      exit $EXITCODE
-    EOT
+    command = templatefile("${path.module}/create.sh.tpl", {
+      export_contents = local.export_contents
+      deploy_path     = local.deploy_path
+      tf_data_dir     = local.tf_data_dir
+      init_script     = local.init_script
+      attempts        = local.attempts
+      timeout         = local.timeout
+      interval        = local.interval
+    })
   }
 }
 
@@ -185,7 +133,10 @@ module "persist_outputs" {
   recreate   = terraform_data.create.id
 }
 
-resource "terraform_data" "destroy_end" {
+# during initial create this should be an extra apply that has no effect
+# when the inputs change and the template needs to be rebuilt this will allow the persist
+#  to rebuild the template before running the create script
+resource "terraform_data" "create_after_persist" {
   depends_on = [
     module.persist_template,
     module.persist_inputs,
@@ -198,6 +149,34 @@ resource "terraform_data" "destroy_end" {
     inputs = local.inputs_hash
     files  = local.template_files_hash
     env    = local.export_hash
+  }
+  provisioner "local-exec" {
+    command = templatefile("${path.module}/create.sh.tpl", {
+      export_contents = local.export_contents
+      deploy_path     = local.deploy_path
+      tf_data_dir     = local.tf_data_dir
+      init_script     = local.init_script
+      attempts        = local.attempts
+      timeout         = local.timeout
+      interval        = local.interval
+    })
+  }
+}
+
+resource "terraform_data" "destroy_end" {
+  depends_on = [
+    module.persist_template,
+    module.persist_inputs,
+    terraform_data.destroy,
+    terraform_data.create,
+    module.persist_state,
+    module.persist_outputs,
+    terraform_data.create_after_persist,
+  ]
+  triggers_replace = {
+    inputs = local.inputs_hash
+    files  = local.template_files_hash
+    env    = local.export_hash
     ec     = local.export_contents
     dp     = local.deploy_path
     to     = local.timeout
@@ -205,17 +184,13 @@ resource "terraform_data" "destroy_end" {
     sd     = local.skip_destroy
   }
   provisioner "local-exec" {
-    when    = destroy
-    command = <<-EOT
-      ${self.triggers_replace.ec}
-      cd ${self.triggers_replace.dp}
-      export TF_DATA_DIR="${self.triggers_replace.dd}"
-      if [ -z "${self.triggers_replace.sd}" ]; then
-        timeout -k 1m ${self.triggers_replace.to} terraform init -upgrade
-        timeout -k 1m ${self.triggers_replace.to} terraform destroy -var-file="${self.triggers_replace.dp}/inputs.tfvars" -auto-approve -state="${self.triggers_replace.dp}/tfstate" || true
-      else
-        echo "Not destroying deployed module, it will no longer be managed here."
-      fi
-    EOT
+    when = destroy
+    command = templatefile("${path.module}/destroy.sh.tpl", {
+      export_contents = self.triggers_replace.ec
+      tf_data_dir     = self.triggers_replace.dd
+      deploy_path     = self.triggers_replace.dp
+      skip_destroy    = self.triggers_replace.sd
+      timeout         = self.triggers_replace.to
+    })
   }
 }

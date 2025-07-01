@@ -12,11 +12,11 @@ import (
 	util "github.com/rancher/terraform-rancher2-aws/test/tests"
 )
 
-func TestThree(t *testing.T) {
+func TestOneBasic(t *testing.T) {
 	t.Parallel()
 	id := util.GetId()
 	region := util.GetRegion()
-	directory := "three"
+	directory := "one"
 	owner := "terraform-ci@suse.com"
 	util.SetAcmeServer()
 
@@ -98,14 +98,13 @@ func TestThree(t *testing.T) {
 		SshAgent:                 sshAgent,
 		Upgrade:                  true,
 	})
-
+	var tfOptions []*terraform.Options
+	tfOptions = append(tfOptions, terraformOptions)
 	_, err = terraform.InitAndApplyE(t, terraformOptions)
 	if err != nil {
 		t.Log("Test failed, tearing down...")
 		util.GetErrorLogs(t, testDir+"/kubeconfig")
-		util.Teardown(t, testDir, terraformOptions, keyPair)
-		os.Remove(exampleDir + ".terraform.lock.hcl")
-		sshAgent.Stop()
+		util.Teardown(t, testDir, exampleDir, tfOptions, keyPair, sshAgent)
 		t.Fatalf("Error creating cluster: %s", err)
 	}
 	util.CheckReady(t, testDir+"/kubeconfig")
@@ -115,7 +114,5 @@ func TestThree(t *testing.T) {
 	} else {
 		t.Log("Test passed...")
 	}
-	util.Teardown(t, testDir, terraformOptions, keyPair)
-	os.Remove(exampleDir + "/.terraform.lock.hcl")
-	sshAgent.Stop()
+	util.Teardown(t, testDir, exampleDir, tfOptions, keyPair, sshAgent)
 }
