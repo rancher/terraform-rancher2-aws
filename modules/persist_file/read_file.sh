@@ -4,11 +4,4 @@ set -e
 JSON_INPUT="$(jq -r '.')"
 FILEPATH="$(jq -r '.filepath' <<<"$JSON_INPUT")"
 
-DATA=""
-if [ -n "$FILEPATH" ]; then
-  if [ -f "$FILEPATH" ]; then
-    DATA="$(cat "$FILEPATH")"
-  fi
-fi
-
-jq -n --arg data "$DATA" '{"data": $data}'
+jq -n --rawfile data "$FILEPATH" '{"data": $data}' 2>/dev/null || jq -n '{"data":"error"}'
