@@ -42,7 +42,7 @@ resource "terraform_data" "snapshot" {
   ]
 }
 
-resource "local_file" "file" {
+resource "local_sensitive_file" "file" {
   depends_on = [
     data.external.read_file,
     terraform_data.recreate,

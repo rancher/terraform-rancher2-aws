@@ -45,21 +45,21 @@ variable "rancher_helm_chart_use_strategy" {
   default     = "default"
 }
 variable "rancher_helm_chart_values" {
-  type        = map(any)
+  type        = string
   description = <<-EOT
-    A key/value map of Helm arguments to pass to the Rancher helm chart.
+    A base64 encoded, json encoded key/value map of Helm arguments to pass to the Rancher helm chart.
     This will be ignored if the rancher_helm_chart_use_strategy argument is set to "default".
     eg.
     {
-      "hostname"                  = local.rancher_domain
-      "replicas"                  = "1"
-      "bootstrapPassword"         = "admin"
-      "ingress.enabled"           = "true"
-      "ingress.tls.source"        = "secret"
-      "ingress.tls.secretName"    = "tls-rancher-ingress"
-      "privateCA"                 = "true"
-      "agentTLSMode"              = "system-store"
+      "hostname"                  : "rancher.example.com",
+      "replicas"                  : "1",
+      "bootstrapPassword"         : "admin",
+      "ingress.enabled"           : "true",
+      "ingress.tls.source"        : "secret",
+      "ingress.tls.secretName"    : "tls-rancher-ingress",
+      "privateCA"                 : "true",
+      "agentTLSMode"              : "system-store"
     }
   EOT
-  default     = {}
+  default     = "{}"
 }

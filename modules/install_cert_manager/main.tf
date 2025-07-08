@@ -30,13 +30,12 @@ module "deploy_cert_manager" {
     KUBECONFIG       = "${abspath(local.path)}/kubeconfig"
   }
   inputs = <<-EOT
+    cert_manager_version       = "${local.cert_manager_version}"
+    project_cert_name          = "${local.project_cert_name}"
+    project_cert_key_id        = "${local.project_cert_key_id}"
     project_domain             = "${local.rancher_domain}"
     zone                       = "${local.zone}"
     zone_id                    = "${local.zone_id}"
-    project_cert_name          = "${local.project_cert_name}"
-    project_cert_key_id        = "${local.project_cert_key_id}"
-    cert_manager_version       = "${local.cert_manager_version}"
-    configure_cert_manager     = "${local.configure_cert_manager}"
     cert_manager_configuration = {
       aws_region            = "${local.cert_manager_config.aws_region}"
       aws_session_token     = "${local.cert_manager_config.aws_session_token}"

@@ -11,6 +11,12 @@ variable "project_domain" {
     error_message = "Must be a fully qualified domain name."
   }
 }
+variable "rancher_version" {
+  type        = string
+  description = <<-EOT
+    The version of rancher to install.
+  EOT
+}
 variable "rancher_helm_repo" {
   type        = string
   description = <<-EOT
@@ -38,27 +44,27 @@ variable "rancher_helm_chart_use_strategy" {
   default     = "default"
 }
 variable "rancher_helm_chart_values" {
-  type        = map(any)
+  type        = string
   description = <<-EOT
-    A key/value map of Helm arguments to pass to the Rancher helm chart.
+    A base64 encoded, json encoded key/value map of Helm arguments to pass to the Rancher helm chart.
     This will be ignored if the rancher_helm_chart_use_strategy argument is set to "default".
     eg.
     {
-      "hostname"                  = "test.example.com"
-      "replicas"                  = "1"
-      "bootstrapPassword"         = "password"
-      "ingress.enabled"           = "true"
-      "ingress.tls.source"        = "letsEncrypt"
-      "tls"                       = "ingress"
-      "letsEncrypt.ingress.class" = "nginx"
-      "letsEncrypt.environment"   = "production"
-      "letsEncrypt.email"         = "test@example.com"
-      "certmanager.version"       = "1.13.1"
-      "agentTLSMode"              = "system-store"
-      "ingress.extraAnnotations.cert-manager\\.io\\/issuer" = "rancher"
+      "hostname"                                        : "test.example.com",
+      "replicas"                                        : "1",
+      "bootstrapPassword"                               : "password",
+      "ingress.enabled"                                 : "true",
+      "ingress.tls.source"                              : "letsEncrypt",
+      "tls"                                             : "ingress",
+      "letsEncrypt.ingress.class"                       : "nginx",
+      "letsEncrypt.environment"                         : "production",
+      "letsEncrypt.email"                               : "test@example.com",
+      "certmanager.version"                             : "1.13.1",
+      "agentTLSMode"                                    : "system-store",
+      "ingress.extraAnnotations.cert-manager.io/issuer" : "rancher"
     }
   EOT
-  default     = {}
+  default     = "{}"
 }
 variable "zone_id" {
   type        = string
@@ -79,13 +85,6 @@ variable "email" {
   description = <<-EOT
     The email to use when registering an account with Let's Encrypt.
   EOT
-}
-variable "rancher_version" {
-  type        = string
-  description = <<-EOT
-    The version of rancher to install.
-  EOT
-  default     = "2.11.2"
 }
 variable "cert_manager_version" {
   type        = string

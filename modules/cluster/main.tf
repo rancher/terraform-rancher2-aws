@@ -25,11 +25,6 @@ locals {
     var.file_path != "" ? (var.file_path == path.root ? "${path.root}/rke2" : var.file_path) :
     "${path.root}/rke2"
   )
-  # # tflint-ignore: terraform_unused_declarations
-  # local_file_path_validate = (can(regex(
-  #     "^\\.",
-  #     local.local_file_path
-  # )) ? false : one([local.local_file_path, "local_file_path_must_be_relative"])) # used like this we can validate local variables
 
   install_method       = var.install_method
   download             = (local.install_method == "tar" ? "download" : "skip")
@@ -182,8 +177,7 @@ module "deploy_initial_node" {
   user_workfolder          = strcontains(each.value.os, "cis") ? "/var/tmp" : "/home/${local.username}"
   timeout                  = 10
 }))}"
-    server_domain_name       = "${substr("${local.project_name}-${md5(each.key)}", 0, 25)}"
-    server_domain_zone       = "${local.zone}"
+    server_add_domain        = false
     install_use_strategy     = "${local.install_method}"
     local_file_use_strategy  = "${local.download}"
     local_file_path          = "${each.value.deploy_path}/configs"
@@ -227,7 +221,7 @@ strcontains(each.value.type, "database") ? local.database_config :
 }
 
 # There are many ways to orchestrate Terraform configurations with the goal of breaking it down
-# In this example I am using Terraform resources to orchestrate Terraform
+# In this module I am using Terraform resources to orchestrate Terraform
 #   I felt this was the best way to accomplish the goal without incurring additional dependencies
 module "deploy_additional_nodes" {
   source = "../deploy"
@@ -271,8 +265,7 @@ module "deploy_additional_nodes" {
   user_workfolder          = strcontains(each.value.os, "cis") ? "/var/tmp" : "/home/${local.username}"
   timeout                  = 10
 }))}"
-    server_domain_name       = "${substr("${local.project_name}-${md5(each.key)}", 0, 25)}"
-    server_domain_zone       = "${local.zone}"
+    server_add_domain        = false
     install_use_strategy     = "${local.install_method}"
     local_file_use_strategy  = "${local.download}"
     local_file_path          = "${each.value.deploy_path}/configs"
@@ -318,7 +311,7 @@ strcontains(each.value.type, "database") ? local.database_config :
   EOT
 }
 
-resource "local_file" "kubeconfig" {
+resource "local_sensitive_file" "kubeconfig" {
   depends_on = [
     module.deploy_initial_node,
     module.deploy_additional_nodes,

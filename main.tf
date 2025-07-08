@@ -28,14 +28,19 @@ locals {
   cni                = var.cni
   node_configuration = var.node_configuration
   # rancher
-  cert_manager_version = var.cert_manager_version
-  rancher_version      = var.rancher_version
-  ip_family            = "ipv4"
-  # ingress_controller   = "nginx"
-  bootstrap_rancher      = var.bootstrap_rancher
-  install_cert_manager   = var.install_cert_manager
-  configure_cert_manager = var.configure_cert_manager
-  cert_manager_config    = var.cert_manager_configuration
+  cert_name                       = (var.tls_cert_name != "" ? var.tls_cert_name : module.cluster.cert.name)
+  cert_key                        = (var.tls_cert_key != "" ? var.tls_cert_key : module.cluster.cert.key_id)
+  cert_manager_version            = var.cert_manager_version
+  rancher_version                 = var.rancher_version
+  rancher_helm_repo               = var.rancher_helm_repo
+  rancher_helm_channel            = var.rancher_helm_channel
+  ip_family                       = "ipv4"
+  rancher_helm_chart_values       = var.rancher_helm_chart_values
+  rancher_helm_chart_use_strategy = var.rancher_helm_chart_use_strategy
+  bootstrap_rancher               = var.bootstrap_rancher
+  install_cert_manager            = var.install_cert_manager
+  configure_cert_manager          = var.configure_cert_manager
+  cert_manager_config             = var.cert_manager_configuration
 }
 
 data "aws_route53_zone" "zone" {
@@ -59,7 +64,6 @@ module "cluster" {
   cni                = local.cni
   node_configuration = local.node_configuration
   ip_family          = local.ip_family
-  # ingress_controller = local.ingress_controller
   skip_cert_creation = local.skip_cert
 }
 
@@ -72,8 +76,8 @@ module "install_cert_manager" {
   project_domain             = local.fqdn
   zone                       = local.zone
   zone_id                    = data.aws_route53_zone.zone.zone_id
-  project_cert_name          = module.cluster.cert.name
-  project_cert_key_id        = module.cluster.cert.key_id
+  project_cert_name          = local.cert_name
+  project_cert_key_id        = local.cert_key
   path                       = local.local_file_path
   cert_manager_version       = local.cert_manager_version
   configure_cert_manager     = local.configure_cert_manager
@@ -85,15 +89,19 @@ module "rancher_bootstrap" {
     module.cluster,
     module.install_cert_manager,
   ]
-  count                = (local.bootstrap_rancher ? 1 : 0)
-  source               = "./modules/rancher_bootstrap"
-  path                 = local.local_file_path
-  project_domain       = local.fqdn
-  zone_id              = data.aws_route53_zone.zone.zone_id
-  region               = local.cert_manager_config.aws_region
-  email                = local.cert_manager_config.acme_email
-  acme_server_url      = local.cert_manager_config.acme_server_url
-  rancher_version      = local.rancher_version
-  cert_manager_version = local.cert_manager_version
-  externalTLS          = (local.configure_cert_manager ? false : true)
+  count                           = (local.bootstrap_rancher ? 1 : 0)
+  source                          = "./modules/rancher_bootstrap"
+  path                            = local.local_file_path
+  project_domain                  = local.fqdn
+  zone_id                         = data.aws_route53_zone.zone.zone_id
+  region                          = local.cert_manager_config.aws_region
+  email                           = local.cert_manager_config.acme_email
+  acme_server_url                 = local.cert_manager_config.acme_server_url
+  rancher_version                 = local.rancher_version
+  rancher_helm_repo               = local.rancher_helm_repo
+  rancher_helm_channel            = local.rancher_helm_channel
+  cert_manager_version            = local.cert_manager_version
+  externalTLS                     = (local.configure_cert_manager ? false : true)
+  rancher_helm_chart_values       = local.rancher_helm_chart_values
+  rancher_helm_chart_use_strategy = local.rancher_helm_chart_use_strategy
 }

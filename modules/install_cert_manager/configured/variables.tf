@@ -3,7 +3,6 @@ variable "cert_manager_version" {
   description = <<-EOT
     The version of cert manager to install.
   EOT
-  default     = "v1.13.1"
 }
 variable "cert_manager_configuration" {
   type = object({
@@ -18,13 +17,7 @@ variable "cert_manager_configuration" {
     https://cert-manager.io/docs/configuration/acme/dns01/route53/#ambient-credentials
     https://docs.aws.amazon.com/sdkref/latest/guide/environment-variables.html
   EOT
-  default = {
-    aws_region            = ""
-    aws_session_token     = ""
-    aws_access_key_id     = ""
-    aws_secret_access_key = ""
-  }
-  sensitive = true
+  sensitive   = true
 }
 variable "zone" {
   type        = string
