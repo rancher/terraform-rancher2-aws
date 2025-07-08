@@ -1,4 +1,4 @@
-# !/bin/bash
+#!/bin/bash
 set -e
 
 JSON_INPUT="$(jq -r '.')"

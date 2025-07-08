@@ -20,16 +20,6 @@ output "admin_password" {
   sensitive = true
 }
 
-# output "additional_node_states" {
-#   value     = module.cluster.additional_node_states
-#   sensitive = true
-# }
-
-# output "rancher_bootstrap_state" {
-#   value     = module.rancher_bootstrap[0].rancher_bootstrap_state
-#   sensitive = true
-# }
-
 output "vpc" {
   value = module.cluster.vpc
 }

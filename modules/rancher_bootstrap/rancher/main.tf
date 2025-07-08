@@ -9,7 +9,7 @@ locals {
   rancher_helm_channel      = var.rancher_helm_channel
   rancher_version           = replace(var.rancher_version, "v", "") # don't include the v
   helm_chart_use_strategy   = var.rancher_helm_chart_use_strategy
-  rancher_helm_chart_values = var.rancher_helm_chart_values
+  rancher_helm_chart_values = jsondecode(base64decode(var.rancher_helm_chart_values))
   default_hc_values = {
     "hostname"                                            = local.rancher_domain
     "replicas"                                            = "1"
@@ -185,6 +185,7 @@ resource "helm_release" "rancher" {
     for_each = local.helm_chart_values
     content {
       name  = set.key
+      type  = "string"
       value = set.value
     }
   }

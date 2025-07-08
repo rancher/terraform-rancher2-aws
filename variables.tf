@@ -27,7 +27,6 @@ variable "domain" {
     If left empty this will default to the project name.
     eg. "test" in "test.example.com"
   EOT
-  default     = ""
 }
 variable "zone" {
   type        = string
@@ -150,14 +149,45 @@ variable "cert_manager_version" {
   description = <<-EOT
     The version of cert-manager to install.
   EOT
-  default     = "v1.18.1" # "v1.13.1"
+  default     = "v1.18.1" # "v1.13.1" # "1.16.3"
+}
+variable "tls_cert_name" {
+  type        = string
+  description = <<-EOT
+    The name of an AWS IAM Server Certificate where the public cert is stored.
+    This is only used when supplying your own TLS certificate.
+  EOT
+  default     = ""
+}
+variable "tls_cert_key" {
+  type        = string
+  description = <<-EOT
+    The name of an AWS SecretsManager Secret where the private key is stored.
+    This is only used when supplying your own TLS certificate.
+  EOT
+  default     = ""
 }
 variable "rancher_version" {
   type        = string
   description = <<-EOT
-    The version of Rancher to install.
+    The version of rancher to install.
   EOT
-  default     = "2.9.1"
+  default     = "2.11.2"
+}
+variable "rancher_helm_repo" {
+  type        = string
+  description = <<-EOT
+    The Helm repository to retrieve charts from.
+  EOT
+  default     = "https://releases.rancher.com/server-charts"
+}
+variable "rancher_helm_channel" {
+  type        = string
+  description = <<-EOT
+    The Helm repository channel retrieve charts from.
+    Can be "latest" or "stable", defaults to "stable".
+  EOT
+  default     = "stable"
 }
 variable "bootstrap_rancher" {
   type        = bool
@@ -209,27 +239,37 @@ variable "cert_manager_configuration" {
   }
   sensitive = true
 }
-# variable "install_cert_manager_backend" {
-#   type        = string
-#   description = <<-EOT
-#     Path to a .tfbackend file.
-#     This allows the user to pass a backend file to the install_cert_manager submodule.
-#     The backend file will be added to the submodule's terraform run and will allow that module's state data to be saved remotely.
-#     Please note that this is a separate state file, and this backend should be independent of the main module's state and any other submodules' states.
-#     See https://developer.hashicorp.com/terraform/language/backend#file for more information.
-#     The default is to use a local state file.
-#   EOT
-#   default     = ""
-# }
-# variable "rancher_bootstrap_backend" {
-#   type        = string
-#   description = <<-EOT
-#     Path to a .tfbackend file.
-#     This allows the user to pass a backend file to the rancher_bootstrap submodule.
-#     The backend file will be added to the submodule's terraform run and will allow that module's state data to be saved remotely.
-#     Please note that this is a separate state file, and this backend should be independent of the main module's state and any other submodules' states.
-#     See https://developer.hashicorp.com/terraform/language/backend#file for more information.
-#     The default is to use a local state file.
-#   EOT
-#   default     = ""
-# }
+variable "rancher_helm_chart_use_strategy" {
+  type        = string
+  description = <<-EOT
+    The strategy to use for Rancher's Helm chart values.
+    Options include: "default", "merge", or "provide".
+    Default will tell the module to use our suggested default configuration.
+    Merge will merge our default suggestions with your supplied configuration, anything you supply will override the default.
+    Provide will ignore our default suggestions and use the configuration provided in the rancher_helm_chart_values argument.
+  EOT
+  default     = "default"
+  validation {
+    condition     = contains(["default", "merge", "provide"], var.rancher_helm_chart_use_strategy)
+    error_message = "Must be one of 'default', 'merge', or 'provide'."
+  }
+}
+variable "rancher_helm_chart_values" {
+  type        = map(any)
+  description = <<-EOT
+    A key/value map of Helm arguments to pass to the Rancher helm chart.
+    This will be ignored if the rancher_helm_chart_use_strategy argument is set to "default".
+    eg.
+    {
+      "hostname"                  = local.rancher_domain
+      "replicas"                  = "1"
+      "bootstrapPassword"         = "admin"
+      "ingress.enabled"           = "true"
+      "ingress.tls.source"        = "secret"
+      "ingress.tls.secretName"    = "tls-rancher-ingress"
+      "privateCA"                 = "true"
+      "agentTLSMode"              = "system-store"
+    }
+  EOT
+  default     = {}
+}

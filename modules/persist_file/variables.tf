@@ -16,6 +16,7 @@ variable "contents" {
     The contents to persist, one of "contents" or "sourcefile" must be given.
   EOT
   default     = ""
+  sensitive   = true
 }
 variable "sourcefile" {
   type        = string
@@ -23,4 +24,5 @@ variable "sourcefile" {
     A file to persist, one of "contents" or "sourcefile" must be given.
   EOT
   default     = ""
+  sensitive   = true
 }

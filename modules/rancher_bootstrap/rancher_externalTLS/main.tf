@@ -9,9 +9,9 @@ locals {
   rancher_helm_channel      = var.rancher_helm_channel
   rancher_version           = replace(var.rancher_version, "v", "") # don't include the v
   helm_chart_use_strategy   = var.rancher_helm_chart_use_strategy
-  rancher_helm_chart_values = var.rancher_helm_chart_values
+  rancher_helm_chart_values = jsondecode(base64decode(var.rancher_helm_chart_values))
   default_hc_values = {
-    "hostname"               = local.rancher_domain
+    "hostname"               = local.rancher_domain # must be an fqdn
     "replicas"               = "1"
     "bootstrapPassword"      = "admin"
     "ingress.enabled"        = "true"
@@ -21,10 +21,10 @@ locals {
     "agentTLSMode"           = "system-store"
   }
   helm_chart_values = coalesce( # using coalesce like this essentially gives us a switch function
-    (local.helm_chart_use_strategy == "merge" ?
-    merge(local.default_hc_values, local.rancher_helm_chart_values) : null),
     (local.helm_chart_use_strategy == "default" ?
     local.default_hc_values : null),
+    (local.helm_chart_use_strategy == "merge" ?
+    merge(local.default_hc_values, local.rancher_helm_chart_values) : null),
     (local.helm_chart_use_strategy == "provide" ?
     local.rancher_helm_chart_values : null)
   ) # WARNING! Some config is necessary, if the result is an empty string the coalesce will fail
@@ -98,6 +98,7 @@ resource "helm_release" "rancher" {
     for_each = local.helm_chart_values
     content {
       name  = set.key
+      type  = "string"
       value = set.value
     }
   }
@@ -149,39 +150,40 @@ resource "terraform_data" "get_public_cert_info" {
   }
 }
 
-resource "terraform_data" "get_ping" {
-  depends_on = [
-    random_password.password,
-    time_sleep.settle_before_rancher,
-    terraform_data.wait_for_nginx,
-    helm_release.rancher,
-    terraform_data.wait_for_rancher,
-    terraform_data.get_public_cert_info,
-  ]
-  provisioner "local-exec" {
-    command = <<-EOT
-      check_letsencrypt_ca() {
-        # Try to verify a known Let's Encrypt certificate (you can use any valid one)
-        if openssl s_client -showcerts -connect letsencrypt.org:443 < /dev/null | openssl x509 -noout -issuer | grep -q "Let's Encrypt"; then
-          return 0 # Success
-        else
-          return 1 # Failure
-        fi
-      }
-      echo "Checking Let's Encrypt CA"
-      if check_letsencrypt_ca; then
-        echo "Let's Encrypt CA is functioning correctly."
-      else
-        echo "Error: Let's Encrypt CA is not being used for verification."
-        exit 1
-      fi
-      echo "Checking Cert"
-      echo | openssl s_client -showcerts -servername ${local.rancher_domain} -connect "${local.rancher_domain}:443" 2>/dev/null | openssl x509 -inform pem -noout -text || true
-      echo "Checking Curl"
-      curl "https://${local.rancher_domain}/ping"
-    EOT
-  }
-}
+# this requires a let's encrypt certificate, which we would like to eventually not require
+# resource "terraform_data" "get_ping" {
+#   depends_on = [
+#     random_password.password,
+#     time_sleep.settle_before_rancher,
+#     terraform_data.wait_for_nginx,
+#     helm_release.rancher,
+#     terraform_data.wait_for_rancher,
+#     terraform_data.get_public_cert_info,
+#   ]
+#   provisioner "local-exec" {
+#     command = <<-EOT
+#       check_letsencrypt_ca() {
+#         # Try to verify a known Let's Encrypt certificate (you can use any valid one)
+#         if openssl s_client -showcerts -connect letsencrypt.org:443 < /dev/null | openssl x509 -noout -issuer | grep -q "Let's Encrypt"; then
+#           return 0 # Success
+#         else
+#           return 1 # Failure
+#         fi
+#       }
+#       echo "Checking Let's Encrypt CA"
+#       if check_letsencrypt_ca; then
+#         echo "Let's Encrypt CA is functioning correctly."
+#       else
+#         echo "Error: Let's Encrypt CA is not being used for verification."
+#         exit 1
+#       fi
+#       echo "Checking Cert"
+#       echo | openssl s_client -showcerts -servername ${local.rancher_domain} -connect "${local.rancher_domain}:443" 2>/dev/null | openssl x509 -inform pem -noout -text || true
+#       echo "Checking Curl"
+#       curl "https://${local.rancher_domain}/ping"
+#     EOT
+#   }
+# }
 
 resource "rancher2_bootstrap" "admin" {
   depends_on = [
@@ -191,7 +193,7 @@ resource "rancher2_bootstrap" "admin" {
     helm_release.rancher,
     terraform_data.wait_for_rancher,
     terraform_data.get_public_cert_info,
-    terraform_data.get_ping,
+    # terraform_data.get_ping,
   ]
   password = random_password.password.result
 }

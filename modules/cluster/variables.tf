@@ -28,7 +28,7 @@ variable "zone" {
 # access
 variable "key_name" {
   type        = string
-  description = "The name of an ssh key that already exists in AWS of that you want to create."
+  description = "The name of an ssh key that already exists in AWS."
 }
 variable "key" {
   type        = string
@@ -112,10 +112,6 @@ variable "ip_family" {
   type        = string
   description = "The IP family to use. Must be 'ipv4', 'ipv6', or 'dualstack'."
 }
-# variable "ingress_controller" {
-#   type        = string
-#   description = "The ingress controller to use. Must be 'nginx' or 'traefik'. Currently only supports 'nginx'."
-# }
 variable "skip_cert_creation" {
   type        = bool
   description = "Skip the generation of a certificate, useful when configuring cert manager."
