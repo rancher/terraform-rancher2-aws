@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.0.0](https://github.com/rancher/terraform-rancher2-aws/compare/v1.2.2...v2.0.0) (2025-07-08)
+
+
+### ⚠ BREAKING CHANGES
+
+* rewrite the deployment system ([#101](https://github.com/rancher/terraform-rancher2-aws/issues/101))
+
+### Features
+
+* enable rancher helm chart values ([#105](https://github.com/rancher/terraform-rancher2-aws/issues/105)) ([36bf637](https://github.com/rancher/terraform-rancher2-aws/commit/36bf637d286d1776e0bec72dff6996f9a362b9a5))
+
+
+### Bug Fixes
+
+* enable and verify remote state with example ([#103](https://github.com/rancher/terraform-rancher2-aws/issues/103)) ([3df73bf](https://github.com/rancher/terraform-rancher2-aws/commit/3df73bf72bf1a6b018c35bb40243a2d816959402))
+* rewrite the deployment system ([#101](https://github.com/rancher/terraform-rancher2-aws/issues/101)) ([60b1eaa](https://github.com/rancher/terraform-rancher2-aws/commit/60b1eaaff93cbbd1149053abec2d1066c07b96e9))
+* use raw file input for reading files ([7d3ec9e](https://github.com/rancher/terraform-rancher2-aws/commit/7d3ec9e7d91cc2fb19598c0e66cb26e0cabcd105))
+
 ## [1.2.2](https://github.com/rancher/terraform-rancher2-aws/compare/v1.2.1...v1.2.2) (2025-05-13)
 
 
