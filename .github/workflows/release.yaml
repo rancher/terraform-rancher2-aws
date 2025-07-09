@@ -88,7 +88,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{env.AWS_ROLE}}
-          role-session-name: ${{github.run_id}}
+          role-session-name: ${{github.run_id}}-TestOneBasic
           aws-region: ${{env.AWS_REGION}}
           role-duration-seconds: 14400 # 4 hours
           output-credentials: true
@@ -108,7 +108,7 @@ jobs:
           AWS_RETRY_MODE: adaptive
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
           GITHUB_OWNER: rancher
-          IDENTIFIER: ${{github.run_id}}
+          IDENTIFIER: ${{github.run_id}}-TestOneBasic
           ZONE: ${{secrets.ZONE}}
           ACME_SERVER_URL: https://acme-v02.api.letsencrypt.org/directory
           RANCHER_INSECURE: false
@@ -130,7 +130,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{env.AWS_ROLE}}
-          role-session-name: ${{github.run_id}}
+          role-session-name: ${{github.run_id}}-TestProdBasic
           aws-region: ${{env.AWS_REGION}}
           role-duration-seconds: 14400 # 4 hours
           output-credentials: true
@@ -150,7 +150,7 @@ jobs:
           AWS_RETRY_MODE: adaptive
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
           GITHUB_OWNER: rancher
-          IDENTIFIER: ${{github.run_id}}
+          IDENTIFIER: ${{github.run_id}}-TestProdBasic
           ZONE: ${{secrets.ZONE}}
           ACME_SERVER_URL: https://acme-v02.api.letsencrypt.org/directory
           RANCHER_INSECURE: false
@@ -172,7 +172,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{env.AWS_ROLE}}
-          role-session-name: ${{github.run_id}}
+          role-session-name: ${{github.run_id}}-TestThreeBasic
           aws-region: ${{env.AWS_REGION}}
           role-duration-seconds: 14400 # 4 hours
           output-credentials: true
@@ -192,7 +192,7 @@ jobs:
           AWS_RETRY_MODE: adaptive
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
           GITHUB_OWNER: rancher
-          IDENTIFIER: ${{github.run_id}}
+          IDENTIFIER: ${{github.run_id}}-TestThreeBasic
           ZONE: ${{secrets.ZONE}}
           ACME_SERVER_URL: https://acme-v02.api.letsencrypt.org/directory
           RANCHER_INSECURE: false
@@ -204,7 +204,6 @@ jobs:
     needs:
       - release
       - test_TestOneBasic
-      - test_TestProdBasic
     if: needs.release.outputs.release_pr
     runs-on: ubuntu-latest
     steps:
@@ -216,7 +215,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{env.AWS_ROLE}}
-          role-session-name: ${{github.run_id}}
+          role-session-name: ${{github.run_id}}-TestDownstreamBasic
           aws-region: ${{env.AWS_REGION}}
           role-duration-seconds: 14400 # 4 hours
           output-credentials: true
@@ -236,7 +235,7 @@ jobs:
           AWS_RETRY_MODE: adaptive
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
           GITHUB_OWNER: rancher
-          IDENTIFIER: ${{github.run_id}}
+          IDENTIFIER: ${{github.run_id}}-TestDownstreamBasic
           ZONE: ${{secrets.ZONE}}
           ACME_SERVER_URL: https://acme-v02.api.letsencrypt.org/directory
           RANCHER_INSECURE: false
@@ -247,9 +246,6 @@ jobs:
     needs:
       - release
       - test_TestOneBasic
-      - test_TestProdBasic
-      - test_TestThreeBasic
-      - test_TestDownstreamBasic
     if: needs.release.outputs.release_pr
     runs-on: ubuntu-latest
     steps:
@@ -261,7 +257,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{env.AWS_ROLE}}
-          role-session-name: ${{github.run_id}}
+          role-session-name: ${{github.run_id}}-TestDownstreamSplitrole
           aws-region: ${{env.AWS_REGION}}
           role-duration-seconds: 14400 # 4 hours
           output-credentials: true
@@ -281,7 +277,7 @@ jobs:
           AWS_RETRY_MODE: adaptive
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
           GITHUB_OWNER: rancher
-          IDENTIFIER: ${{github.run_id}}
+          IDENTIFIER: ${{github.run_id}}-TestDownstreamSplitrole
           ZONE: ${{secrets.ZONE}}
           ACME_SERVER_URL: https://acme-v02.api.letsencrypt.org/directory
           RANCHER_INSECURE: false
@@ -307,7 +303,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{env.AWS_ROLE}}
-          role-session-name: ${{github.run_id}}
+          role-session-name: ${{github.run_id}}-cleanup
           aws-region: ${{env.AWS_REGION}}
           role-duration-seconds: 3600 # 1 hour
           output-credentials: true
@@ -317,19 +313,54 @@ jobs:
           source /home/runner/.nix-profile/etc/profile.d/nix.sh
           nix --version
           which nix
-      - name: cleanup
+      - name: cleanupTestOneBasic
         shell: '/home/runner/.nix-profile/bin/nix develop --ignore-environment --extra-experimental-features nix-command --extra-experimental-features flakes --keep HOME --keep SSH_AUTH_SOCK --keep IDENTIFIER --keep GITHUB_TOKEN --keep GITHUB_OWNER --keep ZONE --keep AWS_ROLE --keep AWS_REGION --keep AWS_DEFAULT_REGION --keep AWS_ACCESS_KEY_ID --keep AWS_SECRET_ACCESS_KEY --keep AWS_SESSION_TOKEN --keep UPDATECLI_GPGTOKEN --keep UPDATECLI_GITHUB_TOKEN --keep UPDATECLI_GITHUB_ACTOR --keep GPG_SIGNING_KEY --keep NIX_SSL_CERT_FILE --keep NIX_ENV_LOADED --keep TERM --command bash -e {0}'
         env:
           AWS_ACCESS_KEY_ID: ${{ steps.aws-creds.outputs.aws-access-key-id }}
           AWS_SECRET_ACCESS_KEY: ${{ steps.aws-creds.outputs.aws-secret-access-key }}
           AWS_SESSION_TOKEN: ${{ steps.aws-creds.outputs.aws-session-token }}
           AWS_MAX_ATTEMPTS: 100
-          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-          GITHUB_OWNER: rancher
-          IDENTIFIER: ${{github.run_id}}
-          ZONE: ${{secrets.ZONE}}
-          ACME_SERVER_URL: https://acme-v02.api.letsencrypt.org/directory
-          RANCHER_INSECURE: false
+          IDENTIFIER: ${{github.run_id}}-TestOneBasic
+        run: |
+          ./run_tests.sh -c $IDENTIFIER
+      - name: cleanupTestProdBasic
+        shell: '/home/runner/.nix-profile/bin/nix develop --ignore-environment --extra-experimental-features nix-command --extra-experimental-features flakes --keep HOME --keep SSH_AUTH_SOCK --keep IDENTIFIER --keep GITHUB_TOKEN --keep GITHUB_OWNER --keep ZONE --keep AWS_ROLE --keep AWS_REGION --keep AWS_DEFAULT_REGION --keep AWS_ACCESS_KEY_ID --keep AWS_SECRET_ACCESS_KEY --keep AWS_SESSION_TOKEN --keep UPDATECLI_GPGTOKEN --keep UPDATECLI_GITHUB_TOKEN --keep UPDATECLI_GITHUB_ACTOR --keep GPG_SIGNING_KEY --keep NIX_SSL_CERT_FILE --keep NIX_ENV_LOADED --keep TERM --command bash -e {0}'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ steps.aws-creds.outputs.aws-access-key-id }}
+          AWS_SECRET_ACCESS_KEY: ${{ steps.aws-creds.outputs.aws-secret-access-key }}
+          AWS_SESSION_TOKEN: ${{ steps.aws-creds.outputs.aws-session-token }}
+          AWS_MAX_ATTEMPTS: 100
+          IDENTIFIER: ${{github.run_id}}-TestProdBasic
+        run: |
+          ./run_tests.sh -c $IDENTIFIER
+      - name: cleanupTestThreeBasic
+        shell: '/home/runner/.nix-profile/bin/nix develop --ignore-environment --extra-experimental-features nix-command --extra-experimental-features flakes --keep HOME --keep SSH_AUTH_SOCK --keep IDENTIFIER --keep GITHUB_TOKEN --keep GITHUB_OWNER --keep ZONE --keep AWS_ROLE --keep AWS_REGION --keep AWS_DEFAULT_REGION --keep AWS_ACCESS_KEY_ID --keep AWS_SECRET_ACCESS_KEY --keep AWS_SESSION_TOKEN --keep UPDATECLI_GPGTOKEN --keep UPDATECLI_GITHUB_TOKEN --keep UPDATECLI_GITHUB_ACTOR --keep GPG_SIGNING_KEY --keep NIX_SSL_CERT_FILE --keep NIX_ENV_LOADED --keep TERM --command bash -e {0}'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ steps.aws-creds.outputs.aws-access-key-id }}
+          AWS_SECRET_ACCESS_KEY: ${{ steps.aws-creds.outputs.aws-secret-access-key }}
+          AWS_SESSION_TOKEN: ${{ steps.aws-creds.outputs.aws-session-token }}
+          AWS_MAX_ATTEMPTS: 100
+          IDENTIFIER: ${{github.run_id}}-TestThreeBasic
+        run: |
+          ./run_tests.sh -c $IDENTIFIER
+      - name: cleanupTestDownstreamBasic
+        shell: '/home/runner/.nix-profile/bin/nix develop --ignore-environment --extra-experimental-features nix-command --extra-experimental-features flakes --keep HOME --keep SSH_AUTH_SOCK --keep IDENTIFIER --keep GITHUB_TOKEN --keep GITHUB_OWNER --keep ZONE --keep AWS_ROLE --keep AWS_REGION --keep AWS_DEFAULT_REGION --keep AWS_ACCESS_KEY_ID --keep AWS_SECRET_ACCESS_KEY --keep AWS_SESSION_TOKEN --keep UPDATECLI_GPGTOKEN --keep UPDATECLI_GITHUB_TOKEN --keep UPDATECLI_GITHUB_ACTOR --keep GPG_SIGNING_KEY --keep NIX_SSL_CERT_FILE --keep NIX_ENV_LOADED --keep TERM --command bash -e {0}'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ steps.aws-creds.outputs.aws-access-key-id }}
+          AWS_SECRET_ACCESS_KEY: ${{ steps.aws-creds.outputs.aws-secret-access-key }}
+          AWS_SESSION_TOKEN: ${{ steps.aws-creds.outputs.aws-session-token }}
+          AWS_MAX_ATTEMPTS: 100
+          IDENTIFIER: ${{github.run_id}}-TestDownstreamBasic
+        run: |
+          ./run_tests.sh -c $IDENTIFIER
+      - name: cleanupTestDownstreamSplitrole
+        shell: '/home/runner/.nix-profile/bin/nix develop --ignore-environment --extra-experimental-features nix-command --extra-experimental-features flakes --keep HOME --keep SSH_AUTH_SOCK --keep IDENTIFIER --keep GITHUB_TOKEN --keep GITHUB_OWNER --keep ZONE --keep AWS_ROLE --keep AWS_REGION --keep AWS_DEFAULT_REGION --keep AWS_ACCESS_KEY_ID --keep AWS_SECRET_ACCESS_KEY --keep AWS_SESSION_TOKEN --keep UPDATECLI_GPGTOKEN --keep UPDATECLI_GITHUB_TOKEN --keep UPDATECLI_GITHUB_ACTOR --keep GPG_SIGNING_KEY --keep NIX_SSL_CERT_FILE --keep NIX_ENV_LOADED --keep TERM --command bash -e {0}'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ steps.aws-creds.outputs.aws-access-key-id }}
+          AWS_SECRET_ACCESS_KEY: ${{ steps.aws-creds.outputs.aws-secret-access-key }}
+          AWS_SESSION_TOKEN: ${{ steps.aws-creds.outputs.aws-session-token }}
+          AWS_MAX_ATTEMPTS: 100
+          IDENTIFIER: ${{github.run_id}}-TestDownstreamSplitrole
         run: |
           ./run_tests.sh -c $IDENTIFIER
 
