@@ -2,3 +2,10 @@ kubernetes
 config
 git
 variablize
+rke2
+rke
+rancher
+oci
+eks
+aks
+readme
