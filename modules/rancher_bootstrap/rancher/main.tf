@@ -1,7 +1,3 @@
-provider "rancher2" {
-  api_url   = "https://${local.rancher_domain}"
-  bootstrap = true
-}
 
 locals {
   rancher_domain            = var.project_domain
@@ -12,7 +8,7 @@ locals {
   rancher_helm_chart_values = jsondecode(base64decode(var.rancher_helm_chart_values))
   default_hc_values = {
     "hostname"                                            = local.rancher_domain
-    "replicas"                                            = "1"
+    "replicas"                                            = "3"
     "bootstrapPassword"                                   = "admin"
     "ingress.enabled"                                     = "true"
     "ingress.tls.source"                                  = "letsEncrypt"
@@ -21,16 +17,15 @@ locals {
     "letsEncrypt.environment"                             = "production"
     "letsEncrypt.email"                                   = local.email
     "certmanager.version"                                 = local.cert_manager_version
-    "agentTLSMode"                                        = "system-store"
+    "agentTLSMode"                                        = "strict"
+    "privateCA"                                           = "true"
+    "additionalTrustedCAs"                                = "true"
     "ingress.extraAnnotations.cert-manager\\.io\\/issuer" = "rancher"
   }
   helm_chart_values = coalesce( # using coalesce like this essentially gives us a switch function
-    (local.helm_chart_use_strategy == "merge" ?
-    merge(local.default_hc_values, local.rancher_helm_chart_values) : null),
-    (local.helm_chart_use_strategy == "default" ?
-    local.default_hc_values : null),
-    (local.helm_chart_use_strategy == "provide" ?
-    local.rancher_helm_chart_values : null)
+    (local.helm_chart_use_strategy == "merge" ? merge(local.default_hc_values, local.rancher_helm_chart_values) : null),
+    (local.helm_chart_use_strategy == "default" ? local.default_hc_values : null),
+    (local.helm_chart_use_strategy == "provide" ? local.rancher_helm_chart_values : null),
   ) # WARNING! Some config is necessary, if the result is an empty string the coalesce will fail
   zone_id              = var.zone_id
   region               = var.region
@@ -43,10 +38,33 @@ resource "time_sleep" "settle_before_rancher" {
   create_duration = "30s"
 }
 
+resource "terraform_data" "wait_for_nginx" {
+  depends_on = [
+    time_sleep.settle_before_rancher,
+  ]
+  provisioner "local-exec" {
+    command = <<-EOT
+      EXITCODE=1
+      ATTEMPTS=0
+      MAX=5
+      while [ $EXITCODE -gt 0 ] && [ $ATTEMPTS -lt $MAX ]; do
+        timeout 3600 kubectl rollout status daemonset -n kube-system rke2-ingress-nginx-controller --timeout=60s
+        EXITCODE=$?
+        if [ $EXITCODE -gt 0 ]; then
+          timeout 3600 kubectl get pods -A
+        fi
+        ATTEMPTS=$((ATTEMPTS+1))
+      done
+      exit $EXITCODE
+    EOT
+  }
+}
+
 # uses kubectl to idempotentenly create cattle-system namespace
 resource "terraform_data" "cattle-system" {
   depends_on = [
     time_sleep.settle_before_rancher,
+    terraform_data.wait_for_nginx,
   ]
   provisioner "local-exec" {
     command = <<-EOT
@@ -73,6 +91,7 @@ resource "terraform_data" "cattle-system" {
 resource "kubernetes_manifest" "issuer" {
   depends_on = [
     time_sleep.settle_before_rancher,
+    terraform_data.wait_for_nginx,
     terraform_data.cattle-system,
   ]
   manifest = {
@@ -93,7 +112,7 @@ resource "kubernetes_manifest" "issuer" {
     spec = {
       acme = {
         email  = local.email
-        server = "${local.acme_server}/directory" # "https://acme-v02.api.letsencrypt.org/directory"
+        server = local.acme_server # "https://acme-v02.api.letsencrypt.org/directory"
         privateKeySecretRef = {
           name = "acme-account-key"
         }
@@ -117,63 +136,16 @@ resource "kubernetes_manifest" "issuer" {
   }
 }
 
-resource "terraform_data" "wait_for_nginx" {
-  depends_on = [
-    time_sleep.settle_before_rancher,
-    terraform_data.cattle-system,
-    kubernetes_manifest.issuer,
-  ]
-  provisioner "local-exec" {
-    command = <<-EOT
-      EXITCODE=1
-      ATTEMPTS=0
-      MAX=3
-      while [ $EXITCODE -gt 0 ] && [ $ATTEMPTS -lt $MAX ]; do
-        timeout 3600 kubectl rollout status daemonset -n kube-system rke2-ingress-nginx-controller --timeout=60s
-        EXITCODE=$?
-        if [ $EXITCODE -gt 0 ]; then
-          timeout 3600 kubectl get pods -A
-        fi
-        ATTEMPTS=$((ATTEMPTS+1))
-      done
-      exit $EXITCODE
-    EOT
-  }
-}
-
-# # WARNING! This adds git, yq, and helm to the dependency list!
-# resource "terraform_data" "build_chart" {
-#   depends_on = [
-#     time_sleep.settle_before_rancher,
-#   ]
-#   provisioner "local-exec" {
-#     command = <<-EOT
-#       cd ${abspath(path.root)} || true
-#       if [ -d chart ]; then
-#         rm -rf chart
-#       fi
-#       mkdir chart
-#       cd chart || exit 1
-#       ${abspath(path.module)}/build_chart.sh "${local.rancher_version}"
-#       cd ${abspath(path.root)} || true
-#       mv chart/rancher-${local.rancher_version}.tgz .
-#       rm -rf chart
-#       ls ${abspath(path.root)}/rancher-${local.rancher_version}.tgz
-#     EOT
-#   }
-# }
-
 # https://github.com/rancher/rancher/blob/main/chart/values.yaml
 resource "helm_release" "rancher" {
   depends_on = [
     time_sleep.settle_before_rancher,
+    terraform_data.wait_for_nginx,
     terraform_data.cattle-system,
     kubernetes_manifest.issuer,
-    terraform_data.wait_for_nginx,
-    # terraform_data.build_chart,
   ]
   name             = "rancher"
-  chart            = "${local.rancher_helm_repo}/${local.rancher_helm_channel}/rancher-${local.rancher_version}.tgz" # "${path.root}/rancher-${local.rancher_version}.tgz"
+  chart            = "${local.rancher_helm_repo}/${local.rancher_helm_channel}/rancher-${local.rancher_version}.tgz"
   namespace        = "cattle-system"
   create_namespace = false
   wait             = false
@@ -191,14 +163,82 @@ resource "helm_release" "rancher" {
   }
 }
 
+# The Helm resource completes in less than 10 seconds
+#   at which time the tls-rancher-ingress secret is generated
+data "kubernetes_secret_v1" "certificate" {
+  depends_on = [
+    time_sleep.settle_before_rancher,
+    terraform_data.wait_for_nginx,
+    terraform_data.cattle-system,
+    kubernetes_manifest.issuer,
+    helm_release.rancher,
+  ]
+  metadata {
+    name      = "tls-rancher-ingress"
+    namespace = "cattle-system"
+  }
+}
+
+# we need to create the tls-ca and tls-ca-additional secrets while the rancher pod is starting up
+# the rancher pod will fail a few times, but once the secrets are in place it will start and everything will start to work
+resource "kubernetes_secret" "rancher_tls_ca" {
+  depends_on = [
+    time_sleep.settle_before_rancher,
+    terraform_data.wait_for_nginx,
+    terraform_data.cattle-system,
+    kubernetes_manifest.issuer,
+    helm_release.rancher,
+    data.kubernetes_secret_v1.certificate,
+  ]
+  metadata {
+    name      = "tls-ca"
+    namespace = "cattle-system"
+  }
+  type = "generic"
+  data = {
+    "cacerts.pem" = data.kubernetes_secret_v1.certificate.data["tls.crt"], # don't base64 encode
+  }
+  lifecycle {
+    ignore_changes = [
+      metadata[0].annotations,
+    ]
+  }
+}
+
+resource "kubernetes_secret" "rancher_tls_ca_additional" {
+  depends_on = [
+    time_sleep.settle_before_rancher,
+    terraform_data.wait_for_nginx,
+    terraform_data.cattle-system,
+    kubernetes_manifest.issuer,
+    helm_release.rancher,
+    data.kubernetes_secret_v1.certificate,
+  ]
+  metadata {
+    name      = "tls-ca-additional"
+    namespace = "cattle-system"
+  }
+  type = "generic"
+  data = {
+    "ca-additional.pem" = data.kubernetes_secret_v1.certificate.data["tls.crt"], # don't base64 encode
+  }
+  lifecycle {
+    ignore_changes = [
+      metadata[0].annotations,
+    ]
+  }
+}
+
 resource "terraform_data" "wait_for_rancher" {
   depends_on = [
     time_sleep.settle_before_rancher,
+    terraform_data.wait_for_nginx,
     terraform_data.cattle-system,
     kubernetes_manifest.issuer,
-    terraform_data.wait_for_nginx,
     helm_release.rancher,
-    # terraform_data.build_chart,
+    data.kubernetes_secret_v1.certificate,
+    kubernetes_secret.rancher_tls_ca,
+    kubernetes_secret.rancher_tls_ca_additional,
   ]
   provisioner "local-exec" {
     command = <<-EOT
@@ -214,12 +254,14 @@ resource "terraform_data" "wait_for_rancher" {
 resource "terraform_data" "get_public_cert_info" {
   depends_on = [
     time_sleep.settle_before_rancher,
+    terraform_data.wait_for_nginx,
     terraform_data.cattle-system,
     kubernetes_manifest.issuer,
-    terraform_data.wait_for_nginx,
     helm_release.rancher,
+    data.kubernetes_secret_v1.certificate,
+    kubernetes_secret.rancher_tls_ca,
+    kubernetes_secret.rancher_tls_ca_additional,
     terraform_data.wait_for_rancher,
-    # terraform_data.build_chart,
   ]
   provisioner "local-exec" {
     command = <<-EOT
@@ -259,6 +301,13 @@ resource "terraform_data" "get_public_cert_info" {
   }
 }
 
+provider "rancher2" {
+  api_url   = "https://${local.rancher_domain}"
+  bootstrap = true
+  ca_certs  = data.kubernetes_secret_v1.certificate.data["tls.crt"]
+  alias     = "bootstrap"
+}
+
 resource "random_password" "password" {
   length           = 16
   special          = true
@@ -268,13 +317,16 @@ resource "random_password" "password" {
 resource "rancher2_bootstrap" "admin" {
   depends_on = [
     time_sleep.settle_before_rancher,
+    terraform_data.wait_for_nginx,
     terraform_data.cattle-system,
     kubernetes_manifest.issuer,
-    terraform_data.wait_for_nginx,
     helm_release.rancher,
     terraform_data.wait_for_rancher,
     terraform_data.get_public_cert_info,
-    # terraform_data.build_chart,
+    data.kubernetes_secret_v1.certificate,
+    kubernetes_secret.rancher_tls_ca,
+    kubernetes_secret.rancher_tls_ca_additional,
   ]
+  provider = rancher2.bootstrap
   password = random_password.password.result
 }

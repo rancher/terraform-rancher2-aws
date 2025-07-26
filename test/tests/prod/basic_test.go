@@ -16,7 +16,10 @@ func TestProdBasic(t *testing.T) {
 	t.Parallel()
 	id := util.GetId()
 	region := util.GetRegion()
-	directory := "prod"
+	accessKey := util.GetAwsAccessKey()
+	secretKey := util.GetAwsSecretKey()
+	sessionToken := util.GetAwsSessionToken()
+  directory := "prod"
 	owner := "terraform-ci@suse.com"
 	util.SetAcmeServer()
 
@@ -74,18 +77,22 @@ func TestProdBasic(t *testing.T) {
 		TerraformDir: exampleDir,
 		// Variables to pass to our Terraform code using -var options
 		Vars: map[string]interface{}{
-			"identifier":      id,
-			"owner":           owner,
-			"key_name":        keyPair.Name,
-			"key":             keyPair.KeyPair.PublicKey,
-			"zone":            os.Getenv("ZONE"),
-			"rke2_version":    rke2Version,
-			"rancher_version": rancherVersion,
-			"file_path":       testDir,
-		},
+			"identifier":            id,
+			"owner":                 owner,
+			"key_name":              keyPair.Name,
+			"key":                   keyPair.KeyPair.PublicKey,
+			"zone":                  os.Getenv("ZONE"),
+			"rke2_version":          rke2Version,
+			"rancher_version":       rancherVersion,
+			"file_path":             testDir,
+			"aws_access_key_id":     accessKey,
+			"aws_secret_access_key": secretKey,
+			"aws_session_token":     sessionToken,
+			"aws_region":            region,
+    },
 		// Environment variables to set when running Terraform
 		EnvVars: map[string]string{
-			"AWS_DEFAULT_REGION":  region,
+      "AWS_DEFAULT_REGION":  region,
 			"AWS_REGION":          region,
 			"TF_DATA_DIR":         testDir,
 			"TF_IN_AUTOMATION":    "1",

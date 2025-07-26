@@ -63,3 +63,21 @@ variable "rancher_helm_chart_values" {
   EOT
   default     = "{}"
 }
+variable "ca_certs" {
+  type        = string
+  description = <<-EOT
+    The base64 encoded pem encoded contents of the certificate chain used to sign Rancher's TLS cert.
+  EOT
+}
+variable "public_cert" {
+  type        = string
+  description = <<-EOT
+    The base64 encoded pem encoded contents of the certificate to use as Rancher's TLS cert.
+  EOT
+}
+variable "private_key" {
+  type        = string
+  description = <<-EOT
+    The base64 encoded pem encoded contents of the private key to use with Rancher's TLS cert.
+  EOT
+}

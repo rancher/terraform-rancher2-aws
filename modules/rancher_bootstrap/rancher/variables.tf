@@ -50,18 +50,20 @@ variable "rancher_helm_chart_values" {
     This will be ignored if the rancher_helm_chart_use_strategy argument is set to "default".
     eg.
     {
-      "hostname"                                        : "test.example.com",
-      "replicas"                                        : "1",
-      "bootstrapPassword"                               : "password",
-      "ingress.enabled"                                 : "true",
-      "ingress.tls.source"                              : "letsEncrypt",
-      "tls"                                             : "ingress",
-      "letsEncrypt.ingress.class"                       : "nginx",
-      "letsEncrypt.environment"                         : "production",
-      "letsEncrypt.email"                               : "test@example.com",
-      "certmanager.version"                             : "1.13.1",
-      "agentTLSMode"                                    : "system-store",
-      "ingress.extraAnnotations.cert-manager.io/issuer" : "rancher"
+      "hostname"                                            = "example.com"
+      "replicas"                                            = "1"
+      "bootstrapPassword"                                   = "admin"
+      "ingress.enabled"                                     = "true"
+      "ingress.tls.source"                                  = "letsEncrypt"
+      "tls"                                                 = "ingress"
+      "letsEncrypt.ingress.class"                           = "nginx"
+      "letsEncrypt.environment"                             = "production"
+      "letsEncrypt.email"                                   = "test@example.com"
+      "certmanager.version"                                 = "1.18.1"
+      "agentTLSMode"                                        = "strict"
+      "privateCA"                                           = "true"
+      "additionalTrustedCAs"                                = "true"
+      "ingress.extraAnnotations.cert-manager\\.io\\/issuer" = "rancher"
     }
   EOT
   default     = "{}"

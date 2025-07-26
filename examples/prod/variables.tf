@@ -52,3 +52,41 @@ variable "file_path" {
   EOT
   default     = "./rke2"
 }
+variable "aws_access_key_id" {
+  type        = string
+  description = <<-EOT
+    AWS access key ID.
+  EOT
+  sensitive   = true
+}
+variable "aws_secret_access_key" {
+  type        = string
+  description = <<-EOT
+    AWS secret key for EC2 services.
+  EOT
+  sensitive   = true
+}
+variable "aws_session_token" {
+  type        = string
+  description = <<-EOT
+    AWS session token for EC2 services.
+    If left empty the AWS provider will assume you are using permanent AWS credentials.
+  EOT
+  sensitive   = true
+  default     = ""
+}
+variable "aws_region" {
+  type        = string
+  description = <<-EOT
+    AWS region EC2 services.
+  EOT
+  sensitive   = true
+}
+variable "email" {
+  type        = string
+  description = <<-EOT
+    Email used for TLS certification registration.
+    If left blank this will be <identifier>@<zone>.
+  EOT
+  default     = ""
+}

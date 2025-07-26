@@ -8,37 +8,12 @@ provider "aws" {
 }
 
 provider "acme" {
-  server_url = "https://acme-v02.api.letsencrypt.org/directory"
+  server_url = local.acme_server_url
 }
 
 provider "github" {}
 provider "kubernetes" {} # make sure you set the env variable KUBE_CONFIG_PATH to local_file_path (file_path variable)
 provider "helm" {}       # make sure you set the env variable KUBE_CONFIG_PATH to local_file_path (file_path variable)
-
-provider "rancher2" {
-  alias     = "default"
-  api_url   = "https://${local.domain}.${local.zone}"
-  token_key = module.this.admin_token
-  timeout   = "300s"
-}
-
-provider "rancher2" {
-  alias     = "authenticate"
-  bootstrap = true
-  api_url   = "https://${local.domain}.${local.zone}"
-  timeout   = "300s"
-}
-
-resource "rancher2_bootstrap" "authenticate" {
-  depends_on = [
-    module.this,
-  ]
-  provider         = rancher2.authenticate
-  initial_password = module.this.admin_password
-  password         = module.this.admin_password
-  token_update     = true
-  token_ttl        = 7200 # 2 hours
-}
 
 
 locals {
@@ -47,16 +22,66 @@ locals {
   project_name         = "tf-${substr(md5(join("-", [local.example, local.identifier])), 0, 5)}"
   username             = local.project_name
   domain               = local.project_name
+  email                = var.email
   zone                 = var.zone
   key_name             = var.key_name
   key                  = var.key
+  acme_server_url      = "https://acme-staging-v02.api.letsencrypt.org/directory" # "https://acme-v02.api.letsencrypt.org/directory"
   owner                = var.owner
   rke2_version         = var.rke2_version
   local_file_path      = var.file_path
-  os                   = "sle-micro-61"
   runner_ip            = chomp(data.http.myip.response_body) # "runner" is the server running Terraform
   rancher_version      = var.rancher_version
-  cert_manager_version = "1.16.3" #"1.13.1"
+  cert_manager_version = "1.18.1"
+  os                   = "sle-micro-61"
+  helm_chart_values = {
+    "hostname"                                            = "${local.domain}.${local.zone}"
+    "replicas"                                            = "3"
+    "bootstrapPassword"                                   = "admin"
+    "ingress.enabled"                                     = "true"
+    "ingress.tls.source"                                  = "letsEncrypt"
+    "tls"                                                 = "ingress"
+    "letsEncrypt.ingress.class"                           = "nginx"
+    "letsEncrypt.environment"                             = "staging" # "production"
+    "letsEncrypt.email"                                   = local.email
+    "certmanager.version"                                 = local.cert_manager_version
+    "agentTLSMode"                                        = "strict"
+    "privateCA"                                           = "true"
+    "additionalTrustedCAs"                                = "true"
+    "ingress.extraAnnotations.cert-manager\\.io\\/issuer" = "rancher" # hard coded
+  }
+  cert_manager_config = {
+    aws_access_key_id     = var.aws_access_key_id
+    aws_secret_access_key = var.aws_secret_access_key
+    aws_session_token     = var.aws_session_token
+    aws_region            = var.aws_region
+    acme_email            = local.email
+    acme_server_url       = local.acme_server_url
+  }
+}
+
+data "http" "myip" {
+  url = "https://ipinfo.io/ip"
+}
+
+module "rancher" {
+  source = "../../"
+  # project
+  identifier   = local.identifier
+  owner        = local.owner
+  project_name = local.project_name
+  domain       = local.domain
+  zone         = local.zone
+  # access
+  key_name = local.key_name
+  key      = local.key
+  username = local.username
+  admin_ip = local.runner_ip
+  # rke2
+  rke2_version    = local.rke2_version
+  local_file_path = local.local_file_path
+  install_method  = "rpm" # rpm only for now, need to figure out local helm chart installs otherwise
+  cni             = "canal"
   node_configuration = {
     "initial" = {
       type            = "database"
@@ -122,56 +147,45 @@ locals {
       initial         = false
     },
   }
+  # rancher
+  cert_manager_version       = local.cert_manager_version
+  cert_use_strategy          = "rancher"
+  cert_manager_configuration = local.cert_manager_config
+  rancher_version            = local.rancher_version
+  acme_server_url            = local.acme_server_url
+  rancher_helm_chart_values  = local.helm_chart_values
 }
 
-data "http" "myip" {
-  url = "https://ipinfo.io/ip"
+provider "rancher2" {
+  alias     = "authenticate"
+  bootstrap = true
+  api_url   = "https://${local.domain}.${local.zone}"
+  timeout   = "300s"
+  ca_certs  = module.rancher.tls_certificate_chain
 }
 
-module "this" {
-  source               = "../../"
-  identifier           = local.identifier
-  owner                = local.owner
-  project_name         = local.project_name
-  domain               = local.domain
-  zone                 = local.zone
-  key_name             = local.key_name
-  key                  = local.key
-  username             = local.username
-  admin_ip             = local.runner_ip
-  rke2_version         = local.rke2_version
-  local_file_path      = local.local_file_path
-  install_method       = "rpm" # rpm only for now, need to figure out local helm chart installs otherwise
-  cni                  = "canal"
-  node_configuration   = local.node_configuration
-  cert_manager_version = local.cert_manager_version
-  rancher_version      = local.rancher_version
-}
-
-# this will fail if the default self signed cert is found
-resource "terraform_data" "get_cert_info" {
+resource "rancher2_bootstrap" "authenticate" {
   depends_on = [
-    module.this,
+    module.rancher,
   ]
-  provisioner "local-exec" {
-    command = <<-EOT
-      CERT="$(echo | openssl s_client -showcerts -servername ${local.domain}.${local.zone} -connect ${local.domain}.${local.zone}:443 2>/dev/null | openssl x509 -inform pem -noout -text)"
-      echo "$CERT"
-      FAKE="$(echo "$CERT" | grep 'Kubernetes Ingress Controller Fake Certificate')"
-      if [ -z "$FAKE" ]; then
-        echo "cert is not fake"
-        exit 0
-      else
-        echo "cert is fake"
-        exit 1
-      fi
-    EOT
-  }
+  provider         = rancher2.authenticate
+  initial_password = module.rancher.admin_password
+  password         = module.rancher.admin_password
+  token_update     = true
+  token_ttl        = 7200 # 2 hours
+}
+
+provider "rancher2" {
+  alias     = "default"
+  api_url   = "https://${local.domain}.${local.zone}"
+  token_key = rancher2_bootstrap.authenticate.token
+  timeout   = "300s"
+  ca_certs  = module.rancher.tls_certificate_chain
 }
 
 data "rancher2_cluster" "local" {
   depends_on = [
-    module.this,
+    module.rancher,
     rancher2_bootstrap.authenticate,
   ]
   provider = rancher2.default
