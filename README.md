@@ -75,9 +75,7 @@ These tools are not necessary, but they can make it much simpler to collaborate.
 * I use [nix](https://nixos.org/) that I have installed using [their recommended script](https://nixos.org/download.html#nix-install-macos)
 * I source the .envrc to get started
   * it sets up all needed dependencies and gives me a set of tools that I can use to test and write the Terraform module.
-* I use the run_tests.sh script in this directory to run the tests, along with the alias 'tt'
-  * eg. `tt -r` will rerun failed tests (once only)
-  * eg. `tt -f=BasicTest` will run only the BasicTest
+* I use the run_tests.sh script in this directory to run the tests
 * I store my credentials in local files and generate a symlink to them
   * eg. `~/.config/github/default/rc`
   * this will be automatically sourced when you enter the nix environment (and unloaded when you leave)
@@ -90,3 +88,14 @@ Our continuous integration tests using the GitHub [ubuntu-latest runner](https:/
 
 It also has special integrations with AWS to allow secure authentication,
  see https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services for more information.
+
+When running tests in an automated system there are two major concerns:
+- make sure that your "identifier" is different between runs
+  - AWS doesn't always delete resources immediately and if you are creating and deleting often it can have collisions
+  - ACME limits the number of certificates with the same domain to two or three a week
+- make sure your environment is clean between tests
+  - install [the leftovers tool](https://github.com/genevieve/leftovers/releases/tag/v0.70.0)
+  - install [the AWS CLI tool](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html#getting-started-install-instructions)
+  - run the "run_tests.sh" script with the "-c" option to clear out any AWS leftovers if the test fails
+    - `./run_tests.sh -c "my-identifier"`
+  - destroy the state file between failed tests

@@ -1,8 +1,3 @@
-provider "rancher2" {
-  api_url   = "https://${local.rancher_domain}"
-  bootstrap = true
-}
-
 locals {
   rancher_domain            = var.project_domain
   rancher_helm_repo         = var.rancher_helm_repo
@@ -10,15 +5,23 @@ locals {
   rancher_version           = replace(var.rancher_version, "v", "") # don't include the v
   helm_chart_use_strategy   = var.rancher_helm_chart_use_strategy
   rancher_helm_chart_values = jsondecode(base64decode(var.rancher_helm_chart_values))
+  public_cert               = base64decode(var.public_cert)
+  private_key               = base64decode(var.private_key)
+  ca_certs                  = base64decode(var.ca_certs)
+  full_chain                = <<-EOT
+    ${trimspace(local.public_cert)}
+    ${trimspace(local.ca_certs)}
+  EOT
   default_hc_values = {
     "hostname"               = local.rancher_domain # must be an fqdn
-    "replicas"               = "1"
+    "replicas"               = "3"
     "bootstrapPassword"      = "admin"
     "ingress.enabled"        = "true"
     "ingress.tls.source"     = "secret"
     "ingress.tls.secretName" = "tls-rancher-ingress"
     "privateCA"              = "true"
-    "agentTLSMode"           = "system-store"
+    "agentTLSMode"           = "strict"
+    "additionalTrustedCAs"   = "true"
   }
   helm_chart_values = coalesce( # using coalesce like this essentially gives us a switch function
     (local.helm_chart_use_strategy == "default" ?
@@ -26,8 +29,25 @@ locals {
     (local.helm_chart_use_strategy == "merge" ?
     merge(local.default_hc_values, local.rancher_helm_chart_values) : null),
     (local.helm_chart_use_strategy == "provide" ?
-    local.rancher_helm_chart_values : null)
-  ) # WARNING! Some config is necessary, if the result is an empty string the coalesce will fail
+    local.rancher_helm_chart_values : null),
+  ) # WARNING! helm_chart_use_strategy is required and must be "default", "merge", or "provide", if the strategy isn't found, the coalesce will fail
+}
+
+resource "local_file" "hcv" {
+  filename = "helm_chart_values.txt"
+  content  = jsonencode(local.rancher_helm_chart_values)
+}
+resource "local_file" "pc" {
+  filename = "public.cert"
+  content  = local.public_cert
+}
+resource "local_file" "ca" {
+  filename = "ca.cert"
+  content  = local.ca_certs
+}
+resource "local_file" "key" {
+  filename = "private.key"
+  content  = local.private_key
 }
 
 resource "time_sleep" "settle_before_rancher" {
@@ -56,37 +76,113 @@ resource "terraform_data" "wait_for_nginx" {
   }
 }
 
-# # WARNING! This adds git, yq, and helm to the dependency list!
-# resource "terraform_data" "build_chart" {
-#   depends_on = [
-#     time_sleep.settle_before_rancher,
-#   ]
-#   provisioner "local-exec" {
-#     command = <<-EOT
-#       cd ${abspath(path.root)} || true
-#       if [ -d chart ]; then
-#         rm -rf chart
-#       fi
-#       mkdir chart
-#       cd chart || exit 1
-#       ${abspath(path.module)}/build_chart.sh "${local.rancher_version}"
-#       cd ${abspath(path.root)} || true
-#       mv chart/rancher-${local.rancher_version}.tgz .
-#       rm -rf chart
-#       ls ${abspath(path.root)}/rancher-${local.rancher_version}.tgz
-#     EOT
-#   }
-# }
+# uses kubectl to idempotentenly create cattle-system namespace
+resource "terraform_data" "cattle-system" {
+  depends_on = [
+    time_sleep.settle_before_rancher,
+    terraform_data.wait_for_nginx,
+  ]
+  provisioner "local-exec" {
+    command = <<-EOT
+      kubectl get namespace cattle-system || kubectl create namespace cattle-system
+    EOT
+  }
+  provisioner "local-exec" {
+    command = <<-EOT
+    kubectl get namespace "cattle-system" -o json  \
+     | tr -d "\n" \
+     | sed "s/\"finalizers\": \[[^]]\+\]/\"finalizers\": []/"   \
+     | kubectl replace --raw /api/v1/namespaces/cattle-system/finalize -f -
+    EOT
+    when    = destroy
+  }
+  provisioner "local-exec" {
+    command = <<-EOT
+      sleep 15
+    EOT
+    when    = destroy
+  }
+}
+
+resource "kubernetes_secret" "tls_rancher_ingress" {
+  depends_on = [
+    time_sleep.settle_before_rancher,
+    terraform_data.wait_for_nginx,
+    terraform_data.cattle-system,
+  ]
+  metadata {
+    name      = "tls-rancher-ingress"
+    namespace = "cattle-system"
+  }
+  type = "kubernetes.io/tls"
+  data = {
+    "tls.crt" = local.full_chain,
+    "tls.key" = local.private_key,
+  }
+  lifecycle {
+    ignore_changes = [
+      metadata[0].annotations,
+    ]
+  }
+}
+
+resource "kubernetes_secret" "rancher_tls_ca" {
+  depends_on = [
+    time_sleep.settle_before_rancher,
+    terraform_data.wait_for_nginx,
+    terraform_data.cattle-system,
+    kubernetes_secret.tls_rancher_ingress,
+  ]
+  metadata {
+    name      = "tls-ca"
+    namespace = "cattle-system"
+  }
+  type = "generic"
+  data = {
+    "cacerts.pem" = local.ca_certs
+  }
+  lifecycle {
+    ignore_changes = [
+      metadata[0].annotations,
+    ]
+  }
+}
+
+resource "kubernetes_secret" "rancher_tls_ca_additional" {
+  depends_on = [
+    time_sleep.settle_before_rancher,
+    terraform_data.wait_for_nginx,
+    terraform_data.cattle-system,
+    kubernetes_secret.tls_rancher_ingress,
+    kubernetes_secret.rancher_tls_ca,
+  ]
+  metadata {
+    name      = "tls-ca-additional"
+    namespace = "cattle-system"
+  }
+  type = "generic"
+  data = {
+    "ca-additional.pem" = local.ca_certs,
+  }
+  lifecycle {
+    ignore_changes = [
+      metadata[0].annotations,
+    ]
+  }
+}
 
 # https://github.com/rancher/rancher/blob/main/chart/values.yaml
 resource "helm_release" "rancher" {
   depends_on = [
     time_sleep.settle_before_rancher,
     terraform_data.wait_for_nginx,
-    # terraform_data.build_chart,
+    terraform_data.cattle-system,
+    kubernetes_secret.tls_rancher_ingress,
+    kubernetes_secret.rancher_tls_ca,
+    kubernetes_secret.rancher_tls_ca_additional,
   ]
   name             = "rancher"
-  chart            = "${local.rancher_helm_repo}/${local.rancher_helm_channel}/rancher-${local.rancher_version}.tgz" # "${path.root}/rancher-${local.rancher_version}.tgz"
+  chart            = "${local.rancher_helm_repo}/${local.rancher_helm_channel}/rancher-${local.rancher_version}.tgz"
   namespace        = "cattle-system"
   create_namespace = false
   wait             = false
@@ -108,6 +204,10 @@ resource "terraform_data" "wait_for_rancher" {
   depends_on = [
     time_sleep.settle_before_rancher,
     terraform_data.wait_for_nginx,
+    terraform_data.cattle-system,
+    kubernetes_secret.tls_rancher_ingress,
+    kubernetes_secret.rancher_tls_ca,
+    kubernetes_secret.rancher_tls_ca_additional,
     helm_release.rancher,
   ]
   provisioner "local-exec" {
@@ -128,9 +228,12 @@ resource "random_password" "password" {
 
 resource "terraform_data" "get_public_cert_info" {
   depends_on = [
-    random_password.password,
     time_sleep.settle_before_rancher,
     terraform_data.wait_for_nginx,
+    terraform_data.cattle-system,
+    kubernetes_secret.tls_rancher_ingress,
+    kubernetes_secret.rancher_tls_ca,
+    kubernetes_secret.rancher_tls_ca_additional,
     helm_release.rancher,
     terraform_data.wait_for_rancher,
   ]
@@ -150,50 +253,25 @@ resource "terraform_data" "get_public_cert_info" {
   }
 }
 
-# this requires a let's encrypt certificate, which we would like to eventually not require
-# resource "terraform_data" "get_ping" {
-#   depends_on = [
-#     random_password.password,
-#     time_sleep.settle_before_rancher,
-#     terraform_data.wait_for_nginx,
-#     helm_release.rancher,
-#     terraform_data.wait_for_rancher,
-#     terraform_data.get_public_cert_info,
-#   ]
-#   provisioner "local-exec" {
-#     command = <<-EOT
-#       check_letsencrypt_ca() {
-#         # Try to verify a known Let's Encrypt certificate (you can use any valid one)
-#         if openssl s_client -showcerts -connect letsencrypt.org:443 < /dev/null | openssl x509 -noout -issuer | grep -q "Let's Encrypt"; then
-#           return 0 # Success
-#         else
-#           return 1 # Failure
-#         fi
-#       }
-#       echo "Checking Let's Encrypt CA"
-#       if check_letsencrypt_ca; then
-#         echo "Let's Encrypt CA is functioning correctly."
-#       else
-#         echo "Error: Let's Encrypt CA is not being used for verification."
-#         exit 1
-#       fi
-#       echo "Checking Cert"
-#       echo | openssl s_client -showcerts -servername ${local.rancher_domain} -connect "${local.rancher_domain}:443" 2>/dev/null | openssl x509 -inform pem -noout -text || true
-#       echo "Checking Curl"
-#       curl "https://${local.rancher_domain}/ping"
-#     EOT
-#   }
-# }
+provider "rancher2" {
+  api_url   = "https://${local.rancher_domain}"
+  bootstrap = true
+  ca_certs  = local.ca_certs
+  alias     = "bootstrap"
+}
 
 resource "rancher2_bootstrap" "admin" {
   depends_on = [
-    random_password.password,
     time_sleep.settle_before_rancher,
     terraform_data.wait_for_nginx,
+    terraform_data.cattle-system,
+    kubernetes_secret.tls_rancher_ingress,
+    kubernetes_secret.rancher_tls_ca,
+    kubernetes_secret.rancher_tls_ca_additional,
     helm_release.rancher,
     terraform_data.wait_for_rancher,
     terraform_data.get_public_cert_info,
-    # terraform_data.get_ping,
   ]
+  provider = rancher2.bootstrap
   password = random_password.password.result
 }

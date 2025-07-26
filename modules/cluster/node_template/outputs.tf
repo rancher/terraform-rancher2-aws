@@ -22,7 +22,8 @@ output "project_security_group" {
   value = module.node.project_security_group
 }
 output "project_domain_tls_certificate" {
-  value = module.node.project_domain_tls_certificate
+  value     = module.node.project_domain_tls_certificate
+  sensitive = true
 }
 output "project_vpc" {
   value = module.node.project_vpc

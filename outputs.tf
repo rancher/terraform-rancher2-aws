@@ -38,3 +38,6 @@ output "private_endpoint" {
 output "domain_object" {
   value = module.cluster.project_domain_object
 }
+output "tls_certificate_chain" {
+  value = module.rancher_bootstrap[0].ca_certs
+}

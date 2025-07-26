@@ -18,15 +18,18 @@ locals {
   deploy_path                     = "${local.path}/rancher_bootstrap"
   rancher_helm_chart_values       = var.rancher_helm_chart_values
   rancher_helm_chart_use_strategy = var.rancher_helm_chart_use_strategy
+  cert_public                     = var.cert_public
+  cert_private                    = var.cert_private
+  cert_chain                      = var.cert_chain
 }
 
 module "deploy_rancher" {
-  source = "../deploy"
-  depends_on = [
-  ]
+  source        = "../deploy"
   deploy_path   = local.deploy_path
   data_path     = local.deploy_path
   template_path = local.rancher_path
+  attempts      = 5
+  interval      = 60
   skip_destroy  = true # this is a one way operation, uninstall not supported
   environment_variables = {
     KUBECONFIG       = "${local.path}/kubeconfig"
@@ -44,5 +47,8 @@ module "deploy_rancher" {
     email                           = "${local.email}"
     cert_manager_version            = "${local.cert_manager_version}"
     acme_server_url                 = "${local.acme_server_url}"
+    ca_certs                        = "${base64encode(local.cert_chain)}"
+    public_cert                     = "${base64encode(local.cert_public)}"
+    private_key                     = "${base64encode(local.cert_private)}"
   EOT
 }

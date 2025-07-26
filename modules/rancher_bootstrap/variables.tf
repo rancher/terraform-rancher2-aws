@@ -115,3 +115,21 @@ variable "rancher_helm_chart_values" {
   EOT
   default     = {}
 }
+variable "cert_public" {
+  type        = string
+  description = <<-EOT
+    The base64 encoded contents of the public cert.
+  EOT
+}
+variable "cert_private" {
+  type        = string
+  description = <<-EOT
+    The base64 encoded contents of the private key.
+  EOT
+}
+variable "cert_chain" {
+  type        = string
+  description = <<-EOT
+    The base64 encoded contents of the certificate chain.
+  EOT
+}

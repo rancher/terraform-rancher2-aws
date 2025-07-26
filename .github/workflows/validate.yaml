@@ -87,7 +87,7 @@ jobs:
           # This format enables automatic generation of changelogs and versioning
           filter() {
             COMMIT="$1"
-            output="$(echo "$COMMIT" | grep -e '^fix: ' -e '^feature: ' -e '^feat: ' -e '^refactor!: ' -e '^feature!: ' -e '^feat!: ' -e '^chore(main): ')"
+            output="$(echo "$COMMIT" | grep -e '^fix: ' -e '^feature: ' -e '^feat: ' -e '^refactor!: ' -e '^feature!: ' -e '^feat!: ' -e '^chore(main): ' -e '^Merge branch ')"
             echo "$output"
           }
           prefix_check() {
@@ -124,7 +124,7 @@ jobs:
           }
           spell_check() {
             message="$1"
-            WORDS="$(aspell list <<<"$message")"
+            WORDS="$(aspell list --dont-validate-words <<<"$message")"
             if [ "" != "$WORDS" ]; then
               echo "...Commit message contains spelling errors on: ^$WORDS\$"
               echo "...Also try updating the PR title."
