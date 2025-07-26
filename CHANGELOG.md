@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.1](https://github.com/rancher/terraform-rancher2-aws/compare/v2.0.0...v2.0.1) (2025-07-09)
+
+
+### Bug Fixes
+
+* give each job its own session ([#107](https://github.com/rancher/terraform-rancher2-aws/issues/107)) ([9e4550c](https://github.com/rancher/terraform-rancher2-aws/commit/9e4550cd04550ed4413a5b1939f4d7b1ac09d20e))
+
 ## [2.0.0](https://github.com/rancher/terraform-rancher2-aws/compare/v1.2.2...v2.0.0) (2025-07-08)
 
 
