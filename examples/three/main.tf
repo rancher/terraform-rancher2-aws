@@ -64,20 +64,20 @@ locals {
       indirect_access = true
       initial         = true
     }
-    # "rancherB" = {
-    #   type            = "all-in-one"
-    #   size            = "xxl"
-    #   os              = local.os
-    #   indirect_access = true
-    #   initial         = false
-    # }
-    # "rancherC" = {
-    #   type            = "all-in-one"
-    #   size            = "xxl"
-    #   os              = local.os
-    #   indirect_access = true
-    #   initial         = false
-    # }
+    "rancherB" = {
+      type            = "all-in-one"
+      size            = "xxl"
+      os              = local.os
+      indirect_access = true
+      initial         = false
+    }
+    "rancherC" = {
+      type            = "all-in-one"
+      size            = "xxl"
+      os              = local.os
+      indirect_access = true
+      initial         = false
+    }
   }
   local_file_path      = var.file_path
   runner_ip            = chomp(data.http.myip.response_body) # "runner" is the server running Terraform
