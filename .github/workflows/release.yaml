@@ -85,7 +85,7 @@ jobs:
           token: ${{secrets.GITHUB_TOKEN}}
           fetch-depth: 0
       - id: aws-creds
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: ${{env.AWS_ROLE}}
           role-session-name: ${{github.run_id}}-TestOneBasic
@@ -127,7 +127,7 @@ jobs:
           token: ${{secrets.GITHUB_TOKEN}}
           fetch-depth: 0
       - id: aws-creds
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: ${{env.AWS_ROLE}}
           role-session-name: ${{github.run_id}}-TestProdBasic
@@ -169,7 +169,7 @@ jobs:
           token: ${{secrets.GITHUB_TOKEN}}
           fetch-depth: 0
       - id: aws-creds
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: ${{env.AWS_ROLE}}
           role-session-name: ${{github.run_id}}-TestThreeBasic
@@ -212,7 +212,7 @@ jobs:
           token: ${{secrets.GITHUB_TOKEN}}
           fetch-depth: 0
       - id: aws-creds
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: ${{env.AWS_ROLE}}
           role-session-name: ${{github.run_id}}-TestDownstreamBasic
@@ -254,7 +254,7 @@ jobs:
           token: ${{secrets.GITHUB_TOKEN}}
           fetch-depth: 0
       - id: aws-creds
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: ${{env.AWS_ROLE}}
           role-session-name: ${{github.run_id}}-TestDownstreamSplitrole
@@ -300,7 +300,7 @@ jobs:
           token: ${{secrets.GITHUB_TOKEN}}
           fetch-depth: 0
       - id: aws-creds
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: ${{env.AWS_ROLE}}
           role-session-name: ${{github.run_id}}-cleanup
