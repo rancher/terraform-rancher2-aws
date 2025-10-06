@@ -5,16 +5,6 @@ variable "inputs" {
   EOT
   default     = ""
 }
-variable "template_path" {
-  type        = string
-  description = <<-EOT
-    Path to the module to deploy.
-    These files will be copied to the deploy path, not used directly.
-    This is optional, but one of template_path or template_files must be specified.
-    Only one of template_path or template_files can be specified.
-  EOT
-  default     = null
-}
 variable "template_files" {
   type        = list(any)
   description = <<-EOT
@@ -91,4 +81,13 @@ variable "skip_destroy" {
     Be careful as this can leave objects in your API unmanaged by IAC.
   EOT
   default     = false
+}
+variable "deploy_trigger" {
+  type        = string
+  description = <<-EOT
+    An arbitrary string which describes the deployment itself (not what it is deploying).
+    When this string changes the module will update the deployment files from the other inputs given.
+    This means that arbitrary changes to this module's inputs don't cause the deployment to trigger,
+     the deployment will only trigger when this string changes.
+  EOT
 }

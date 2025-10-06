@@ -33,21 +33,21 @@ locals {
   ) # WARNING! helm_chart_use_strategy is required and must be "default", "merge", or "provide", if the strategy isn't found, the coalesce will fail
 }
 
-resource "local_file" "hcv" {
-  filename = "helm_chart_values.txt"
-  content  = jsonencode(local.rancher_helm_chart_values)
+resource "file_local" "hcv" {
+  name     = "helm_chart_values.txt"
+  contents = jsonencode(local.rancher_helm_chart_values)
 }
-resource "local_file" "pc" {
-  filename = "public.cert"
-  content  = local.public_cert
+resource "file_local" "pc" {
+  name     = "public.cert"
+  contents = local.public_cert
 }
-resource "local_file" "ca" {
-  filename = "ca.cert"
-  content  = local.ca_certs
+resource "file_local" "ca" {
+  name     = "ca.cert"
+  contents = local.ca_certs
 }
-resource "local_file" "key" {
-  filename = "private.key"
-  content  = local.private_key
+resource "file_local" "key" {
+  name     = "private.key"
+  contents = local.private_key
 }
 
 resource "time_sleep" "settle_before_rancher" {

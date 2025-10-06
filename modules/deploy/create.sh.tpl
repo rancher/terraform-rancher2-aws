@@ -1,6 +1,5 @@
-${export_contents}
 cd ${deploy_path}
-export TF_DATA_DIR="${tf_data_dir}"
+source envrc
 TF_CLI_ARGS_init=""
 TF_CLI_ARGS_apply=""
 
