@@ -136,10 +136,39 @@ module "deploy_initial_node" {
   depends_on = [
     data.aws_availability_zones.available,
   ]
-  for_each      = local.initial_node
-  deploy_path   = each.value.deploy_path
-  data_path     = each.value.deploy_path
-  template_path = "${path.module}/node_template"
+  for_each    = local.initial_node
+  deploy_path = each.value.deploy_path
+  data_path   = each.value.deploy_path
+  # if any of this changes, update/redeploy
+  deploy_trigger = md5(join("-", [
+    each.key,
+    md5(base64encode(jsonencode(each.value))),
+    local.identifier,
+    local.owner,
+    local.acme_server_url,
+    local.project_name,
+    local.ip_family,
+    md5(base64encode(jsonencode(data.aws_availability_zones.available.names))),
+    md5(base64encode(jsonencode(local.project_subnet_names))),
+    md5(base64encode(jsonencode(local.project_load_balancer_access_cidrs))),
+    local.domain,
+    local.zone,
+    local.skip_cert,
+    data.aws_availability_zones.available.names[0],
+    md5(base64encode(jsonencode(values(local.target_groups)))),
+    md5(base64encode(jsonencode(local.server_access_addresses))),
+    local.username,
+    local.ssh_key,
+    local.install_method,
+    local.download,
+    local.rke2_version,
+  ]))
+  template_files = [
+    join("/", [path.module, "node_template", "main.tf"]),
+    join("/", [path.module, "node_template", "outputs.tf"]),
+    join("/", [path.module, "node_template", "variables.tf"]),
+    join("/", [path.module, "node_template", "versions.tf"]),
+  ]
   inputs = <<-EOT
     identifier                          = "${local.identifier}"
     owner                               = "${local.owner}"
@@ -229,10 +258,39 @@ module "deploy_additional_nodes" {
     data.aws_availability_zones.available,
     module.deploy_initial_node,
   ]
-  for_each      = local.additional_nodes
-  deploy_path   = each.value.deploy_path
-  data_path     = each.value.deploy_path
-  template_path = "${path.module}/node_template"
+  for_each    = local.additional_nodes
+  deploy_path = each.value.deploy_path
+  data_path   = each.value.deploy_path
+  # if any of this changes, update/redeploy
+  deploy_trigger = md5(join("-", [
+    each.key,
+    md5(base64encode(jsonencode(each.value))),
+    local.identifier,
+    local.owner,
+    local.acme_server_url,
+    local.project_name,
+    local.ip_family,
+    md5(base64encode(jsonencode(data.aws_availability_zones.available.names))),
+    md5(base64encode(jsonencode(local.project_subnet_names))),
+    md5(base64encode(jsonencode(local.project_load_balancer_access_cidrs))),
+    local.domain,
+    local.zone,
+    local.skip_cert,
+    data.aws_availability_zones.available.names[0],
+    md5(base64encode(jsonencode(values(local.target_groups)))),
+    md5(base64encode(jsonencode(local.server_access_addresses))),
+    local.username,
+    local.ssh_key,
+    local.install_method,
+    local.download,
+    local.rke2_version,
+  ]))
+  template_files = [
+    join("/", [path.module, "node_template", "main.tf"]),
+    join("/", [path.module, "node_template", "outputs.tf"]),
+    join("/", [path.module, "node_template", "variables.tf"]),
+    join("/", [path.module, "node_template", "versions.tf"]),
+  ]
   inputs = <<-EOT
     identifier                  = "${local.identifier}"
     owner                       = "${local.owner}"
@@ -311,11 +369,12 @@ strcontains(each.value.type, "database") ? local.database_config :
   EOT
 }
 
-resource "local_sensitive_file" "kubeconfig" {
+resource "file_local" "kubeconfig" {
   depends_on = [
     module.deploy_initial_node,
     module.deploy_additional_nodes,
   ]
-  content  = local.ino.output.kubeconfig
-  filename = "${local.local_file_path}/kubeconfig"
+  name      = "kubeconfig"
+  directory = local.local_file_path
+  contents  = local.ino.output.kubeconfig
 }
