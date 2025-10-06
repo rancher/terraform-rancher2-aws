@@ -1,5 +1,5 @@
 output "output" {
-  value = { for k, v in jsondecode(module.persist_outputs.contents) : k => v.value }
+  value = { for k, v in jsondecode(base64decode(file_local_snapshot.persist_outputs.snapshot)) : k => v.value }
 }
 
 # output "raw_output" {

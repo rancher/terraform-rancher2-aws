@@ -24,13 +24,40 @@ locals {
 }
 
 module "deploy_rancher" {
-  source        = "../deploy"
-  deploy_path   = local.deploy_path
-  data_path     = local.deploy_path
-  template_path = local.rancher_path
-  attempts      = 5
-  interval      = 60
-  skip_destroy  = true # this is a one way operation, uninstall not supported
+  source      = "../deploy"
+  deploy_path = local.deploy_path
+  data_path   = local.deploy_path
+  template_files = [
+    join("/", [local.rancher_path, "main.tf"]),
+    join("/", [local.rancher_path, "outputs.tf"]),
+    join("/", [local.rancher_path, "variables.tf"]),
+    join("/", [local.rancher_path, "versions.tf"]),
+    join("/", [local.rancher_path, "runningPods.sh"]),
+    join("/", [local.rancher_path, "runningDeployments.sh"]),
+  ]
+  attempts     = 5
+  interval     = 60
+  skip_destroy = true # this is a one way operation, uninstall not supported
+  # if any of these change, redeploy/update
+  deploy_trigger = md5(join("-", [
+    local.project_domain,
+    local.zone_id,
+    local.region,
+    local.email,
+    local.acme_server_url,
+    local.rancher_version,
+    local.rancher_helm_repo,
+    local.rancher_helm_channel,
+    local.cert_manager_version,
+    local.path,
+    local.externalTLS,
+    local.rancher_path,
+    local.deploy_path,
+    md5(jsonencode(local.rancher_helm_chart_values)),
+    local.cert_public,
+    local.cert_private,
+    local.cert_chain,
+  ]))
   environment_variables = {
     KUBECONFIG       = "${local.path}/kubeconfig"
     KUBE_CONFIG_PATH = "${local.path}/kubeconfig"

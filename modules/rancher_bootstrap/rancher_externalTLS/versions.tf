@@ -5,10 +5,6 @@ terraform {
       source  = "hashicorp/helm"
       version = "2.14"
     }
-    local = {
-      source  = "hashicorp/local"
-      version = ">= 2.5"
-    }
     rancher2 = {
       source  = "rancher/rancher2"
       version = ">= 5.0.0"
@@ -28,6 +24,10 @@ terraform {
     aws = {
       source  = "hashicorp/aws"
       version = ">= 5.11"
+    }
+    file = {
+      source  = "rancher/file"
+      version = ">= 2.2.0"
     }
   }
 }

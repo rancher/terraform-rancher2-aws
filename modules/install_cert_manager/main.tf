@@ -21,10 +21,27 @@ module "deploy_cert_manager" {
   source = "../deploy"
   depends_on = [
   ]
-  deploy_path   = local.deploy_path
-  data_path     = local.deploy_path
-  template_path = local.cert_manager_path
-  skip_destroy  = true # this is a one way operation, uninstall is not supported
+  deploy_path = local.deploy_path
+  data_path   = local.deploy_path
+  template_files = [
+    join("/", [local.cert_manager_path, "main.tf"]),
+    join("/", [local.cert_manager_path, "variables.tf"]),
+    join("/", [local.cert_manager_path, "versions.tf"]),
+  ]
+  skip_destroy = true # this is a one way operation, uninstall is not supported
+  # if any of these change, redeploy/update
+  deploy_trigger = md5(
+    join("-", [
+      local.rancher_domain,
+      local.zone_id,
+      local.project_cert_key_id,
+      local.path,
+      local.cert_manager_version,
+      local.cert_manager_path,
+      md5(jsonencode(local.cert_manager_config)),
+      local.deploy_path,
+    ])
+  )
   environment_variables = {
     KUBE_CONFIG_PATH = "${abspath(local.path)}/kubeconfig"
     KUBECONFIG       = "${abspath(local.path)}/kubeconfig"
