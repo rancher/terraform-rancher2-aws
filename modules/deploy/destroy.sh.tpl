@@ -1,5 +1,5 @@
 cd ${deploy_path}
-source envrc
+. envrc
 TF_CLI_ARGS_init=""
 TF_CLI_ARGS_apply=""
 if [ -z "${skip_destroy}" ]; then
