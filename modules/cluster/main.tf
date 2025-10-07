@@ -374,7 +374,8 @@ resource "file_local" "kubeconfig" {
     module.deploy_initial_node,
     module.deploy_additional_nodes,
   ]
-  name      = "kubeconfig"
-  directory = local.local_file_path
-  contents  = local.ino.output.kubeconfig
+  name        = "kubeconfig"
+  directory   = local.local_file_path
+  contents    = local.ino.output.kubeconfig
+  permissions = "0644" // kube-proxy requires read permissions for others
 }

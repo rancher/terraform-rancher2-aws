@@ -176,11 +176,11 @@ resource "file_local" "instantiate_envrc_snapshot" {
     file_local_snapshot.persist_envrc,
     terraform_data.remove_tmp_envrc,
   ]
-  directory = local.deploy_path
-  name      = "envrc"
-  contents  = base64decode(file_local_snapshot.persist_envrc.snapshot)
+  directory   = local.deploy_path
+  name        = "envrc"
+  contents    = base64decode(file_local_snapshot.persist_envrc.snapshot)
+  permissions = "0700" # make it executable so it can be sourced
 }
-
 
 resource "terraform_data" "destroy" {
   depends_on = [
@@ -271,7 +271,7 @@ resource "file_local" "instantiate_outputs" {
 
 # during initial create this should be an extra apply that has no effect
 # when the inputs change and the template needs to be rebuilt this will allow the persist
-#  to rebuild the template before running the create script
+#  to rebuild the template and state file before running the create script
 resource "terraform_data" "create_after_persist" {
   depends_on = [
     file_local.instantiate_envrc_snapshot,
