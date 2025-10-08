@@ -31,7 +31,6 @@ resource "file_local_directory" "deploy_path" {
   path        = local.deploy_path
   permissions = "0755"
 }
-
 resource "file_local_directory" "tf_data_dir" {
   count       = (local.tf_data_dir != local.deploy_path ? 1 : 0)
   path        = local.tf_data_dir
@@ -75,9 +74,10 @@ resource "file_local" "write_tmp_inputs" {
     file_local_directory.deploy_path,
     file_local_directory.tf_data_dir,
   ]
-  directory = local.tf_data_dir
-  name      = "inputs.tmp"
-  contents  = local.inputs
+  directory   = local.tf_data_dir
+  name        = "inputs.tmp"
+  contents    = local.inputs
+  permissions = "0400"
 }
 resource "file_local_snapshot" "persist_inputs" {
   depends_on = [
@@ -107,9 +107,10 @@ resource "file_local" "write_tmp_env" {
     file_local_directory.deploy_path,
     file_local_directory.tf_data_dir,
   ]
-  directory = local.tf_data_dir
-  name      = "env.tmp"
-  contents  = local.export_contents
+  directory   = local.tf_data_dir
+  name        = "env.tmp"
+  contents    = local.export_contents
+  permissions = "0400"
 }
 resource "file_local_snapshot" "persist_envrc" {
   depends_on = [
@@ -128,9 +129,10 @@ resource "file_local" "instantiate_envrc_snapshot" {
     file_local.write_tmp_env,
     file_local_snapshot.persist_envrc,
   ]
-  directory = local.deploy_path
-  name      = "envrc"
-  contents  = base64decode(file_local_snapshot.persist_envrc.snapshot)
+  directory   = local.deploy_path
+  name        = "envrc"
+  contents    = base64decode(file_local_snapshot.persist_envrc.snapshot)
+  permissions = "0644"
 }
 
 ## Deploy ##

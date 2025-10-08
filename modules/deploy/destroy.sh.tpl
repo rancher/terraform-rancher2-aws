@@ -1,8 +1,10 @@
 set -x
+DIR=$(pwd)
 cd ${deploy_path}
 pwd
 ls -lah
-. envrc
+whoami
+. ${deploy_path}/envrc
 TF_CLI_ARGS_init=""
 TF_CLI_ARGS_apply=""
 if [ -z "${skip_destroy}" ]; then
@@ -11,3 +13,5 @@ if [ -z "${skip_destroy}" ]; then
 else
   echo "Not destroying deployed module, it will no longer be managed here."
 fi
+cd $DIR
+exit 0
