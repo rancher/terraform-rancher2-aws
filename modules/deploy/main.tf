@@ -128,56 +128,86 @@ resource "file_local" "instantiate_envrc_snapshot" {
     file_local.write_tmp_env,
     file_local_snapshot.persist_envrc,
   ]
-  directory   = local.deploy_path
-  name        = "envrc"
-  contents    = base64decode(file_local_snapshot.persist_envrc.snapshot)
-  permissions = "0700" # make it executable so it can be sourced
+  directory = local.deploy_path
+  name      = "envrc"
+  contents  = base64decode(file_local_snapshot.persist_envrc.snapshot)
 }
 
-resource "terraform_data" "destroy" {
+## Deploy ##
+resource "file_local" "generate_destroy" {
   depends_on = [
     file_local.instantiate_envrc_snapshot,
     file_local.instantiate_inputs_snapshot,
     file_local.instantiate_tpl_snapshot,
   ]
+  directory   = local.tf_data_dir
+  name        = "destroy.sh"
+  permissions = "0755"
+  contents = templatefile("${path.module}/destroy.sh.tpl", {
+    deploy_path  = local.deploy_path
+    skip_destroy = local.skip_destroy
+    timeout      = local.timeout
+  })
+}
+resource "terraform_data" "destroy" {
+  depends_on = [
+    file_local.instantiate_envrc_snapshot,
+    file_local.instantiate_inputs_snapshot,
+    file_local.instantiate_tpl_snapshot,
+    file_local.generate_destroy,
+  ]
   triggers_replace = {
     trigger = local.deploy_trigger
     dp      = local.deploy_path
-    sd      = local.skip_destroy
-    to      = local.timeout
   }
   provisioner "local-exec" {
     when = destroy
-    command = templatefile("${path.module}/destroy.sh.tpl", {
-      deploy_path  = self.triggers_replace.dp
-      skip_destroy = self.triggers_replace.sd
-      timeout      = self.triggers_replace.to
-    })
+    # no changing the directory or this won't work on different machines!
+    command = <<-EOT
+      set -x
+      ${self.triggers_replace.dp}/destroy.sh
+    EOT
   }
 }
 
-resource "terraform_data" "create" {
+resource "file_local" "generate_create" {
   depends_on = [
     file_local.instantiate_envrc_snapshot,
     file_local.instantiate_inputs_snapshot,
     file_local.instantiate_tpl_snapshot,
     terraform_data.destroy,
   ]
+  directory   = local.tf_data_dir
+  name        = "create.sh"
+  permissions = "0755"
+  contents = templatefile("${path.module}/create.sh.tpl", {
+    deploy_path = local.deploy_path
+    init_script = local.init_script
+    attempts    = local.attempts
+    timeout     = local.timeout
+    interval    = local.interval
+  })
+}
+resource "terraform_data" "create" {
+  depends_on = [
+    file_local.instantiate_envrc_snapshot,
+    file_local.instantiate_inputs_snapshot,
+    file_local.instantiate_tpl_snapshot,
+    file_local.generate_create,
+    file_local.generate_destroy,
+    terraform_data.destroy,
+  ]
   triggers_replace = {
     never = <<-EOT
-      This resource is only meant to run once,
-        on the initial deploy,
-        the secondary create manages updates.
+      This resource is only meant to run once, on the initial deploy,
+      the second create (create_after_persist) manages updates.
     EOT
   }
   provisioner "local-exec" {
-    command = templatefile("${path.module}/create.sh.tpl", {
-      deploy_path = local.deploy_path
-      init_script = local.init_script
-      attempts    = local.attempts
-      timeout     = local.timeout
-      interval    = local.interval
-    })
+    command = <<-EOT
+      set -x
+      ${local.tf_data_dir}/create.sh
+    EOT
   }
 }
 
@@ -229,6 +259,8 @@ resource "terraform_data" "create_after_persist" {
     file_local.instantiate_envrc_snapshot,
     file_local.instantiate_inputs_snapshot,
     file_local.instantiate_tpl_snapshot,
+    file_local.generate_destroy,
+    file_local.generate_create,
     terraform_data.destroy,
     terraform_data.create,
     file_local.instantiate_state,
@@ -238,13 +270,10 @@ resource "terraform_data" "create_after_persist" {
     trigger = local.deploy_trigger
   }
   provisioner "local-exec" {
-    command = templatefile("${path.module}/create.sh.tpl", {
-      deploy_path = local.deploy_path
-      init_script = local.init_script
-      attempts    = local.attempts
-      timeout     = local.timeout
-      interval    = local.interval
-    })
+    command = <<-EOT
+      set -x
+      ${local.tf_data_dir}/create.sh
+    EOT
   }
 }
 
@@ -255,21 +284,20 @@ resource "terraform_data" "destroy_end" {
     file_local.instantiate_tpl_snapshot,
     terraform_data.destroy,
     terraform_data.create,
+    file_local.generate_destroy,
+    file_local.generate_create,
     file_local.instantiate_state,
     file_local.instantiate_outputs,
     terraform_data.create_after_persist,
   ]
   triggers_replace = {
     dp = local.deploy_path
-    sd = local.skip_destroy
-    to = local.timeout
   }
   provisioner "local-exec" {
-    when = destroy
-    command = templatefile("${path.module}/destroy.sh.tpl", {
-      deploy_path  = self.triggers_replace.dp
-      skip_destroy = self.triggers_replace.sd
-      timeout      = self.triggers_replace.to
-    })
+    when    = destroy
+    command = <<-EOT
+      set -x
+      ${self.triggers_replace.dp}/destroy.sh
+    EOT
   }
 }

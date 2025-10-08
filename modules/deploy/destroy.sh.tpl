@@ -1,4 +1,7 @@
-cd ${deploy_path}
+set -x
+pushd ${deploy_path}
+pwd
+ls -lah
 . envrc
 TF_CLI_ARGS_init=""
 TF_CLI_ARGS_apply=""
@@ -8,3 +11,4 @@ if [ -z "${skip_destroy}" ]; then
 else
   echo "Not destroying deployed module, it will no longer be managed here."
 fi
+popd
