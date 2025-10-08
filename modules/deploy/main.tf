@@ -70,55 +70,31 @@ resource "file_local" "instantiate_tpl_snapshot" {
 }
 
 ### Inputs ###
-resource "terraform_data" "write_tmp_inputs" {
+resource "file_local" "write_tmp_inputs" {
   depends_on = [
     file_local_directory.deploy_path,
     file_local_directory.tf_data_dir,
   ]
-  triggers_replace = {
-    trigger = local.deploy_trigger
-  }
-  provisioner "local-exec" {
-    command = <<-EOT
-      cat <<'EOF'> "${local.tf_data_dir}/inputs"
-      ${local.inputs}
-      EOF
-    EOT
-  }
+  directory = local.tf_data_dir
+  name      = "inputs.tmp"
+  contents  = local.inputs
 }
 resource "file_local_snapshot" "persist_inputs" {
   depends_on = [
     file_local_directory.deploy_path,
     file_local_directory.tf_data_dir,
-    terraform_data.write_tmp_inputs,
+    file_local.write_tmp_inputs,
   ]
   directory      = local.tf_data_dir
-  name           = "inputs"
+  name           = "inputs.tmp"
   update_trigger = local.deploy_trigger
-}
-resource "terraform_data" "remove_tmp_inputs" {
-  depends_on = [
-    file_local_directory.deploy_path,
-    file_local_directory.tf_data_dir,
-    terraform_data.write_tmp_inputs,
-    file_local_snapshot.persist_inputs,
-  ]
-  triggers_replace = {
-    trigger = local.deploy_trigger
-  }
-  provisioner "local-exec" {
-    command = <<-EOT
-      rm -f "${local.tf_data_dir}/inputs"
-    EOT
-  }
 }
 resource "file_local" "instantiate_inputs_snapshot" {
   depends_on = [
     file_local_directory.deploy_path,
     file_local_directory.tf_data_dir,
-    terraform_data.write_tmp_inputs,
+    file_local.write_tmp_inputs,
     file_local_snapshot.persist_inputs,
-    terraform_data.remove_tmp_inputs,
   ]
   directory = local.deploy_path
   name      = "inputs.tfvars"
@@ -126,55 +102,31 @@ resource "file_local" "instantiate_inputs_snapshot" {
 }
 
 ### Environment Variables ###
-resource "terraform_data" "write_tmp_envrc" {
+resource "file_local" "write_tmp_env" {
   depends_on = [
     file_local_directory.deploy_path,
     file_local_directory.tf_data_dir,
   ]
-  triggers_replace = {
-    trigger = local.deploy_trigger
-  }
-  provisioner "local-exec" {
-    command = <<-EOT
-      cat <<'EOF'> "${local.tf_data_dir}/envrc"
-      ${local.export_contents}
-      EOF
-    EOT
-  }
+  directory = local.tf_data_dir
+  name      = "env.tmp"
+  contents  = local.export_contents
 }
 resource "file_local_snapshot" "persist_envrc" {
   depends_on = [
     file_local_directory.deploy_path,
     file_local_directory.tf_data_dir,
-    terraform_data.write_tmp_envrc,
+    file_local.write_tmp_env,
   ]
   directory      = local.tf_data_dir
-  name           = "envrc"
+  name           = "env.tmp"
   update_trigger = local.deploy_trigger
-}
-resource "terraform_data" "remove_tmp_envrc" {
-  depends_on = [
-    file_local_directory.deploy_path,
-    file_local_directory.tf_data_dir,
-    terraform_data.write_tmp_envrc,
-    file_local_snapshot.persist_envrc,
-  ]
-  triggers_replace = {
-    trigger = local.deploy_trigger
-  }
-  provisioner "local-exec" {
-    command = <<-EOT
-      rm -f "${local.tf_data_dir}/envrc"
-    EOT
-  }
 }
 resource "file_local" "instantiate_envrc_snapshot" {
   depends_on = [
     file_local_directory.deploy_path,
     file_local_directory.tf_data_dir,
-    terraform_data.write_tmp_envrc,
+    file_local.write_tmp_env,
     file_local_snapshot.persist_envrc,
-    terraform_data.remove_tmp_envrc,
   ]
   directory   = local.deploy_path
   name        = "envrc"
