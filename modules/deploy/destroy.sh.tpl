@@ -1,5 +1,5 @@
 set -x
-pushd ${deploy_path}
+cd ${deploy_path}
 pwd
 ls -lah
 . envrc
@@ -11,4 +11,3 @@ if [ -z "${skip_destroy}" ]; then
 else
   echo "Not destroying deployed module, it will no longer be managed here."
 fi
-popd
