@@ -1,4 +1,7 @@
-cd ${deploy_path}
+set -x
+pushd ${deploy_path}
+pwd
+ls -lah
 . envrc
 TF_CLI_ARGS_init=""
 TF_CLI_ARGS_apply=""
@@ -51,4 +54,5 @@ if [ $EXITCODE -eq 0 ]; then
   echo "success...";
   terraform output -json -state="${deploy_path}/tfstate" > ${deploy_path}/outputs.json
 fi
+popd
 exit $EXITCODE
