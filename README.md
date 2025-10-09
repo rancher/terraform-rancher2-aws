@@ -2,6 +2,10 @@
 
 This module deploys infrastructure in AWS, installs rke2, then uses the rancher2 provider to install and configure rancher.
 This module combines other modules that we provide to give holistic control of the lifecycle of the rancher cluster.
+This is a secondary module, it deploys very little on its own, instead, it acts as an adapter/controller talking to other Terraform modules.
+In some cases these modules need to exist on their own with heir own state for the infrastructure to scale properly.
+To accomplish this we save the contents of the state files in our state file as a single resource and regenerate them if necessary on apply.
+These child modules are saved base64 encoded in the root module's state file.
 
 ## Requirements
 
@@ -83,8 +87,7 @@ These tools are not necessary, but they can make it much simpler to collaborate.
 
 #### Automated Tests
 
-Our continuous integration tests using the GitHub [ubuntu-latest runner](https://github.com/actions/runner-images/blob/main/images/linux/Ubuntu2204-Readme.md),
- we then rely on Nix to deploy the additional dependencies.
+Our continuous integration tests using the GitHub [ubuntu-latest runner](https://github.com/actions/runner-images/blob/main/images/linux/Ubuntu2204-Readme.md), we then rely on Nix to deploy the additional dependencies.
 
 It also has special integrations with AWS to allow secure authentication,
  see https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services for more information.
