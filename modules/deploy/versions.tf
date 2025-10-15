@@ -3,7 +3,7 @@ terraform {
   required_providers {
     file = {
       source  = "rancher/file"
-      version = ">= 2.5"
+      version = ">= 2.2"
     }
   }
 }
