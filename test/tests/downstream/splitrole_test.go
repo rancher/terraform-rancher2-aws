@@ -99,7 +99,7 @@ func TestDownstreamSplitrole(t *testing.T) {
 			"KUBECONFIG":          testDir + "/kubeconfig",
 			"KUBE_CONFIG_PATH":    testDir,
 			"TF_CLI_ARGS_plan":    "-no-color -state=" + testDir + "/tfstate",
-			"TF_CLI_ARGS_apply":   "-no-color -state=" + testDir + "/tfstate",
+			"TF_CLI_ARGS_apply":   "-no-color -state=" + testDir + "/tfstate -parallelism=5",
 			"TF_CLI_ARGS_destroy": "-no-color -state=" + testDir + "/tfstate",
 			"TF_CLI_ARGS_output":  "-no-color -state=" + testDir + "/tfstate",
 		},

@@ -92,11 +92,15 @@ func TestThreeBasic(t *testing.T) {
 		},
 		// Environment variables to set when running Terraform
 		EnvVars: map[string]string{
-			"AWS_DEFAULT_REGION": region,
-			"AWS_REGION":         region,
-			"TF_DATA_DIR":        testDir,
-			"TF_IN_AUTOMATION":   "1",
-			"TF_CLI_ARGS_init":   "-backend-config=\"bucket=" + strings.ToLower(id) + "\"",
+			"AWS_DEFAULT_REGION":  region,
+			"AWS_REGION":          region,
+			"TF_DATA_DIR":         testDir,
+			"TF_IN_AUTOMATION":    "1",
+			"TF_CLI_ARGS_init":    "-backend-config=\"bucket=" + strings.ToLower(id) + "\"",
+			"TF_CLI_ARGS_plan":    "-no-color", // using remote state from storage backend
+			"TF_CLI_ARGS_apply":   "-no-color -parallelism=5",
+			"TF_CLI_ARGS_destroy": "-no-color",
+			"TF_CLI_ARGS_output":  "-no-color",
 		},
 		RetryableTerraformErrors: util.GetRetryableTerraformErrors(),
 		NoColor:                  true,
