@@ -161,6 +161,7 @@ jobs:
     needs:
       - release
       - test_TestOneBasic
+      - test_TestProdBasic
     if: needs.release.outputs.release_pr
     runs-on: ubuntu-latest
     steps:
@@ -250,6 +251,7 @@ jobs:
       - test_TestOneBasic
       - test_TestProdBasic
       - test_TestThreeBasic
+      - test_TestDownstreamBasic
     if: needs.release.outputs.release_pr
     runs-on: ubuntu-latest
     steps:

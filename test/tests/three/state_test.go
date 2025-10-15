@@ -18,16 +18,16 @@ func TestThreeState(t *testing.T) {
 	t.Parallel()
 	util.SetAcmeServer()
 
-  id            := util.GetId()
-	region        := util.GetRegion()
-	directory     := "three"
-	owner         := "terraform-ci@suse.com"
+	id := util.GetId()
+	region := util.GetRegion()
+	directory := "three"
+	owner := "terraform-ci@suse.com"
 	repoRoot, err := filepath.Abs(g.GetRepoRoot(t))
 	if err != nil {
 		t.Fatalf("Error getting git root directory: %v", err)
 	}
 	exampleDir := repoRoot + "/examples/" + directory
-	testDir    := repoRoot + "/test/tests/data/" + id
+	testDir := repoRoot + "/test/tests/data/" + id
 
 	err = util.CreateTestDirectories(t, id)
 	if err != nil {
@@ -92,11 +92,15 @@ func TestThreeState(t *testing.T) {
 		},
 		// Environment variables to set when running Terraform
 		EnvVars: map[string]string{
-			"AWS_DEFAULT_REGION": region,
-			"AWS_REGION":         region,
-			"TF_DATA_DIR":        testDir,
-			"TF_IN_AUTOMATION":   "1",
-			"TF_CLI_ARGS_init":   "-backend-config=\"bucket=" + strings.ToLower(id) + "\"",
+			"AWS_DEFAULT_REGION":  region,
+			"AWS_REGION":          region,
+			"TF_DATA_DIR":         testDir,
+			"TF_IN_AUTOMATION":    "1",
+			"TF_CLI_ARGS_init":    "-backend-config=\"bucket=" + strings.ToLower(id) + "\"",
+			"TF_CLI_ARGS_plan":    "-no-color", // using remote state from storage backend
+			"TF_CLI_ARGS_apply":   "-no-color -parallelism=5",
+			"TF_CLI_ARGS_destroy": "-no-color",
+			"TF_CLI_ARGS_output":  "-no-color",
 		},
 		RetryableTerraformErrors: util.GetRetryableTerraformErrors(),
 		NoColor:                  true,
@@ -116,7 +120,7 @@ func TestThreeState(t *testing.T) {
 	util.CheckReady(t, testDir+"/kubeconfig")
 	util.CheckRunning(t, testDir+"/kubeconfig")
 
-  os.RemoveAll(testDir)
+	os.RemoveAll(testDir)
 	err = util.CreateTestDirectories(t, id)
 	if err != nil {
 		t.Log("Test failed, tearing down...")
@@ -125,16 +129,16 @@ func TestThreeState(t *testing.T) {
 		t.Fatalf("Error creating cluster: %s", err)
 	}
 
-  // Running the apply again should re-create everything from state in S3
-  // This should only recreate the files, the resources should be untouched
+	// Running the apply again should re-create everything from state in S3
+	// This should only recreate the files, the resources should be untouched
 	err = os.WriteFile(testDir+"/id_rsa", []byte(keyPair.KeyPair.PrivateKey), 0600)
 	if err != nil {
 		t.Log("Test failed, tearing down...")
 		util.GetErrorLogs(t, testDir+"/kubeconfig")
 		util.Teardown(t, testDir, exampleDir, newTfOptions, keyPair, sshAgent)
 		t.Fatalf("Error creating cluster: %s", err)
-  }
-  _, err = terraform.InitAndApplyE(t, terraformOptions)
+	}
+	_, err = terraform.InitAndApplyE(t, terraformOptions)
 	if err != nil {
 		t.Log("Test failed, tearing down...")
 		util.GetErrorLogs(t, testDir+"/kubeconfig")
@@ -144,8 +148,8 @@ func TestThreeState(t *testing.T) {
 	util.CheckReady(t, testDir+"/kubeconfig")
 	util.CheckRunning(t, testDir+"/kubeconfig")
 
-  // Running the apply again should not change anything
-  _, err = terraform.InitAndApplyE(t, terraformOptions)
+	// Running the apply again should not change anything
+	_, err = terraform.InitAndApplyE(t, terraformOptions)
 	if err != nil {
 		t.Log("Test failed, tearing down...")
 		util.GetErrorLogs(t, testDir+"/kubeconfig")
@@ -155,7 +159,7 @@ func TestThreeState(t *testing.T) {
 	util.CheckReady(t, testDir+"/kubeconfig")
 	util.CheckRunning(t, testDir+"/kubeconfig")
 
-  if t.Failed() {
+	if t.Failed() {
 		t.Log("Test failed...")
 	} else {
 		t.Log("Test passed...")

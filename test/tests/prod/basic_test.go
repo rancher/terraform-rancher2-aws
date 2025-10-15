@@ -19,7 +19,7 @@ func TestProdBasic(t *testing.T) {
 	accessKey := util.GetAwsAccessKey()
 	secretKey := util.GetAwsSecretKey()
 	sessionToken := util.GetAwsSessionToken()
-  directory := "prod"
+	directory := "prod"
 	owner := "terraform-ci@suse.com"
 	util.SetAcmeServer()
 
@@ -89,15 +89,15 @@ func TestProdBasic(t *testing.T) {
 			"aws_secret_access_key": secretKey,
 			"aws_session_token":     sessionToken,
 			"aws_region":            region,
-    },
+		},
 		// Environment variables to set when running Terraform
 		EnvVars: map[string]string{
-      "AWS_DEFAULT_REGION":  region,
+			"AWS_DEFAULT_REGION":  region,
 			"AWS_REGION":          region,
 			"TF_DATA_DIR":         testDir,
 			"TF_IN_AUTOMATION":    "1",
 			"TF_CLI_ARGS_plan":    "-no-color -state=" + testDir + "/tfstate",
-			"TF_CLI_ARGS_apply":   "-no-color -state=" + testDir + "/tfstate",
+			"TF_CLI_ARGS_apply":   "-no-color -state=" + testDir + "/tfstate -parallelism=5",
 			"TF_CLI_ARGS_destroy": "-no-color -state=" + testDir + "/tfstate",
 			"TF_CLI_ARGS_output":  "-no-color -state=" + testDir + "/tfstate",
 		},
