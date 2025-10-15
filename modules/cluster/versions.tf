@@ -3,7 +3,7 @@ terraform {
   required_providers {
     file = {
       source  = "rancher/file"
-      version = ">= 1.1"
+      version = ">= 2.5"
     }
     random = {
       source  = "hashicorp/random"
