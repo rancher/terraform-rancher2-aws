@@ -1,5 +1,30 @@
 # Changelog
 
+## [3.1.0](https://github.com/rancher/terraform-rancher2-aws/compare/v3.0.0...v3.1.0) (2025-10-16)
+
+
+### Features
+
+* implement the file provider ([#115](https://github.com/rancher/terraform-rancher2-aws/issues/115)) ([d05249b](https://github.com/rancher/terraform-rancher2-aws/commit/d05249bb8d8e918c028275792552a770ea600e14))
+
+
+### Bug Fixes
+
+* bump checkout from 4 to 5 ([#112](https://github.com/rancher/terraform-rancher2-aws/issues/112)) ([b1ad6fe](https://github.com/rancher/terraform-rancher2-aws/commit/b1ad6fec7e22802c16c2a973d616cb3585e26f3d))
+* bump configure aws credentials from 4 to 5 ([#114](https://github.com/rancher/terraform-rancher2-aws/issues/114)) ([62d8580](https://github.com/rancher/terraform-rancher2-aws/commit/62d85808d94afe92dd19cfe329663c2dd1ea562e))
+* bump github script from 7 to 8 ([#113](https://github.com/rancher/terraform-rancher2-aws/issues/113)) ([623c2e1](https://github.com/rancher/terraform-rancher2-aws/commit/623c2e181a6d3c9f6b4063e48e02d073080b5102))
+* change directory rather than push it ([#121](https://github.com/rancher/terraform-rancher2-aws/issues/121)) ([3c161fb](https://github.com/rancher/terraform-rancher2-aws/commit/3c161fb1f6cfbb0b18f406bbec6c5a0e3cbdf457))
+* fail back to previous flake if upgrade fails ([#126](https://github.com/rancher/terraform-rancher2-aws/issues/126)) ([4450eb9](https://github.com/rancher/terraform-rancher2-aws/commit/4450eb9c683fb26cf1e5e138d5fa23901179f91c))
+* generate create and destroy scripts ([#120](https://github.com/rancher/terraform-rancher2-aws/issues/120)) ([fbbfcef](https://github.com/rancher/terraform-rancher2-aws/commit/fbbfcef29bdb4da5a7755d1e5bf8af67ba0f248d))
+* increase permissions and return to directory ([#122](https://github.com/rancher/terraform-rancher2-aws/issues/122)) ([c3f2da9](https://github.com/rancher/terraform-rancher2-aws/commit/c3f2da99e283ac857ec29fb2aa8c17692e3455ff))
+* null provider is no longer necessary ([#127](https://github.com/rancher/terraform-rancher2-aws/issues/127)) ([e91fcff](https://github.com/rancher/terraform-rancher2-aws/commit/e91fcffa91521a19810bc1b823ad20eb34d2ce95))
+* reduce test concurrency ([#125](https://github.com/rancher/terraform-rancher2-aws/issues/125)) ([e58984f](https://github.com/rancher/terraform-rancher2-aws/commit/e58984fe576f1161b031f13a19769ff0bd77e82a))
+* replace local script with file ([#119](https://github.com/rancher/terraform-rancher2-aws/issues/119)) ([0feba34](https://github.com/rancher/terraform-rancher2-aws/commit/0feba34ec7a32505edeef246e816c2c71a403745))
+* set config and environment file permissions ([#117](https://github.com/rancher/terraform-rancher2-aws/issues/117)) ([cda2ae7](https://github.com/rancher/terraform-rancher2-aws/commit/cda2ae7281c03664e282ed0e1995562dc5e2ef5a))
+* shell needs a dot over the source command ([#118](https://github.com/rancher/terraform-rancher2-aws/issues/118)) ([67e90c0](https://github.com/rancher/terraform-rancher2-aws/commit/67e90c044c15397dac47308edf4fa3a6bfc54f76))
+* slow down tests to prevent throttling ([#123](https://github.com/rancher/terraform-rancher2-aws/issues/123)) ([275dad5](https://github.com/rancher/terraform-rancher2-aws/commit/275dad535f3ca1541b1c06601bace98cd37e311f))
+* update readme with child module info ([#124](https://github.com/rancher/terraform-rancher2-aws/issues/124)) ([c304cd6](https://github.com/rancher/terraform-rancher2-aws/commit/c304cd6cd118a37711390f011253f56848abbde3))
+
 ## [3.0.0](https://github.com/rancher/terraform-rancher2-aws/compare/v2.0.1...v3.0.0) (2025-07-26)
 
 
