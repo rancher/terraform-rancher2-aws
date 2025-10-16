@@ -1,9 +1,9 @@
 terraform {
   required_version = ">= 1.5.0"
   required_providers {
-    local = {
-      source  = "hashicorp/local"
-      version = ">= 2.5"
+    file = {
+      source  = "rancher/file"
+      version = ">= 2.2"
     }
     random = {
       source  = "hashicorp/random"
@@ -48,6 +48,10 @@ terraform {
     kubernetes = {
       source  = "hashicorp/kubernetes"
       version = ">= 2.31.0"
+    }
+    time = {
+      source  = "hashicorp/time"
+      version = ">= 0.12.0"
     }
   }
 }

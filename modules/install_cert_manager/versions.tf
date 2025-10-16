@@ -5,13 +5,13 @@ terraform {
       source  = "hashicorp/helm"
       version = "2.14"
     }
-    kubernetes = {
-      source  = "hashicorp/kubernetes"
-      version = ">= 2.31.0"
-    }
     time = {
       source  = "hashicorp/time"
       version = ">= 0.12.0"
+    }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = ">= 2.31.0"
     }
     aws = {
       source  = "hashicorp/aws"
@@ -19,7 +19,7 @@ terraform {
     }
     file = {
       source  = "rancher/file"
-      version = ">= 2.0.0"
+      version = ">= 2.2"
     }
   }
 }

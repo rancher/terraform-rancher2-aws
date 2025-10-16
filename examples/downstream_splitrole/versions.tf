@@ -1,6 +1,10 @@
 terraform {
   required_version = ">= 1.5.0"
   required_providers {
+    file = {
+      source  = "rancher/file"
+      version = ">= 2.2"
+    }
     random = {
       source  = "hashicorp/random"
       version = ">= 3.5.1"
@@ -16,10 +20,6 @@ terraform {
     http = {
       source  = "hashicorp/http"
       version = ">= 3.4"
-    }
-    null = {
-      source  = "hashicorp/null"
-      version = ">= 3"
     }
     tls = {
       source  = "hashicorp/tls"
