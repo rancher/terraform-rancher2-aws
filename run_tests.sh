@@ -85,6 +85,8 @@ EOF
   else
     package_pattern="..."
   fi
+  # We need both -p and -parallel, as -p sets the number of packages to test in parallel, and -parallel sets the number of tests to run in parallel.
+  # By setting both to 1, we ensure that tests are run sequentially, which can help avoid AWS rate limiting issues. I does increase the runtime significantly though.
   # shellcheck disable=SC2086
   gotestsum \
     --format=standard-verbose \
@@ -92,10 +94,11 @@ EOF
     --post-run-command "sh /tmp/${IDENTIFIER}_test-processor" \
     --packages "$REPO_ROOT/$TEST_DIR/$package_pattern" \
     -- \
-    -parallel=2 \
     -count=1 \
-    -failfast=1 \
+    -p=1 \
+    -parallel=1 \
     -timeout=300m \
+    -failfast \
     $rerun_flag \
     $specific_test_flag
 

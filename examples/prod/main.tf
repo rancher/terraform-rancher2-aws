@@ -32,7 +32,7 @@ locals {
   local_file_path      = var.file_path
   runner_ip            = chomp(data.http.myip.response_body) # "runner" is the server running Terraform
   rancher_version      = var.rancher_version
-  cert_manager_version = "1.18.1"
+  cert_manager_version = "1.18.3"
   os                   = "sle-micro-61"
   helm_chart_values = {
     "hostname"                                            = "${local.domain}.${local.zone}"
@@ -88,7 +88,7 @@ module "rancher" {
       size            = "xl"
       os              = local.os
       indirect_access = false
-      initial         = true # this will set the first server as the inital node
+      initial         = true # this will set the first server as the initial node
     }
     "db2" = {
       type            = "database"
@@ -145,15 +145,15 @@ module "rancher" {
       os              = local.os
       indirect_access = true
       initial         = false
-    },
+    }
   }
   # rancher
   cert_manager_version       = local.cert_manager_version
   cert_use_strategy          = "rancher"
   cert_manager_configuration = local.cert_manager_config
   rancher_version            = local.rancher_version
-  acme_server_url            = local.acme_server_url
   rancher_helm_chart_values  = local.helm_chart_values
+  acme_server_url            = local.acme_server_url
 }
 
 provider "rancher2" {
