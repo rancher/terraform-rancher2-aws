@@ -73,6 +73,10 @@ jobs:
               repo: "${{ github.event.repository.name }}",
               body: "Please make sure e2e tests pass before merging this PR! \n ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             })
+      - uses: actions/checkout@v5
+        with:
+          token: ${{secrets.GITHUB_TOKEN}}
+          fetch-depth: 0
       - id: aws-creds
         uses: aws-actions/configure-aws-credentials@v5
         with:
