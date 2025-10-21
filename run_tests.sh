@@ -4,22 +4,63 @@ rerun_failed=false
 specific_test=""
 specific_package=""
 cleanup_id=""
+slow_mode=false
 
-while getopts ":r:t:p:c:" opt; do
+while getopts ":rst:p:c:" opt; do
   case $opt in
     r) rerun_failed=true ;;
     t) specific_test="$OPTARG" ;;
     p) specific_package="$OPTARG" ;;
     c) cleanup_id="$OPTARG" ;;
+    s) slow_mode=true ;;
     \?) cat <<EOT >&2 && exit 1 ;;
 Invalid option -$OPTARG, valid options are
   -r to re-run failed tests
-  -t to specify a specific test (eg. TestBase)
-  -p to specify a specific test package (eg. base)
+  -s to run tests in slow mode (one at a time to avoid AWS rate limiting)
   -c to run clean up only with the given id (eg. abc123)
+  -t to specify a specific test (eg. TestBase)
+  -p to specify a specific test package (eg. one)
+Only one of -c, -t, or -p can be used at a time.
 EOT
   esac
 done
+
+if [ $slow_mode == true ]; then
+  echo "Running in slow mode: tests will be run one at a time to avoid AWS rate limiting."
+elif [ $slow_mode == false ]; then
+  echo "Running in normal mode: tests will be run in parallel."
+fi
+if [ $rerun_failed == true ]; then
+  echo "Rerun failed tests is enabled."
+elif [ $rerun_failed == false ]; then
+  echo "Rerun failed tests is disabled."
+fi
+if [ -n "$specific_test" ]; then
+  echo "Specific test to run: $specific_test"
+else
+  echo "No specific test to run."
+fi
+if [ -n "$specific_package" ]; then
+  echo "Specific package to run: $specific_package"
+else
+  echo "No specific package to run."
+fi
+if [ -n "$cleanup_id" ]; then
+  echo "Cleanup only mode enabled with id: $cleanup_id"
+fi
+if [ -n "$cleanup_id" ] && { [ -n "$specific_test" ] || [ -n "$specific_package" ]; }; then
+  echo "Error: Only one of -c, -t, or -p can be used at a time." >&2
+  exit 1
+fi
+if [ -n "$specific_test" ] && { [ -n "$specific_package" ] || [ -n "$cleanup_id" ]; }; then
+  echo "Error: Only one of -c, -t, or -p can be used at a time." >&2
+  exit 1
+fi
+if [ -n "$specific_package" ] && { [ -n "$specific_test" ] || [ -n "$cleanup_id" ]; }; then
+  echo "Error: Only one of -c, -t, or -p can be used at a time." >&2
+  exit 1
+fi
+
 
 # shellcheck disable=SC2143
 if [ -n "$cleanup_id" ]; then
@@ -30,6 +71,7 @@ REPO_ROOT="$(git rev-parse --show-toplevel)"
 
 run_tests() {
   local rerun=$1
+  local slow_mode=$2
   REPO_ROOT="$(git rev-parse --show-toplevel)"
   cd "$REPO_ROOT" || exit 1
 
@@ -85,8 +127,37 @@ EOF
   else
     package_pattern="..."
   fi
-  # We need both -p and -parallel, as -p sets the number of packages to test in parallel, and -parallel sets the number of tests to run in parallel.
-  # By setting both to 1, we ensure that tests are run sequentially, which can help avoid AWS rate limiting issues. I does increase the runtime significantly though.
+
+  # We need both -p and -parallel, as -p sets the number of packages to test in parallel,
+  #  and -parallel sets the number of tests to run in parallel.
+  # By setting both to 1, we ensure that tests are run sequentially, which can help avoid AWS rate limiting issues.
+  # It does increase the runtime significantly though.
+  local parallel_packages=""
+  local parallel_tests=""
+  if [ "$slow_mode" = true ]; then
+    echo "Running in slow mode..."
+    parallel_packages="-p=1"
+    parallel_tests="-parallel=1"
+  fi
+
+  CMD=$(cat <<EOT
+gotestsum \
+  --format=standard-verbose \
+  --jsonfile "/tmp/${IDENTIFIER}_test.log" \
+  --post-run-command "sh /tmp/${IDENTIFIER}_test-processor" \
+  --packages "$REPO_ROOT/$TEST_DIR/$package_pattern" \
+  -- \
+  -count=1 \
+  -timeout=300m \
+  -failfast \
+  $parallel_packages \
+  $parallel_tests \
+  $rerun_flag \
+  $specific_test_flag
+EOT
+)
+  echo "Running command: $CMD"
+
   # shellcheck disable=SC2086
   gotestsum \
     --format=standard-verbose \
@@ -95,10 +166,10 @@ EOF
     --packages "$REPO_ROOT/$TEST_DIR/$package_pattern" \
     -- \
     -count=1 \
-    -p=1 \
-    -parallel=1 \
     -timeout=300m \
     -failfast \
+    $parallel_packages \
+    $parallel_tests \
     $rerun_flag \
     $specific_test_flag
 
@@ -136,13 +207,13 @@ if [ -z "$cleanup_id" ]; then
   echo "terraform configs valid..."
 
   # Run tests initially
-  run_tests false
+  run_tests false "$slow_mode"
   sleep 60
 
   # Check if we need to rerun failed tests
   if [ "$rerun_failed" = true ] && [ -f "/tmp/${IDENTIFIER}_failed_tests.txt" ]; then
     echo "Rerunning failed tests..."
-    run_tests true
+    run_tests true "$slow_mode"
     sleep 60
   fi
 fi
