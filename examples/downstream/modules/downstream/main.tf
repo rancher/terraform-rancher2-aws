@@ -15,11 +15,11 @@ locals {
   subnet_id         = var.subnet_id
   security_group_id = var.security_group_id
   lbsg              = sort(var.load_balancer_security_groups)
+  # load balancers only have 2 security groups, the project and its own
+  # this eliminates the project security group to just return the load balancer's security group
   load_balancer_security_group_id = [
     for i in range(length(local.lbsg)) :
     local.lbsg[i] if local.lbsg[i] != local.security_group_id
-    # load balancers only have 2 security groups, the project and its own
-    # this eliminates the project security group to just return the load balancer's security group
   ][0]
   downstream_security_group_name = "${local.cluster_name}-sgroup"
   # node info
@@ -27,12 +27,14 @@ locals {
   ami_id            = var.ami_id
   ami_ssh_user      = var.ami_ssh_user
   node_count        = var.node_count
-  node_ips          = { for i in range(local.node_count) : tostring(i) => data.aws_instances.rke2_instance_nodes.public_ips[i] }
-  node_id           = "${local.cluster_name}-nodes"
-  ami_admin_group   = (var.ami_admin_group != "" ? var.ami_admin_group : "tty")
-  runner_ip         = (var.direct_node_access != null ? var.direct_node_access.runner_ip : "10.1.1.1") # the IP running Terraform
-  ssh_access_key    = (var.direct_node_access != null ? var.direct_node_access.ssh_access_key : "fake123abc")
-  ssh_access_user   = (var.direct_node_access != null ? var.direct_node_access.ssh_access_user : "fake")
+  # if the IPs aren't found, then this should fail
+  node_ips        = { for i in range(local.node_count) : tostring(i) => data.aws_instances.rke2_instance_nodes.public_ips[i] }
+  node_id         = "${local.cluster_name}-nodes"
+  node_wait_time  = "${tostring(local.node_count * 60)}s" # 60 seconds per node
+  ami_admin_group = (var.ami_admin_group != "" ? var.ami_admin_group : "tty")
+  runner_ip       = (var.direct_node_access != null ? var.direct_node_access.runner_ip : "10.1.1.1") # the IP running Terraform
+  ssh_access_key  = (var.direct_node_access != null ? var.direct_node_access.ssh_access_key : "fake123abc")
+  ssh_access_user = (var.direct_node_access != null ? var.direct_node_access.ssh_access_user : "fake")
   # rke2 info
   rke2_version = var.rke2_version
 }
@@ -207,7 +209,7 @@ resource "time_sleep" "wait_for_nodes" {
     rancher2_machine_config_v2.all_in_one,
     terraform_data.patch_machine_configs,
   ]
-  create_duration = "120s"
+  create_duration = local.node_wait_time
 }
 
 data "aws_instances" "rke2_instance_nodes" {

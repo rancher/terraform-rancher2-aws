@@ -39,6 +39,10 @@ resource "file_local_directory" "tf_data_dir" {
 
 ### Template Files ###
 data "file_local" "template_files" {
+  depends_on = [
+    file_local_directory.deploy_path,
+    file_local_directory.tf_data_dir,
+  ]
   for_each  = local.template_file_map
   directory = dirname(each.value)
   name      = each.key
@@ -138,6 +142,8 @@ resource "file_local" "instantiate_envrc_snapshot" {
 ## Deploy ##
 resource "file_local" "generate_destroy" {
   depends_on = [
+    file_local_directory.deploy_path,
+    file_local_directory.tf_data_dir,
     file_local.instantiate_envrc_snapshot,
     file_local.instantiate_inputs_snapshot,
     file_local.instantiate_tpl_snapshot,
@@ -153,6 +159,8 @@ resource "file_local" "generate_destroy" {
 }
 resource "terraform_data" "destroy" {
   depends_on = [
+    file_local_directory.deploy_path,
+    file_local_directory.tf_data_dir,
     file_local.instantiate_envrc_snapshot,
     file_local.instantiate_inputs_snapshot,
     file_local.instantiate_tpl_snapshot,
@@ -174,6 +182,8 @@ resource "terraform_data" "destroy" {
 
 resource "file_local" "generate_create" {
   depends_on = [
+    file_local_directory.deploy_path,
+    file_local_directory.tf_data_dir,
     file_local.instantiate_envrc_snapshot,
     file_local.instantiate_inputs_snapshot,
     file_local.instantiate_tpl_snapshot,
@@ -192,6 +202,8 @@ resource "file_local" "generate_create" {
 }
 resource "terraform_data" "create" {
   depends_on = [
+    file_local_directory.deploy_path,
+    file_local_directory.tf_data_dir,
     file_local.instantiate_envrc_snapshot,
     file_local.instantiate_inputs_snapshot,
     file_local.instantiate_tpl_snapshot,
@@ -215,6 +227,11 @@ resource "terraform_data" "create" {
 
 resource "file_local_snapshot" "persist_state" {
   depends_on = [
+    file_local_directory.deploy_path,
+    file_local_directory.tf_data_dir,
+    file_local.instantiate_envrc_snapshot,
+    file_local.instantiate_inputs_snapshot,
+    file_local.instantiate_tpl_snapshot,
     terraform_data.destroy,
     terraform_data.create,
   ]
@@ -224,6 +241,11 @@ resource "file_local_snapshot" "persist_state" {
 }
 resource "file_local" "instantiate_state" {
   depends_on = [
+    file_local_directory.deploy_path,
+    file_local_directory.tf_data_dir,
+    file_local.instantiate_envrc_snapshot,
+    file_local.instantiate_inputs_snapshot,
+    file_local.instantiate_tpl_snapshot,
     terraform_data.destroy,
     terraform_data.create,
     file_local_snapshot.persist_state,
@@ -235,6 +257,11 @@ resource "file_local" "instantiate_state" {
 
 resource "file_local_snapshot" "persist_outputs" {
   depends_on = [
+    file_local_directory.deploy_path,
+    file_local_directory.tf_data_dir,
+    file_local.instantiate_envrc_snapshot,
+    file_local.instantiate_inputs_snapshot,
+    file_local.instantiate_tpl_snapshot,
     terraform_data.destroy,
     terraform_data.create,
   ]
@@ -244,6 +271,11 @@ resource "file_local_snapshot" "persist_outputs" {
 }
 resource "file_local" "instantiate_outputs" {
   depends_on = [
+    file_local_directory.deploy_path,
+    file_local_directory.tf_data_dir,
+    file_local.instantiate_envrc_snapshot,
+    file_local.instantiate_inputs_snapshot,
+    file_local.instantiate_tpl_snapshot,
     terraform_data.destroy,
     terraform_data.create,
     file_local_snapshot.persist_outputs,
@@ -258,6 +290,8 @@ resource "file_local" "instantiate_outputs" {
 #  to rebuild the template and state file before running the create script
 resource "terraform_data" "create_after_persist" {
   depends_on = [
+    file_local_directory.deploy_path,
+    file_local_directory.tf_data_dir,
     file_local.instantiate_envrc_snapshot,
     file_local.instantiate_inputs_snapshot,
     file_local.instantiate_tpl_snapshot,
@@ -281,6 +315,8 @@ resource "terraform_data" "create_after_persist" {
 
 resource "terraform_data" "destroy_end" {
   depends_on = [
+    file_local_directory.deploy_path,
+    file_local_directory.tf_data_dir,
     file_local.instantiate_envrc_snapshot,
     file_local.instantiate_inputs_snapshot,
     file_local.instantiate_tpl_snapshot,

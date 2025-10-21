@@ -1,4 +1,4 @@
-package one
+package three
 
 import (
 	"os"

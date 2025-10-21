@@ -41,7 +41,7 @@ locals {
   email                 = (var.email != "" ? var.email : "${local.identifier}@${local.zone}")
   helm_chart_values = {
     "hostname"                                            = "${local.domain}.${local.zone}"
-    "replicas"                                            = "1"
+    "replicas"                                            = "1" # because we are only deploying one Rancher node
     "bootstrapPassword"                                   = "admin"
     "ingress.enabled"                                     = "true"
     "ingress.tls.source"                                  = "letsEncrypt"

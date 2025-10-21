@@ -16,10 +16,12 @@ locals {
   downstream_security_group_name  = var.downstream_security_group_name
   load_balancer_security_group_id = var.load_balancer_security_group_id
   # node info
-  node_info       = var.node_info
-  node_count      = sum([for i in range(length(local.node_info)) : local.node_info[keys(local.node_info)[i]].quantity])
+  node_info  = var.node_info
+  node_count = sum([for i in range(length(local.node_info)) : local.node_info[keys(local.node_info)[i]].quantity])
+  # if the IPs aren't found, then this should fail
   node_ips        = { for i in range(local.node_count) : tostring(i) => data.aws_instances.rke2_instance_nodes.public_ips[i] }
   node_id         = "${local.cluster_name}-nodes"
+  node_wait_time  = "${tostring(local.node_count * 60)}s"                                            # 60 seconds per node
   runner_ip       = (var.direct_node_access != null ? var.direct_node_access.runner_ip : "10.1.1.1") # the IP running Terraform
   ssh_access_key  = (var.direct_node_access != null ? var.direct_node_access.ssh_access_key : "fake123abc")
   ssh_access_user = (var.direct_node_access != null ? var.direct_node_access.ssh_access_user : "fake")
@@ -118,7 +120,7 @@ resource "time_sleep" "wait_for_nodes" {
     rancher2_machine_config_v2.nodes,
     terraform_data.patch_machine_configs,
   ]
-  create_duration = "120s"
+  create_duration = local.node_wait_time
 }
 
 data "aws_instances" "rke2_instance_nodes" {
