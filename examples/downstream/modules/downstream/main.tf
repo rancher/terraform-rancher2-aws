@@ -27,14 +27,25 @@ locals {
   ami_id            = var.ami_id
   ami_ssh_user      = var.ami_ssh_user
   node_count        = var.node_count
-  # if the IPs aren't found, then this should fail
-  node_ips        = { for i in range(local.node_count) : tostring(i) => data.aws_instances.rke2_instance_nodes.public_ips[i] }
-  node_id         = "${local.cluster_name}-nodes"
-  node_wait_time  = "${tostring(local.node_count * 60)}s" # 60 seconds per node
-  ami_admin_group = (var.ami_admin_group != "" ? var.ami_admin_group : "tty")
-  runner_ip       = (var.direct_node_access != null ? var.direct_node_access.runner_ip : "10.1.1.1") # the IP running Terraform
-  ssh_access_key  = (var.direct_node_access != null ? var.direct_node_access.ssh_access_key : "fake123abc")
-  ssh_access_user = (var.direct_node_access != null ? var.direct_node_access.ssh_access_user : "fake")
+  nodes = (length(data.aws_instances.rke2_nodes.ids) > 0 ? data.aws_instances.rke2_nodes :
+    (length(data.aws_instances.rke2_nodes_again.ids) > 0 ? data.aws_instances.rke2_nodes_again :
+    data.aws_instances.rke2_nodes_again_again)
+  )
+  node_ids = coalescelist(
+    data.aws_instances.rke2_nodes.ids,
+    data.aws_instances.rke2_nodes_again.ids,
+    data.aws_instances.rke2_nodes_again_again.ids,
+  )
+  # if the nodes aren't found, then this should fail
+  # tflint-ignore: terraform_unused_declarations
+  fail_nodes_not_found = (length(local.node_ids) == 0 ? one([local.node_count, "nodes_not_found"]) : false)
+  node_ips             = { for i in range(local.node_count) : tostring(i) => local.nodes.public_ips[i] }
+  node_id              = "${local.cluster_name}-nodes"
+  node_wait_time       = "${tostring(local.node_count * 60 + 60)}s" # 60 seconds per node + 60 seconds buffer
+  ami_admin_group      = (var.ami_admin_group != "" ? var.ami_admin_group : "tty")
+  runner_ip            = (var.direct_node_access != null ? var.direct_node_access.runner_ip : "10.1.1.1") # the IP running Terraform
+  ssh_access_key       = (var.direct_node_access != null ? var.direct_node_access.ssh_access_key : "fake123abc")
+  ssh_access_user      = (var.direct_node_access != null ? var.direct_node_access.ssh_access_user : "fake")
   # rke2 info
   rke2_version = var.rke2_version
 }
@@ -212,7 +223,7 @@ resource "time_sleep" "wait_for_nodes" {
   create_duration = local.node_wait_time
 }
 
-data "aws_instances" "rke2_instance_nodes" {
+data "aws_instances" "rke2_nodes" {
   depends_on = [
     aws_security_group.downstream_cluster,
     aws_vpc_security_group_ingress_rule.downstream_ingress_rancher,
@@ -222,6 +233,76 @@ data "aws_instances" "rke2_instance_nodes" {
     rancher2_machine_config_v2.all_in_one,
     terraform_data.patch_machine_configs,
     time_sleep.wait_for_nodes,
+  ]
+  filter {
+    name   = "tag:NodeId"
+    values = [local.node_id]
+  }
+}
+resource "time_sleep" "wait_for_nodes_again" {
+  depends_on = [
+    aws_security_group.downstream_cluster,
+    aws_vpc_security_group_ingress_rule.downstream_ingress_rancher,
+    aws_vpc_security_group_egress_rule.downstream_egress_ipv4,
+    aws_vpc_security_group_egress_rule.downstream_egress_ipv6,
+    aws_vpc_security_group_egress_rule.downstream_egress_project_link,
+    rancher2_machine_config_v2.all_in_one,
+    terraform_data.patch_machine_configs,
+    time_sleep.wait_for_nodes,
+    data.aws_instances.rke2_nodes,
+  ]
+  create_duration = local.node_wait_time
+}
+data "aws_instances" "rke2_nodes_again" {
+  depends_on = [
+    aws_security_group.downstream_cluster,
+    aws_vpc_security_group_ingress_rule.downstream_ingress_rancher,
+    aws_vpc_security_group_egress_rule.downstream_egress_ipv4,
+    aws_vpc_security_group_egress_rule.downstream_egress_ipv6,
+    aws_vpc_security_group_egress_rule.downstream_egress_project_link,
+    rancher2_machine_config_v2.all_in_one,
+    terraform_data.patch_machine_configs,
+    time_sleep.wait_for_nodes,
+    data.aws_instances.rke2_nodes,
+    time_sleep.wait_for_nodes_again,
+  ]
+  filter {
+    name   = "tag:NodeId"
+    values = [local.node_id]
+  }
+}
+
+resource "time_sleep" "wait_for_nodes_again_again" {
+  depends_on = [
+    aws_security_group.downstream_cluster,
+    aws_vpc_security_group_ingress_rule.downstream_ingress_rancher,
+    aws_vpc_security_group_egress_rule.downstream_egress_ipv4,
+    aws_vpc_security_group_egress_rule.downstream_egress_ipv6,
+    aws_vpc_security_group_egress_rule.downstream_egress_project_link,
+    rancher2_machine_config_v2.all_in_one,
+    terraform_data.patch_machine_configs,
+    time_sleep.wait_for_nodes,
+    data.aws_instances.rke2_nodes,
+    time_sleep.wait_for_nodes_again,
+    data.aws_instances.rke2_nodes_again,
+  ]
+  create_duration = local.node_wait_time
+}
+
+data "aws_instances" "rke2_nodes_again_again" {
+  depends_on = [
+    aws_security_group.downstream_cluster,
+    aws_vpc_security_group_ingress_rule.downstream_ingress_rancher,
+    aws_vpc_security_group_egress_rule.downstream_egress_ipv4,
+    aws_vpc_security_group_egress_rule.downstream_egress_ipv6,
+    aws_vpc_security_group_egress_rule.downstream_egress_project_link,
+    rancher2_machine_config_v2.all_in_one,
+    terraform_data.patch_machine_configs,
+    time_sleep.wait_for_nodes,
+    data.aws_instances.rke2_nodes,
+    time_sleep.wait_for_nodes_again,
+    data.aws_instances.rke2_nodes_again,
+    time_sleep.wait_for_nodes_again_again,
   ]
   filter {
     name   = "tag:NodeId"
@@ -243,7 +324,11 @@ resource "aws_vpc_security_group_ingress_rule" "downstream_public_ingress_loadba
     rancher2_machine_config_v2.all_in_one,
     terraform_data.patch_machine_configs,
     time_sleep.wait_for_nodes,
-    data.aws_instances.rke2_instance_nodes,
+    data.aws_instances.rke2_nodes,
+    time_sleep.wait_for_nodes_again,
+    data.aws_instances.rke2_nodes_again,
+    time_sleep.wait_for_nodes_again_again,
+    data.aws_instances.rke2_nodes_again_again,
   ]
   for_each          = local.node_ips
   security_group_id = local.load_balancer_security_group_id
@@ -261,7 +346,11 @@ resource "aws_vpc_security_group_ingress_rule" "downstream_public_ingress_runner
     rancher2_machine_config_v2.all_in_one,
     terraform_data.patch_machine_configs,
     time_sleep.wait_for_nodes,
-    data.aws_instances.rke2_instance_nodes,
+    data.aws_instances.rke2_nodes,
+    time_sleep.wait_for_nodes_again,
+    data.aws_instances.rke2_nodes_again,
+    time_sleep.wait_for_nodes_again_again,
+    data.aws_instances.rke2_nodes_again_again,
   ]
   security_group_id = aws_security_group.downstream_cluster.id
   ip_protocol       = "tcp"
@@ -279,6 +368,12 @@ resource "rancher2_cluster_sync" "sync" {
     aws_vpc_security_group_egress_rule.downstream_egress_project_link,
     rancher2_machine_config_v2.all_in_one,
     terraform_data.patch_machine_configs,
+    time_sleep.wait_for_nodes,
+    data.aws_instances.rke2_nodes,
+    time_sleep.wait_for_nodes_again,
+    data.aws_instances.rke2_nodes_again,
+    time_sleep.wait_for_nodes_again_again,
+    data.aws_instances.rke2_nodes_again_again,
     rancher2_cluster_v2.rke2_cluster,
   ]
   cluster_id = rancher2_cluster_v2.rke2_cluster.cluster_v1_id
