@@ -1,5 +1,15 @@
 # Changelog
 
+## [3.1.1](https://github.com/rancher/terraform-rancher2-aws/compare/v3.1.0...v3.1.1) (2025-10-22)
+
+
+### Bug Fixes
+
+* checkout before installing nix ([#130](https://github.com/rancher/terraform-rancher2-aws/issues/130)) ([59a71fc](https://github.com/rancher/terraform-rancher2-aws/commit/59a71fcfee2d463ef5541196e08fc0f75544d885))
+* create a slow mode for testing ([#131](https://github.com/rancher/terraform-rancher2-aws/issues/131)) ([f17a4da](https://github.com/rancher/terraform-rancher2-aws/commit/f17a4dab70dbc79a502c4bc862228f3fec68a8c2))
+* dependency issues in deploy module ([#128](https://github.com/rancher/terraform-rancher2-aws/issues/128)) ([611400b](https://github.com/rancher/terraform-rancher2-aws/commit/611400b718ba2794ff22481318b039a6a6ec53ae))
+* try to get the nodes 3 times before failure ([#132](https://github.com/rancher/terraform-rancher2-aws/issues/132)) ([28a1977](https://github.com/rancher/terraform-rancher2-aws/commit/28a1977a9ccb582ef6661d47cd083270fcdab19a))
+
 ## [3.1.0](https://github.com/rancher/terraform-rancher2-aws/compare/v3.0.0...v3.1.0) (2025-10-16)
 
 
