@@ -209,12 +209,21 @@ variable "rancher_helm_channel" {
   EOT
   default     = "stable"
 }
-variable "bootstrap_rancher" {
+variable "install_rancher" {
   type        = bool
   description = <<-EOT
     Whether or not to install Rancher, defaults to true.
     This mostly exists to provide a convenient way to generate RKE2 clusters that are Rancher compatible.
     For a more robust solution check out the terraform-aws-rke2 module.
+  EOT
+  default     = true
+}
+variable "bootstrap_rancher" {
+  type        = bool
+  description = <<-EOT
+    Whether or not to bootstrap Rancher, defaults to true.
+    When this is false the module will install Rancher using helm, but it won't instantiate the rancher provider.
+    This mostly exists to provide a convenient way to test provider changes.
   EOT
   default     = true
 }
@@ -269,6 +278,7 @@ variable "rancher_helm_chart_values" {
     }
   EOT
   default     = {}
+  sensitive   = true
 }
 variable "acme_server_url" {
   type        = string

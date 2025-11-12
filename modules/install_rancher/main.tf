@@ -16,6 +16,7 @@ locals {
   externalTLS                     = var.externalTLS
   rancher_path                    = (local.externalTLS ? "${path.module}/rancher_externalTLS" : "${path.module}/rancher")
   deploy_path                     = "${local.path}/rancher_bootstrap"
+  kubeconfig_path                 = "../kubeconfig" # relative to deploy path
   rancher_helm_chart_values       = var.rancher_helm_chart_values
   rancher_helm_chart_use_strategy = var.rancher_helm_chart_use_strategy
   cert_public                     = var.cert_public
@@ -59,8 +60,8 @@ module "deploy_rancher" {
     local.cert_chain,
   ]))
   environment_variables = {
-    KUBECONFIG       = "${local.path}/kubeconfig"
-    KUBE_CONFIG_PATH = "${local.path}/kubeconfig"
+    KUBECONFIG       = local.kubeconfig_path
+    KUBE_CONFIG_PATH = local.kubeconfig_path
   }
   inputs = <<-EOT
     project_domain                  = "${local.project_domain}"

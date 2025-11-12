@@ -52,3 +52,11 @@ variable "file_path" {
   EOT
   default     = "./rke2"
 }
+variable "acme_server_url" {
+  type        = string
+  description = <<-EOT
+    The ACME server URL to use for cert-manager.
+    This is useful for using the Let's Encrypt staging server for testing.
+  EOT
+  default     = "https://acme-staging-v02.api.letsencrypt.org/directory"
+}

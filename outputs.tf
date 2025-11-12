@@ -11,12 +11,12 @@ output "address" {
 }
 
 output "admin_token" {
-  value     = module.rancher_bootstrap[0].admin_token
+  value     = try(module.bootstrap_rancher[0].admin_token, "")
   sensitive = true
 }
 
 output "admin_password" {
-  value     = module.rancher_bootstrap[0].admin_password
+  value     = try(module.install_rancher[0].rancher_admin_password, "")
   sensitive = true
 }
 
@@ -39,5 +39,5 @@ output "domain_object" {
   value = module.cluster.project_domain_object
 }
 output "tls_certificate_chain" {
-  value = module.rancher_bootstrap[0].ca_certs
+  value = try(module.install_rancher[0].ca_certs, "")
 }

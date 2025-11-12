@@ -40,9 +40,10 @@ locals {
   # tflint-ignore: terraform_unused_declarations
   aws_instance_type = "m5.large"
   # tflint-ignore: terraform_unused_declarations
-  node_count      = 1
-  email           = (var.email != "" ? var.email : "${local.identifier}@${local.zone}")
-  acme_server_url = "https://acme-staging-v02.api.letsencrypt.org/directory" #"https://acme-v02.api.letsencrypt.org/directory"
+  node_count = 1
+  email      = (var.email != "" ? var.email : "${local.identifier}@${local.zone}")
+  # "https://acme-staging-v02.api.letsencrypt.org/directory" #"https://acme-v02.api.letsencrypt.org/directory"
+  acme_server_url = var.acme_server_url
   helm_chart_values = {
     "hostname"                                            = "${local.domain}.${local.zone}"
     "replicas"                                            = "1"

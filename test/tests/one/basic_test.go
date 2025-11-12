@@ -18,7 +18,7 @@ func TestOneBasic(t *testing.T) {
 	region := util.GetRegion()
 	directory := "one"
 	owner := "terraform-ci@suse.com"
-	util.SetAcmeServer()
+	acme_server_url := util.SetAcmeServer()
 
 	repoRoot, err := filepath.Abs(g.GetRepoRoot(t))
 	if err != nil {
@@ -81,6 +81,7 @@ func TestOneBasic(t *testing.T) {
 			"rke2_version":    rke2Version,
 			"rancher_version": rancherVersion,
 			"file_path":       testDir,
+      "acme_server_url": acme_server_url,
 		},
 		// Environment variables to set when running Terraform
 		EnvVars: map[string]string{

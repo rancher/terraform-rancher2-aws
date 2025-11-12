@@ -16,7 +16,7 @@ import (
 // This test is the same as basic but it also tests that the state is correctly stored in S3 and can be used to re-create the cluster
 func TestThreeState(t *testing.T) {
 	t.Parallel()
-	util.SetAcmeServer()
+	acme_server_url := til.SetAcmeServer()
 
 	id := util.GetId()
 	region := util.GetRegion()
@@ -89,6 +89,7 @@ func TestThreeState(t *testing.T) {
 			"rke2_version":    rke2Version,
 			"rancher_version": rancherVersion,
 			"file_path":       testDir,
+      "acme_server_url": acme_server_url,
 		},
 		// Environment variables to set when running Terraform
 		EnvVars: map[string]string{

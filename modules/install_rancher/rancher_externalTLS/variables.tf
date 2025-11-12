@@ -62,6 +62,7 @@ variable "rancher_helm_chart_values" {
     }
   EOT
   default     = "{}"
+  sensitive   = true
 }
 variable "ca_certs" {
   type        = string

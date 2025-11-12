@@ -15,12 +15,11 @@ locals {
   cert_manager_path       = "${path.module}/${local.cert_manager_configured}"
   cert_manager_config     = var.cert_manager_configuration
   deploy_path             = "${local.path}/install_cert_manager"
+  kubeconfig_path         = "../kubeconfig" # relative to deploy path
 }
 
 module "deploy_cert_manager" {
-  source = "../deploy"
-  depends_on = [
-  ]
+  source      = "../deploy"
   deploy_path = local.deploy_path
   data_path   = local.deploy_path
   template_files = [
@@ -43,8 +42,8 @@ module "deploy_cert_manager" {
     ])
   )
   environment_variables = {
-    KUBE_CONFIG_PATH = "${abspath(local.path)}/kubeconfig"
-    KUBECONFIG       = "${abspath(local.path)}/kubeconfig"
+    KUBE_CONFIG_PATH = local.kubeconfig_path
+    KUBECONFIG       = local.kubeconfig_path
   }
   inputs = <<-EOT
     cert_manager_version       = "${local.cert_manager_version}"

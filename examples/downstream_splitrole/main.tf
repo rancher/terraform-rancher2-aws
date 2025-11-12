@@ -18,22 +18,23 @@ provider "helm" {}       # make sure you set the env variable KUBE_CONFIG_PATH t
 
 
 locals {
-  identifier            = var.identifier
-  example               = "downstream_splitrole"
-  project_name          = "tf-${substr(md5(join("-", [local.example, local.identifier])), 0, 5)}"
-  username              = local.project_name
-  domain                = local.project_name
-  zone                  = var.zone
-  key_name              = var.key_name
-  key                   = var.key
-  owner                 = var.owner
-  rke2_version          = var.rke2_version
-  local_file_path       = var.file_path
-  runner_ip             = chomp(data.http.myip.response_body) # "runner" is the server running Terraform
-  rancher_version       = var.rancher_version
-  cert_manager_version  = "1.18.1"
-  os                    = "sle-micro-61"
-  acme_server_url       = "https://acme-staging-v02.api.letsencrypt.org/directory" #"https://acme-v02.api.letsencrypt.org/directory"
+  identifier           = var.identifier
+  example              = "downstream_splitrole"
+  project_name         = "tf-${substr(md5(join("-", [local.example, local.identifier])), 0, 5)}"
+  username             = local.project_name
+  domain               = local.project_name
+  zone                 = var.zone
+  key_name             = var.key_name
+  key                  = var.key
+  owner                = var.owner
+  rke2_version         = var.rke2_version
+  local_file_path      = var.file_path
+  runner_ip            = chomp(data.http.myip.response_body) # "runner" is the server running Terraform
+  rancher_version      = var.rancher_version
+  cert_manager_version = "1.18.1"
+  os                   = "sle-micro-61"
+  # "https://acme-staging-v02.api.letsencrypt.org/directory" #"https://acme-v02.api.letsencrypt.org/directory"
+  acme_server_url       = var.acme_server_url
   aws_access_key_id     = var.aws_access_key_id
   aws_secret_access_key = var.aws_secret_access_key
   aws_region            = var.aws_region

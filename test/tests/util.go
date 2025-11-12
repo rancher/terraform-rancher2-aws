@@ -249,7 +249,7 @@ func removeZeroPadding(v *[]string) {
 func CreateKeypair(t *testing.T, region string, owner string, id string) (*aws.Ec2Keypair, error) {
 	t.Log("Creating keypair...")
 	// Create an EC2 KeyPair that we can use for SSH access
-	keyPairName := fmt.Sprintf("terraform-ci-%s", id)
+	keyPairName := fmt.Sprintf("%s", id)
 	keyPair := aws.CreateAndImportEC2KeyPair(t, region, keyPairName)
 
 	// tag the key pair so we can find in the access module
