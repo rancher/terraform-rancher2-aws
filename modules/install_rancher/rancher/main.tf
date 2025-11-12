@@ -9,7 +9,7 @@ locals {
   default_hc_values = {
     "hostname"                                            = local.rancher_domain
     "replicas"                                            = "3"
-    "bootstrapPassword"                                   = "admin"
+    "bootstrapPassword"                                   = random_password.admin_password.result
     "ingress.enabled"                                     = "true"
     "ingress.tls.source"                                  = "letsEncrypt"
     "tls"                                                 = "ingress"
@@ -22,16 +22,22 @@ locals {
     "additionalTrustedCAs"                                = "true"
     "ingress.extraAnnotations.cert-manager\\.io\\/issuer" = "rancher"
   }
-  helm_chart_values = coalesce( # using coalesce like this essentially gives us a switch function
+  helm_chart_values = tomap(coalesce( # using coalesce like this essentially gives us a switch function
     (local.helm_chart_use_strategy == "merge" ? merge(local.default_hc_values, local.rancher_helm_chart_values) : null),
     (local.helm_chart_use_strategy == "default" ? local.default_hc_values : null),
     (local.helm_chart_use_strategy == "provide" ? local.rancher_helm_chart_values : null),
-  ) # WARNING! Some config is necessary, if the result is an empty string the coalesce will fail
+  )) # WARNING! Some config is necessary, if the result is an empty string the coalesce will fail
   zone_id              = var.zone_id
   region               = var.region
   email                = var.email
   cert_manager_version = replace(var.cert_manager_version, "v", "") # don't include the v
   acme_server          = var.acme_server_url
+}
+
+resource "random_password" "admin_password" {
+  length           = 16
+  special          = true
+  override_special = "!#$%&-_=+"
 }
 
 resource "time_sleep" "settle_before_rancher" {
@@ -154,7 +160,8 @@ resource "helm_release" "rancher" {
   timeout          = 1800 # 30m
 
   dynamic "set" {
-    for_each = local.helm_chart_values
+    # Terraform won't iterate over sensitive values, so we have to wrap it in nonsensitive()
+    for_each = nonsensitive(local.helm_chart_values)
     content {
       name  = set.key
       type  = "string"
@@ -299,34 +306,4 @@ resource "terraform_data" "get_public_cert_info" {
       fi
     EOT
   }
-}
-
-provider "rancher2" {
-  api_url   = "https://${local.rancher_domain}"
-  bootstrap = true
-  ca_certs  = data.kubernetes_secret_v1.certificate.data["tls.crt"]
-  alias     = "bootstrap"
-}
-
-resource "random_password" "password" {
-  length           = 16
-  special          = true
-  override_special = "!-_=+"
-}
-
-resource "rancher2_bootstrap" "admin" {
-  depends_on = [
-    time_sleep.settle_before_rancher,
-    terraform_data.wait_for_nginx,
-    terraform_data.cattle-system,
-    kubernetes_manifest.issuer,
-    helm_release.rancher,
-    terraform_data.wait_for_rancher,
-    terraform_data.get_public_cert_info,
-    data.kubernetes_secret_v1.certificate,
-    kubernetes_secret.rancher_tls_ca,
-    kubernetes_secret.rancher_tls_ca_additional,
-  ]
-  provider = rancher2.bootstrap
-  password = random_password.password.result
 }

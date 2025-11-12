@@ -7,10 +7,6 @@ provider "aws" {
   }
 }
 
-provider "acme" {
-  server_url = local.acme_server_url
-}
-
 provider "github" {}
 provider "kubernetes" {} # make sure you set the env variable KUBE_CONFIG_PATH to local_file_path (file_path variable)
 provider "helm" {}       # make sure you set the env variable KUBE_CONFIG_PATH to local_file_path (file_path variable)
@@ -27,16 +23,14 @@ terraform {
 }
 
 locals {
-  identifier   = var.identifier
-  example      = "basic"
-  project_name = "tf-${substr(md5(join("-", [local.example, local.identifier])), 0, 5)}"
-  username     = local.project_name
-  domain       = local.project_name
-  zone         = var.zone
-  key_name     = var.key_name
-  key          = var.key
-  # "https://acme-staging-v02.api.letsencrypt.org/directory" # "https://acme-v02.api.letsencrypt.org/directory"
-  acme_server_url      = var.acme_server_url
+  identifier           = var.identifier
+  example              = "dev"
+  project_name         = "tf-${substr(md5(join("-", [local.example, local.identifier])), 0, 5)}"
+  username             = local.project_name
+  domain               = local.project_name
+  zone                 = var.zone
+  key_name             = var.key_name
+  key                  = var.key
   owner                = var.owner
   rke2_version         = var.rke2_version
   rancher_helm_repo    = "https://releases.rancher.com/server-charts"
@@ -47,7 +41,7 @@ locals {
   helm_chart_values = {
     "hostname"               = "${local.domain}.${local.zone}"
     "replicas"               = "1"
-    "bootstrapPassword"      = "admin"
+    "bootstrapPassword"      = random_password.admin_password.result
     "tls"                    = "ingress"
     "ingress.enabled"        = "true"
     "ingress.tls.source"     = "secret"
@@ -58,26 +52,12 @@ locals {
     "additionalTrustedCAs"   = "true"
   }
   node_configuration = {
-    "rancherA" = {
+    "rancher" = {
       type            = "all-in-one"
       size            = "xxl"
       os              = local.os
       indirect_access = true
       initial         = true
-    }
-    "rancherB" = {
-      type            = "all-in-one"
-      size            = "xxl"
-      os              = local.os
-      indirect_access = true
-      initial         = false
-    }
-    "rancherC" = {
-      type            = "all-in-one"
-      size            = "xxl"
-      os              = local.os
-      indirect_access = true
-      initial         = false
     }
   }
   local_file_path      = var.file_path
@@ -86,6 +66,13 @@ locals {
   cert_manager_version = "1.18.1"
   os                   = "sle-micro-61"
 }
+
+resource "random_password" "admin_password" {
+  length           = 16
+  special          = true
+  override_special = "!#$%&-_=+"
+}
+
 
 data "http" "myip" {
   url = "https://ipinfo.io/ip"
@@ -131,43 +118,5 @@ module "rancher" {
   rancher_helm_channel            = local.rancher_helm_channel
   rancher_helm_chart_use_strategy = local.helm_chart_strategy
   rancher_helm_chart_values       = local.helm_chart_values
-  acme_server_url                 = local.acme_server_url
-}
-
-provider "rancher2" {
-  alias     = "authenticate"
-  bootstrap = true
-  api_url   = "https://${local.domain}.${local.zone}"
-  timeout   = "300s"
-  ca_certs  = module.rancher.tls_certificate_chain
-}
-
-resource "rancher2_bootstrap" "authenticate" {
-  depends_on = [
-    module.tls,
-    module.rancher,
-  ]
-  provider         = rancher2.authenticate
-  initial_password = module.rancher.admin_password
-  password         = module.rancher.admin_password
-  token_update     = true
-  token_ttl        = 7200 # 2 hours
-}
-
-provider "rancher2" {
-  alias     = "default"
-  api_url   = "https://${local.domain}.${local.zone}"
-  token_key = rancher2_bootstrap.authenticate.token
-  timeout   = "300s"
-  ca_certs  = module.rancher.tls_certificate_chain
-}
-
-data "rancher2_cluster" "local" {
-  depends_on = [
-    module.tls,
-    module.rancher,
-    rancher2_bootstrap.authenticate,
-  ]
-  provider = rancher2.default
-  name     = "local"
+  bootstrap_rancher               = false
 }

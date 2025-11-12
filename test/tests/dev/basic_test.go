@@ -13,19 +13,19 @@ import (
 	util "github.com/rancher/terraform-rancher2-aws/test/tests"
 )
 
-// This test is the same as basic but it also tests that the state is correctly stored in S3 and can be used to re-create the cluster
-func TestThreeState(t *testing.T) {
+func TestDevBasic(t *testing.T) {
 	t.Parallel()
-	acme_server_url := til.SetAcmeServer()
-
 	id := util.GetId()
 	region := util.GetRegion()
-	directory := "three"
+	directory := "dev"
 	owner := "terraform-ci@suse.com"
+	acme_server_url := util.SetAcmeServer()
+
 	repoRoot, err := filepath.Abs(g.GetRepoRoot(t))
 	if err != nil {
 		t.Fatalf("Error getting git root directory: %v", err)
 	}
+
 	exampleDir := repoRoot + "/examples/" + directory
 	testDir := repoRoot + "/test/tests/data/" + id
 
@@ -120,46 +120,6 @@ func TestThreeState(t *testing.T) {
 	}
 	util.CheckReady(t, testDir+"/kubeconfig")
 	util.CheckRunning(t, testDir+"/kubeconfig")
-
-	os.RemoveAll(testDir)
-	err = util.CreateTestDirectories(t, id)
-	if err != nil {
-		t.Log("Test failed, tearing down...")
-		util.GetErrorLogs(t, testDir+"/kubeconfig")
-		util.Teardown(t, testDir, exampleDir, newTfOptions, keyPair, sshAgent)
-		t.Fatalf("Error creating cluster: %s", err)
-	}
-
-	// Running the apply again should re-create everything from state in S3
-	// This should only recreate the files, the resources should be untouched
-	err = os.WriteFile(testDir+"/id_rsa", []byte(keyPair.KeyPair.PrivateKey), 0600)
-	if err != nil {
-		t.Log("Test failed, tearing down...")
-		util.GetErrorLogs(t, testDir+"/kubeconfig")
-		util.Teardown(t, testDir, exampleDir, newTfOptions, keyPair, sshAgent)
-		t.Fatalf("Error creating cluster: %s", err)
-	}
-	_, err = terraform.InitAndApplyE(t, terraformOptions)
-	if err != nil {
-		t.Log("Test failed, tearing down...")
-		util.GetErrorLogs(t, testDir+"/kubeconfig")
-		util.Teardown(t, testDir, exampleDir, newTfOptions, keyPair, sshAgent)
-		t.Fatalf("Error creating cluster: %s", err)
-	}
-	util.CheckReady(t, testDir+"/kubeconfig")
-	util.CheckRunning(t, testDir+"/kubeconfig")
-
-	// Running the apply again should not change anything
-	_, err = terraform.InitAndApplyE(t, terraformOptions)
-	if err != nil {
-		t.Log("Test failed, tearing down...")
-		util.GetErrorLogs(t, testDir+"/kubeconfig")
-		util.Teardown(t, testDir, exampleDir, newTfOptions, keyPair, sshAgent)
-		t.Fatalf("Error creating cluster: %s", err)
-	}
-	util.CheckReady(t, testDir+"/kubeconfig")
-	util.CheckRunning(t, testDir+"/kubeconfig")
-
 	if t.Failed() {
 		t.Log("Test failed...")
 	} else {

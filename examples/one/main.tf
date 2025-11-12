@@ -17,15 +17,16 @@ provider "helm" {}       # make sure you set the env variable KUBE_CONFIG_PATH t
 
 
 locals {
-  identifier           = var.identifier
-  example              = "basic"
-  project_name         = "tf-${substr(md5(join("-", [local.example, local.identifier])), 0, 5)}"
-  username             = local.project_name
-  domain               = local.project_name
-  zone                 = var.zone
-  key_name             = var.key_name
-  key                  = var.key
-  acme_server_url      = "https://acme-staging-v02.api.letsencrypt.org/directory" # "https://acme-v02.api.letsencrypt.org/directory"
+  identifier   = var.identifier
+  example      = "basic"
+  project_name = "tf-${substr(md5(join("-", [local.example, local.identifier])), 0, 5)}"
+  username     = local.project_name
+  domain       = local.project_name
+  zone         = var.zone
+  key_name     = var.key_name
+  key          = var.key
+  # "https://acme-staging-v02.api.letsencrypt.org/directory" or "https://acme-v02.api.letsencrypt.org/directory"
+  acme_server_url      = var.acme_server_url
   owner                = var.owner
   rke2_version         = var.rke2_version
   local_file_path      = var.file_path

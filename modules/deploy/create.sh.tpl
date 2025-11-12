@@ -4,7 +4,9 @@ cd ${deploy_path}
 pwd
 ls -lah
 whoami
-. ${deploy_path}/envrc
+. envrc
+terraform version
+
 TF_CLI_ARGS_init=""
 TF_CLI_ARGS_apply=""
 
@@ -18,7 +20,7 @@ E1=0
 while [ $EXITCODE -gt 0 ] && [ $ATTEMPTS -lt $MAX ]; do
   A=0
   while [ $E -gt 0 ] && [ $A -lt $MAX ]; do
-    timeout -k 1m ${timeout} terraform apply -var-file="${deploy_path}/inputs.tfvars" -no-color -auto-approve -state="${deploy_path}/tfstate"
+    timeout -k 1m ${timeout} terraform apply -var-file="inputs.tfvars" -no-color -auto-approve -state="tfstate"
     E=$?
     if [ $E -eq 124 ]; then echo "Apply timed out after ${timeout}"; fi
     A=$((A+1))
@@ -27,7 +29,7 @@ while [ $EXITCODE -gt 0 ] && [ $ATTEMPTS -lt $MAX ]; do
   if [ $E -gt 0 ] && [ $ATTEMPTS != $((MAX-1)) ]; then
     A1=0
     while [ $E1 -gt 0 ] && [ $A1 -lt $MAX ]; do
-      timeout -k 1m ${timeout} terraform destroy -var-file="${deploy_path}/inputs.tfvars" -no-color -auto-approve -state="${deploy_path}/tfstate"
+      timeout -k 1m ${timeout} terraform destroy -var-file="inputs.tfvars" -no-color -auto-approve -state="tfstate"
       E1=$?
       if [ $E1 -eq 124 ]; then echo "Apply timed out after ${timeout}"; fi
       A1=$((A1+1))
@@ -54,7 +56,7 @@ if [ $ATTEMPTS -eq $MAX ]; then echo "max attempts reached..."; fi
 if [ $EXITCODE -ne 0 ]; then echo "failure, exit code $EXITCODE..."; fi
 if [ $EXITCODE -eq 0 ]; then
   echo "success...";
-  terraform output -json -state="${deploy_path}/tfstate" > ${deploy_path}/outputs.json
+  terraform output -json -state="tfstate" > outputs.json
 fi
 cd $DIR
 exit $EXITCODE

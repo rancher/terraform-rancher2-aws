@@ -1,13 +1,13 @@
 terraform {
   required_version = ">= 1.5.0"
   required_providers {
+    file = {
+      source  = "rancher/file"
+      version = ">= 2.2.0"
+    }
     helm = {
       source  = "hashicorp/helm"
       version = "2.14"
-    }
-    rancher2 = {
-      source  = "rancher/rancher2"
-      version = ">= 5.0.0"
     }
     random = {
       source  = "hashicorp/random"
@@ -24,10 +24,6 @@ terraform {
     aws = {
       source  = "hashicorp/aws"
       version = ">= 5.11"
-    }
-    file = {
-      source  = "rancher/file"
-      version = ">= 2.2.0"
     }
   }
 }

@@ -67,6 +67,7 @@ variable "rancher_helm_chart_values" {
     }
   EOT
   default     = "{}"
+  sensitive   = true
 }
 variable "zone_id" {
   type        = string

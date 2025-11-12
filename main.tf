@@ -73,6 +73,7 @@ locals {
   ip_family                       = "ipv4"
   rancher_helm_chart_values       = var.rancher_helm_chart_values
   rancher_helm_chart_use_strategy = var.rancher_helm_chart_use_strategy
+  install_rancher                 = var.install_rancher
   bootstrap_rancher               = var.bootstrap_rancher
   acme_server_url                 = var.acme_server_url
 }
@@ -117,13 +118,13 @@ module "install_cert_manager" {
   cert_manager_configuration = local.cert_manager_config
 }
 
-module "rancher_bootstrap" {
+module "install_rancher" {
   depends_on = [
     module.cluster,
     module.install_cert_manager,
   ]
-  count                           = (local.bootstrap_rancher ? 1 : 0)
-  source                          = "./modules/rancher_bootstrap"
+  count                           = (local.install_rancher ? 1 : 0)
+  source                          = "./modules/install_rancher"
   path                            = local.local_file_path
   project_domain                  = local.fqdn
   zone_id                         = data.aws_route53_zone.zone.zone_id
@@ -140,4 +141,18 @@ module "rancher_bootstrap" {
   cert_chain                      = local.cert_chain
   rancher_helm_chart_values       = local.rancher_helm_chart_values
   rancher_helm_chart_use_strategy = local.rancher_helm_chart_use_strategy
+}
+
+module "bootstrap_rancher" {
+  depends_on = [
+    module.cluster,
+    module.install_cert_manager,
+    module.install_rancher,
+  ]
+  count          = (local.bootstrap_rancher ? 1 : 0)
+  source         = "./modules/bootstrap_rancher"
+  path           = local.local_file_path
+  rancher_domain = local.fqdn
+  ca_certs       = module.install_rancher[0].ca_certs
+  admin_password = module.install_rancher[0].rancher_admin_password
 }
