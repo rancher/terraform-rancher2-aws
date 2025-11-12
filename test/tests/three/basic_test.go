@@ -89,7 +89,7 @@ func TestThreeBasic(t *testing.T) {
 			"rke2_version":    rke2Version,
 			"rancher_version": rancherVersion,
 			"file_path":       testDir,
-      "acme_server_url": acme_server_url,
+			"acme_server_url": acme_server_url,
 		},
 		// Environment variables to set when running Terraform
 		EnvVars: map[string]string{

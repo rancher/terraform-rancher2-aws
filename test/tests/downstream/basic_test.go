@@ -87,7 +87,7 @@ func TestDownstreamBasic(t *testing.T) {
 			"aws_secret_access_key": secretKey,
 			"aws_session_token":     sessionToken,
 			"aws_region":            region,
-      "acme_server_url":       acme_server_url,
+			"acme_server_url":       acme_server_url,
 		},
 		// Environment variables to set when running Terraform
 		EnvVars: map[string]string{
