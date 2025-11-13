@@ -112,7 +112,7 @@ func filterPrimeOnly(r *[]*github.RepositoryRelease) {
 	*r = fr
 }
 
-// this effectively removes release candidates as well as pending releases
+// This effectively removes release candidates as well as pending releases.
 func filterPrerelease(r *[]*github.RepositoryRelease) {
 	var fr []*github.RepositoryRelease
 	releases := *r
@@ -249,7 +249,7 @@ func removeZeroPadding(v *[]string) {
 func CreateKeypair(t *testing.T, region string, owner string, id string) (*aws.Ec2Keypair, error) {
 	t.Log("Creating keypair...")
 	// Create an EC2 KeyPair that we can use for SSH access
-	keyPairName := fmt.Sprintf("%s", id)
+	keyPairName := id
 	keyPair := aws.CreateAndImportEC2KeyPair(t, region, keyPairName)
 
 	// tag the key pair so we can find in the access module
@@ -285,7 +285,7 @@ func CreateKeypair(t *testing.T, region string, owner string, id string) (*aws.E
 	input = &ec2.DescribeKeyPairsInput{
 		Filters: []*ec2.Filter{&keyNameFilter},
 	}
-	result, err = client.DescribeKeyPairs(input)
+	_, err = client.DescribeKeyPairs(input)
 	if err != nil {
 		return nil, err
 	}
@@ -298,7 +298,7 @@ func CreateKeypair(t *testing.T, region string, owner string, id string) (*aws.E
 	input = &ec2.DescribeKeyPairsInput{
 		Filters: []*ec2.Filter{&keyNameFilter},
 	}
-	result, err = client.DescribeKeyPairs(input)
+	_, err = client.DescribeKeyPairs(input)
 	if err != nil {
 		return nil, err
 	}
@@ -320,10 +320,10 @@ func GetRetryableTerraformErrors() map[string]string {
 	return retryableTerraformErrors
 }
 
-func SetAcmeServer() string {
+func SetAcmeServer(t *testing.T) string {
 	acmeserver := os.Getenv("ACME_SERVER_URL")
 	if acmeserver == "" {
-		os.Setenv("ACME_SERVER_URL", "https://acme-staging-v02.api.letsencrypt.org/directory")
+		t.Setenv("ACME_SERVER_URL", "https://acme-staging-v02.api.letsencrypt.org/directory")
 	}
 	return acmeserver
 }
@@ -424,7 +424,10 @@ func Teardown(t *testing.T, dataDir string, exampleDir string, options []*terraf
 	if err != nil {
 		t.Logf("Failed to destroy key pair: %v", err)
 	}
-	os.Remove(exampleDir + "/.terraform.lock.hcl")
+	err = os.Remove(exampleDir + "/.terraform.lock.hcl")
+	if err != nil {
+		t.Logf("Failed to remove lock file: %v", err)
+	}
 }
 
 func GetErrorLogs(t *testing.T, kubeconfigPath string) {

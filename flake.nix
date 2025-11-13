@@ -59,7 +59,7 @@
               gitleaks
               gnupg
               go
-              golint
+              golangci-lint
               gotestfmt
               gotestsum
               kubernetes-helm
