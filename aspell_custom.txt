@@ -9,3 +9,4 @@ oci
 eks
 aks
 readme
+ci
