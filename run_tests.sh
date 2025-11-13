@@ -186,19 +186,29 @@ if [ -z "$GITHUB_OWNER" ]; then echo "GITHUB_OWNER isn't set"; else echo "GITHUB
 if [ -z "$ZONE" ]; then echo "ZONE isn't set"; else echo "ZONE is set"; fi
 
 if [ -z "$cleanup_id" ]; then
-  echo "checking tests for compile errors..."
+
+
   D="$(pwd)"
 
+  echo "tidying..."
   cd "$REPO_ROOT/test/tests" || exit
   if ! go mod tidy; then C=$?; echo "failed to tidy, exit code $C"; exit $C; fi
-  echo "completed tidy..."
 
+  echo "checking tests for compile errors..."
   while IFS= read -r file; do
     echo "found $file";
     if ! go test -c "$file" -o "${file}.test"; then C=$?; echo "failed to compile $file, exit code $C"; exit $C; fi
     rm -rf "${file}.test"
   done <<< "$(find "$REPO_ROOT/test" -not \( -path "$REPO_ROOT/test/tests/data" -prune \) -name '*.go')"
   echo "compile checks passed..."
+
+  echo "checking tests for go lint errors..."
+  if ! golangci-lint run; then echo "lint failed..."; exit 1; fi
+  echo "lint errors complete"
+
+  echo "formatting tests..."
+  gofmt -s -w -e .
+  echo "done formatting"
 
   cd "$D" || exit
 

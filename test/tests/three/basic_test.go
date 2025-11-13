@@ -15,11 +15,13 @@ import (
 
 func TestThreeBasic(t *testing.T) {
 	t.Parallel()
+	var err error
+	var err2 error
 	id := util.GetId()
 	region := util.GetRegion()
 	directory := "three"
 	owner := "terraform-ci@suse.com"
-	acme_server_url := util.SetAcmeServer()
+	acme_server_url := util.SetAcmeServer(t)
 
 	repoRoot, err := filepath.Abs(g.GetRepoRoot(t))
 	if err != nil {
@@ -31,25 +33,39 @@ func TestThreeBasic(t *testing.T) {
 
 	err = util.CreateTestDirectories(t, id)
 	if err != nil {
-		os.RemoveAll(testDir)
+		err2 = os.RemoveAll(testDir)
+		if err2 != nil {
+			t.Logf("Error removing test data directories: %s", err2)
+		}
 		t.Fatalf("Error creating test data directories: %s", err)
 	}
 	keyPair, err := util.CreateKeypair(t, region, owner, id)
 	if err != nil {
-		os.RemoveAll(testDir)
-		t.Fatalf("Error creating test key pair: %s", err)
-	}
-	err = os.WriteFile(testDir+"/id_rsa", []byte(keyPair.KeyPair.PrivateKey), 0600)
-	if err != nil {
-		err = aws.DeleteEC2KeyPairE(t, keyPair)
-		if err != nil {
-			t.Logf("Failed to destroy key pair: %v", err)
+		err2 = os.RemoveAll(testDir)
+		if err2 != nil {
+			t.Logf("Error removing test data directories: %s", err2)
 		}
-		os.RemoveAll(testDir)
 		t.Fatalf("Error creating test key pair: %s", err)
 	}
-	sshAgent := ssh.SshAgentWithKeyPair(t, keyPair.KeyPair)
-	t.Logf("Key %s created and added to agent", keyPair.Name)
+	keyPairObj := keyPair.KeyPair
+	privateKey := keyPairObj.PrivateKey
+	publicKey := keyPairObj.PublicKey
+	keyPairName := keyPair.Name
+
+	err = os.WriteFile(testDir+"/id_rsa", []byte(privateKey), 0600)
+	if err != nil {
+		err2 = aws.DeleteEC2KeyPairE(t, keyPair)
+		if err2 != nil {
+			t.Logf("Failed to destroy key pair: %v", err2)
+		}
+		err2 = os.RemoveAll(testDir)
+		if err2 != nil {
+			t.Logf("Error removing test data directories: %s", err2)
+		}
+		t.Fatalf("Error creating test key pair: %s", err)
+	}
+	sshAgent := ssh.SshAgentWithKeyPair(t, keyPairObj)
+	t.Logf("Key %s created and added to agent", keyPairName)
 
 	backendTerraformOptions, err := util.CreateObjectStorageBackend(t, testDir, id, owner, region)
 	tfOptions := []*terraform.Options{backendTerraformOptions}
@@ -83,8 +99,8 @@ func TestThreeBasic(t *testing.T) {
 		Vars: map[string]interface{}{
 			"identifier":      id,
 			"owner":           owner,
-			"key_name":        keyPair.Name,
-			"key":             keyPair.KeyPair.PublicKey,
+			"key_name":        keyPairName,
+			"key":             publicKey,
 			"zone":            os.Getenv("ZONE"),
 			"rke2_version":    rke2Version,
 			"rancher_version": rancherVersion,
