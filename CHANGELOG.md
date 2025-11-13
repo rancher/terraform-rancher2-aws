@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.1.2](https://github.com/rancher/terraform-rancher2-aws/compare/v3.1.1...v3.1.2) (2025-11-13)
+
+
+### Bug Fixes
+
+* lint create and destroy scripts ([#137](https://github.com/rancher/terraform-rancher2-aws/issues/137)) ([8af41ae](https://github.com/rancher/terraform-rancher2-aws/commit/8af41ae98e68a62d7d3c913a943c041369d0d1d6))
+* lint errors and add lint check to CI ([#136](https://github.com/rancher/terraform-rancher2-aws/issues/136)) ([c5652b0](https://github.com/rancher/terraform-rancher2-aws/commit/c5652b0ed1897e6baa14400b643a489c214cb69b))
+* separate install from bootstrap ([#134](https://github.com/rancher/terraform-rancher2-aws/issues/134)) ([f3eaf65](https://github.com/rancher/terraform-rancher2-aws/commit/f3eaf65b024101be2d81a1b3c9ba1591225d3d9c))
+
 ## [3.1.1](https://github.com/rancher/terraform-rancher2-aws/compare/v3.1.0...v3.1.1) (2025-10-22)
 
 
