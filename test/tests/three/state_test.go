@@ -13,7 +13,7 @@ import (
 	util "github.com/rancher/terraform-rancher2-aws/test/tests"
 )
 
-// This test is the same as basic but it also tests that the state is correctly stored in S3 and can be used to re-create the cluster
+// This test is the same as basic but it also tests that the state is correctly stored in S3 and can be used to re-create the cluster.
 func TestThreeState(t *testing.T) {
 	t.Parallel()
 	var err error
