@@ -323,10 +323,7 @@ func GetRetryableTerraformErrors() map[string]string {
 func SetAcmeServer(t *testing.T) string {
 	acmeserver := os.Getenv("ACME_SERVER_URL")
 	if acmeserver == "" {
-		err := t.Setenv("ACME_SERVER_URL", "https://acme-staging-v02.api.letsencrypt.org/directory")
-		if err != nil {
-			t.Logf("Error setting environment variable: %v", err)
-		}
+		t.Setenv("ACME_SERVER_URL", "https://acme-staging-v02.api.letsencrypt.org/directory")
 	}
 	return acmeserver
 }
