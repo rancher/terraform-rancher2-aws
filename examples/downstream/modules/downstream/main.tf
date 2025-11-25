@@ -1,4 +1,3 @@
-
 locals {
   # general
   identifier   = var.identifier
@@ -11,134 +10,38 @@ locals {
   aws_region            = var.aws_region
   aws_region_letter     = var.aws_region_letter
   # networking info
-  vpc_id            = var.vpc_id
-  subnet_id         = var.subnet_id
-  security_group_id = var.security_group_id
-  lbsg              = sort(var.load_balancer_security_groups)
-  # load balancers only have 2 security groups, the project and its own
-  # this eliminates the project security group to just return the load balancer's security group
-  load_balancer_security_group_id = [
-    for i in range(length(local.lbsg)) :
-    local.lbsg[i] if local.lbsg[i] != local.security_group_id
-  ][0]
-  downstream_security_group_name = "${local.cluster_name}-sgroup"
+  vpc_id                          = var.vpc_id
+  subnet_id                       = var.subnet_id
+  downstream_security_group_id    = var.downstream_security_group_id
+  downstream_security_group_name  = var.downstream_security_group_name
+  load_balancer_security_group_id = var.load_balancer_security_group_id
   # node info
-  aws_instance_type = var.aws_instance_type
-  ami_id            = var.ami_id
-  ami_ssh_user      = var.ami_ssh_user
-  node_count        = var.node_count
-  nodes = (length(data.aws_instances.rke2_nodes.ids) > 0 ? data.aws_instances.rke2_nodes :
-    (length(data.aws_instances.rke2_nodes_again.ids) > 0 ? data.aws_instances.rke2_nodes_again :
-    data.aws_instances.rke2_nodes_again_again)
-  )
-  node_ids = coalescelist(
-    data.aws_instances.rke2_nodes.ids,
-    data.aws_instances.rke2_nodes_again.ids,
-    data.aws_instances.rke2_nodes_again_again.ids,
-  )
-  # if the nodes aren't found, then this should fail
-  # tflint-ignore: terraform_unused_declarations
-  fail_nodes_not_found = (length(local.node_ids) == 0 ? one([local.node_count, "nodes_not_found"]) : false)
-  node_ips             = { for i in range(local.node_count) : tostring(i) => local.nodes.public_ips[i] }
-  node_id              = "${local.cluster_name}-nodes"
-  node_wait_time       = "${tostring(local.node_count * 60 + 60)}s" # 60 seconds per node + 60 seconds buffer
-  ami_admin_group      = (var.ami_admin_group != "" ? var.ami_admin_group : "tty")
-  runner_ip            = (var.direct_node_access != null ? var.direct_node_access.runner_ip : "10.1.1.1") # the IP running Terraform
-  ssh_access_key       = (var.direct_node_access != null ? var.direct_node_access.ssh_access_key : "fake123abc")
-  ssh_access_user      = (var.direct_node_access != null ? var.direct_node_access.ssh_access_user : "fake")
+  node_info       = var.node_info
+  node_count      = sum([for i in range(length(local.node_info)) : local.node_info[keys(local.node_info)[i]].quantity])
+  node_id         = "${local.cluster_name}-nodes"
+  runner_ip       = (var.direct_node_access != null ? var.direct_node_access.runner_ip : "10.1.1.1") # the IP running Terraform
+  ssh_access_key  = (var.direct_node_access != null ? var.direct_node_access.ssh_access_key : "fake123abc")
+  ssh_access_user = (var.direct_node_access != null ? var.direct_node_access.ssh_access_user : "fake")
   # rke2 info
-  rke2_version = var.rke2_version
+  rke2_version             = var.rke2_version
+  rke2_ingress_config_name = "rke2-ingress-config"
+  rke2_ingress_config_key  = "config"
 }
 
-resource "aws_security_group" "downstream_cluster" {
-  description = "Access to downstream cluster"
-  name        = local.downstream_security_group_name
-  vpc_id      = local.vpc_id
-  tags = {
-    Name = local.downstream_security_group_name
-  }
-  lifecycle {
-    ignore_changes = [
-      ingress,
-      egress,
-    ]
-  }
-}
-# this allows servers attached to the project security group to accept connections initiated by the downstream cluster
-resource "aws_vpc_security_group_ingress_rule" "downstream_ingress_rancher" {
-  depends_on = [
-    aws_security_group.downstream_cluster,
-  ]
-  referenced_security_group_id = aws_security_group.downstream_cluster.id
-  security_group_id            = local.security_group_id
-  ip_protocol                  = "-1"
-}
-# this allows the load balancer to accept connections initiated by the downstream cluster
-resource "aws_vpc_security_group_ingress_rule" "downstream_ingress_loadbalancer" {
-  depends_on = [
-    aws_security_group.downstream_cluster,
-  ]
-  referenced_security_group_id = aws_security_group.downstream_cluster.id
-  security_group_id            = local.load_balancer_security_group_id
-  ip_protocol                  = "-1"
-}
-
-# this allows the downstream cluster to reach out to any public ipv4 address
-resource "aws_vpc_security_group_egress_rule" "downstream_egress_ipv4" {
-  depends_on = [
-    aws_security_group.downstream_cluster,
-  ]
-  ip_protocol       = "-1"
-  cidr_ipv4         = "0.0.0.0/0"
-  security_group_id = aws_security_group.downstream_cluster.id
-}
-# this allows the downstream cluster to reach out to any public ipv6 address
-resource "aws_vpc_security_group_egress_rule" "downstream_egress_ipv6" {
-  depends_on = [
-    aws_security_group.downstream_cluster,
-  ]
-  ip_protocol       = "-1"
-  cidr_ipv6         = "::/0"
-  security_group_id = aws_security_group.downstream_cluster.id
-}
-# this allows the downstream cluster to reach out to any server attached to the project security group
-resource "aws_vpc_security_group_egress_rule" "downstream_egress_project_link" {
-  depends_on = [
-    aws_security_group.downstream_cluster,
-  ]
-  referenced_security_group_id = local.security_group_id
-  security_group_id            = aws_security_group.downstream_cluster.id
-  ip_protocol                  = "-1"
-}
-# this allows nodes to talk to each other
-resource "aws_vpc_security_group_ingress_rule" "downstream_ingress_internal_ipv4" {
-  depends_on = [
-    aws_security_group.downstream_cluster,
-  ]
-  ip_protocol       = "-1"
-  cidr_ipv4         = "10.0.0.0/16"
-  security_group_id = aws_security_group.downstream_cluster.id
-}
-resource "rancher2_machine_config_v2" "all_in_one" {
-  depends_on = [
-    aws_security_group.downstream_cluster,
-    aws_vpc_security_group_ingress_rule.downstream_ingress_rancher,
-    aws_vpc_security_group_egress_rule.downstream_egress_ipv4,
-    aws_vpc_security_group_egress_rule.downstream_egress_ipv6,
-    aws_vpc_security_group_egress_rule.downstream_egress_project_link,
-  ]
-  generate_name = local.cluster_name
+resource "rancher2_machine_config_v2" "nodes" {
+  for_each      = local.node_info
+  generate_name = "${each.key}-${local.cluster_name}"
   amazonec2_config {
-    ami            = local.ami_id
+    ami            = each.value.aws_ami_id
     region         = local.aws_region
     security_group = [local.downstream_security_group_name]
     subnet_id      = local.subnet_id
     vpc_id         = local.vpc_id
     zone           = local.aws_region_letter
     session_token  = local.aws_session_token
-    instance_type  = local.aws_instance_type
-    ssh_user       = local.ami_ssh_user
-    tags           = join(",", ["Id", local.identifier, "Owner", local.owner, "NodeId", local.node_id])
+    instance_type  = each.value.aws_instance_type
+    tags           = join(",", ["Id", local.identifier, "Owner", local.owner, "NodeID", local.node_id])
+    ssh_user       = each.value.ami_ssh_user
     userdata       = <<-EOT
       #cloud-config
 
@@ -152,7 +55,7 @@ resource "rancher2_machine_config_v2" "all_in_one" {
         - name: ${local.ssh_access_user}
           gecos: ${local.ssh_access_user}
           sudo: ALL=(ALL) NOPASSWD:ALL
-          groups: users, ${local.ami_admin_group}
+          groups: users, ${each.value.ami_admin_group}
           lock_passwd: true
           ssh_authorized_keys:
             - ${local.ssh_access_key}
@@ -162,46 +65,96 @@ resource "rancher2_machine_config_v2" "all_in_one" {
 }
 resource "terraform_data" "patch_machine_configs" {
   depends_on = [
-    aws_security_group.downstream_cluster,
-    aws_vpc_security_group_ingress_rule.downstream_ingress_rancher,
-    aws_vpc_security_group_egress_rule.downstream_egress_ipv4,
-    aws_vpc_security_group_egress_rule.downstream_egress_ipv6,
-    aws_vpc_security_group_egress_rule.downstream_egress_project_link,
-    rancher2_machine_config_v2.all_in_one,
+    rancher2_machine_config_v2.nodes,
   ]
   triggers_replace = {
-    core_config = rancher2_machine_config_v2.all_in_one.id
+    node_config    = local.node_info
+    aws_access_key = local.aws_access_key_id
+    aws_secret_key = local.aws_secret_access_key
   }
   provisioner "local-exec" {
     command = <<-EOT
+      # WARNING! This will update all machine configs in the fleet-default namespace.
       ${path.module}/addKeyToAmazonConfig.sh "${local.aws_access_key_id}" "${local.aws_secret_access_key}"
     EOT
   }
 }
-
+# resource "terraform_data" "cluster_destroy_helpers" {
+#   depends_on = [
+#     rancher2_machine_config_v2.nodes,
+#     terraform_data.patch_machine_configs,
+#   ]
+#   provisioner "local-exec" {
+#     when    = destroy
+#     command = <<-EOT
+#       # here should be the removal of finalizers for the cluster objects
+#     EOT
+#   }
+# }
+resource "terraform_data" "ingress_config" {
+  depends_on = [
+    rancher2_machine_config_v2.nodes,
+    terraform_data.patch_machine_configs,
+  ]
+  provisioner "local-exec" {
+    # https://ranchermanager.docs.rancher.com/reference-guides/cluster-configuration/rancher-server-configuration/rke2-cluster-configuration#machineselectorfiles
+    command = <<-EOT
+      ${path.module}/applyK8sManifest.sh <<EOF
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: "${local.rke2_ingress_config_name}"
+        namespace: "fleet-default"
+        annotations:
+          rke.cattle.io/object-authorized-for-clusters: ${local.cluster_name}
+      data:
+        "${local.rke2_ingress_config_key}": "ingress-controller: traefik"
+      EOF
+    EOT
+  }
+}
 resource "rancher2_cluster_v2" "rke2_cluster" {
   depends_on = [
-    aws_security_group.downstream_cluster,
-    aws_vpc_security_group_ingress_rule.downstream_ingress_rancher,
-    aws_vpc_security_group_egress_rule.downstream_egress_ipv4,
-    aws_vpc_security_group_egress_rule.downstream_egress_ipv6,
-    aws_vpc_security_group_egress_rule.downstream_egress_project_link,
-    rancher2_machine_config_v2.all_in_one,
+    rancher2_machine_config_v2.nodes,
     terraform_data.patch_machine_configs,
+    # terraform_data.cluster_destroy_helpers,
+    terraform_data.ingress_config,
   ]
   name                  = local.cluster_name
   kubernetes_version    = local.rke2_version
   enable_network_policy = true
   rke_config {
-    machine_pools {
-      name               = local.cluster_name
-      control_plane_role = true
-      etcd_role          = true
-      worker_role        = true
-      quantity           = local.node_count
-      machine_config {
-        kind = rancher2_machine_config_v2.all_in_one.kind
-        name = rancher2_machine_config_v2.all_in_one.name
+    dynamic "machine_pools" {
+      for_each = local.node_info
+      content {
+        name               = "${local.cluster_name}-${machine_pools.key}"
+        control_plane_role = machine_pools.value["control_plane_role"]
+        etcd_role          = machine_pools.value["etcd_role"]
+        worker_role        = machine_pools.value["worker_role"]
+        quantity           = machine_pools.value["quantity"]
+
+        dynamic "machine_config" {
+          for_each = toset([machine_pools.key])
+          content {
+            kind = rancher2_machine_config_v2.nodes[machine_config.key].kind
+            name = rancher2_machine_config_v2.nodes[machine_config.key].name
+          }
+        }
+      }
+    }
+    machine_selector_files {
+      machine_label_selector {
+        match_expressions {}
+        match_labels = {}
+      }
+      file_sources {
+        configmap {
+          name = local.rke2_ingress_config_name
+          items {
+            key  = local.rke2_ingress_config_key
+            path = "/etc/rancher/rke2/config.yaml.d/51-rke2-ingress-traefik.yaml"
+          }
+        }
       }
     }
   }
@@ -210,104 +163,17 @@ resource "rancher2_cluster_v2" "rke2_cluster" {
   }
 }
 
-resource "time_sleep" "wait_for_nodes" {
+module "get_instances" {
+  source = "../get_instances"
   depends_on = [
-    aws_security_group.downstream_cluster,
-    aws_vpc_security_group_ingress_rule.downstream_ingress_rancher,
-    aws_vpc_security_group_egress_rule.downstream_egress_ipv4,
-    aws_vpc_security_group_egress_rule.downstream_egress_ipv6,
-    aws_vpc_security_group_egress_rule.downstream_egress_project_link,
-    rancher2_machine_config_v2.all_in_one,
+    rancher2_machine_config_v2.nodes,
     terraform_data.patch_machine_configs,
+    # terraform_data.cluster_destroy_helpers,
+    terraform_data.ingress_config,
   ]
-  create_duration = local.node_wait_time
-}
-
-data "aws_instances" "rke2_nodes" {
-  depends_on = [
-    aws_security_group.downstream_cluster,
-    aws_vpc_security_group_ingress_rule.downstream_ingress_rancher,
-    aws_vpc_security_group_egress_rule.downstream_egress_ipv4,
-    aws_vpc_security_group_egress_rule.downstream_egress_ipv6,
-    aws_vpc_security_group_egress_rule.downstream_egress_project_link,
-    rancher2_machine_config_v2.all_in_one,
-    terraform_data.patch_machine_configs,
-    time_sleep.wait_for_nodes,
-  ]
-  filter {
-    name   = "tag:NodeId"
-    values = [local.node_id]
-  }
-}
-resource "time_sleep" "wait_for_nodes_again" {
-  depends_on = [
-    aws_security_group.downstream_cluster,
-    aws_vpc_security_group_ingress_rule.downstream_ingress_rancher,
-    aws_vpc_security_group_egress_rule.downstream_egress_ipv4,
-    aws_vpc_security_group_egress_rule.downstream_egress_ipv6,
-    aws_vpc_security_group_egress_rule.downstream_egress_project_link,
-    rancher2_machine_config_v2.all_in_one,
-    terraform_data.patch_machine_configs,
-    time_sleep.wait_for_nodes,
-    data.aws_instances.rke2_nodes,
-  ]
-  create_duration = local.node_wait_time
-}
-data "aws_instances" "rke2_nodes_again" {
-  depends_on = [
-    aws_security_group.downstream_cluster,
-    aws_vpc_security_group_ingress_rule.downstream_ingress_rancher,
-    aws_vpc_security_group_egress_rule.downstream_egress_ipv4,
-    aws_vpc_security_group_egress_rule.downstream_egress_ipv6,
-    aws_vpc_security_group_egress_rule.downstream_egress_project_link,
-    rancher2_machine_config_v2.all_in_one,
-    terraform_data.patch_machine_configs,
-    time_sleep.wait_for_nodes,
-    data.aws_instances.rke2_nodes,
-    time_sleep.wait_for_nodes_again,
-  ]
-  filter {
-    name   = "tag:NodeId"
-    values = [local.node_id]
-  }
-}
-
-resource "time_sleep" "wait_for_nodes_again_again" {
-  depends_on = [
-    aws_security_group.downstream_cluster,
-    aws_vpc_security_group_ingress_rule.downstream_ingress_rancher,
-    aws_vpc_security_group_egress_rule.downstream_egress_ipv4,
-    aws_vpc_security_group_egress_rule.downstream_egress_ipv6,
-    aws_vpc_security_group_egress_rule.downstream_egress_project_link,
-    rancher2_machine_config_v2.all_in_one,
-    terraform_data.patch_machine_configs,
-    time_sleep.wait_for_nodes,
-    data.aws_instances.rke2_nodes,
-    time_sleep.wait_for_nodes_again,
-    data.aws_instances.rke2_nodes_again,
-  ]
-  create_duration = local.node_wait_time
-}
-
-data "aws_instances" "rke2_nodes_again_again" {
-  depends_on = [
-    aws_security_group.downstream_cluster,
-    aws_vpc_security_group_ingress_rule.downstream_ingress_rancher,
-    aws_vpc_security_group_egress_rule.downstream_egress_ipv4,
-    aws_vpc_security_group_egress_rule.downstream_egress_ipv6,
-    aws_vpc_security_group_egress_rule.downstream_egress_project_link,
-    rancher2_machine_config_v2.all_in_one,
-    terraform_data.patch_machine_configs,
-    time_sleep.wait_for_nodes,
-    data.aws_instances.rke2_nodes,
-    time_sleep.wait_for_nodes_again,
-    data.aws_instances.rke2_nodes_again,
-    time_sleep.wait_for_nodes_again_again,
-  ]
-  filter {
-    name   = "tag:NodeId"
-    values = [local.node_id]
-  }
+  node_id    = local.node_id
+  node_count = local.node_count
+  max_wait   = 1200 # 20 minutes
 }
 
 # this allows the load balancer to accept connections initiated by the downstream cluster's public ip addresses
@@ -316,43 +182,28 @@ data "aws_instances" "rke2_nodes_again_again" {
 # FYI: security group references only work with private IPs
 resource "aws_vpc_security_group_ingress_rule" "downstream_public_ingress_loadbalancer" {
   depends_on = [
-    aws_security_group.downstream_cluster,
-    aws_vpc_security_group_ingress_rule.downstream_ingress_rancher,
-    aws_vpc_security_group_egress_rule.downstream_egress_ipv4,
-    aws_vpc_security_group_egress_rule.downstream_egress_ipv6,
-    aws_vpc_security_group_egress_rule.downstream_egress_project_link,
-    rancher2_machine_config_v2.all_in_one,
+    rancher2_machine_config_v2.nodes,
     terraform_data.patch_machine_configs,
-    time_sleep.wait_for_nodes,
-    data.aws_instances.rke2_nodes,
-    time_sleep.wait_for_nodes_again,
-    data.aws_instances.rke2_nodes_again,
-    time_sleep.wait_for_nodes_again_again,
-    data.aws_instances.rke2_nodes_again_again,
+    # terraform_data.cluster_destroy_helpers,
+    terraform_data.ingress_config,
+    module.get_instances,
   ]
-  for_each          = local.node_ips
+  for_each          = module.get_instances.node_ips
   security_group_id = local.load_balancer_security_group_id
   ip_protocol       = "-1"
   cidr_ipv4         = "${each.value}/32"
 }
 
+# this allows the runner to access the downstream cluster's nodes
 resource "aws_vpc_security_group_ingress_rule" "downstream_public_ingress_runner" {
   depends_on = [
-    aws_security_group.downstream_cluster,
-    aws_vpc_security_group_ingress_rule.downstream_ingress_rancher,
-    aws_vpc_security_group_egress_rule.downstream_egress_ipv4,
-    aws_vpc_security_group_egress_rule.downstream_egress_ipv6,
-    aws_vpc_security_group_egress_rule.downstream_egress_project_link,
-    rancher2_machine_config_v2.all_in_one,
+    rancher2_machine_config_v2.nodes,
     terraform_data.patch_machine_configs,
-    time_sleep.wait_for_nodes,
-    data.aws_instances.rke2_nodes,
-    time_sleep.wait_for_nodes_again,
-    data.aws_instances.rke2_nodes_again,
-    time_sleep.wait_for_nodes_again_again,
-    data.aws_instances.rke2_nodes_again_again,
+    # terraform_data.cluster_destroy_helpers,
+    terraform_data.ingress_config,
+    module.get_instances,
   ]
-  security_group_id = aws_security_group.downstream_cluster.id
+  security_group_id = local.downstream_security_group_id
   ip_protocol       = "tcp"
   from_port         = 22
   to_port           = 22
@@ -361,20 +212,14 @@ resource "aws_vpc_security_group_ingress_rule" "downstream_public_ingress_runner
 
 resource "rancher2_cluster_sync" "sync" {
   depends_on = [
-    aws_security_group.downstream_cluster,
-    aws_vpc_security_group_ingress_rule.downstream_ingress_rancher,
-    aws_vpc_security_group_egress_rule.downstream_egress_ipv4,
-    aws_vpc_security_group_egress_rule.downstream_egress_ipv6,
-    aws_vpc_security_group_egress_rule.downstream_egress_project_link,
-    rancher2_machine_config_v2.all_in_one,
+    rancher2_machine_config_v2.nodes,
     terraform_data.patch_machine_configs,
-    time_sleep.wait_for_nodes,
-    data.aws_instances.rke2_nodes,
-    time_sleep.wait_for_nodes_again,
-    data.aws_instances.rke2_nodes_again,
-    time_sleep.wait_for_nodes_again_again,
-    data.aws_instances.rke2_nodes_again_again,
+    # terraform_data.cluster_destroy_helpers,
+    terraform_data.ingress_config,
     rancher2_cluster_v2.rke2_cluster,
+    module.get_instances,
+    aws_vpc_security_group_ingress_rule.downstream_public_ingress_loadbalancer,
+    aws_vpc_security_group_ingress_rule.downstream_public_ingress_runner,
   ]
   cluster_id = rancher2_cluster_v2.rke2_cluster.cluster_v1_id
 }

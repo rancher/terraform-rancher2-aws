@@ -28,7 +28,7 @@ terraform {
 
 locals {
   identifier   = var.identifier
-  example      = "basic"
+  example      = "three"
   project_name = "tf-${substr(md5(join("-", [local.example, local.identifier])), 0, 5)}"
   username     = local.project_name
   domain       = local.project_name
@@ -47,7 +47,7 @@ locals {
   helm_chart_values = {
     "hostname"               = "${local.domain}.${local.zone}"
     "replicas"               = "1"
-    "bootstrapPassword"      = "admin"
+    "bootstrapPassword"      = random_password.admin_password.result
     "tls"                    = "ingress"
     "ingress.enabled"        = "true"
     "ingress.tls.source"     = "secret"
@@ -87,6 +87,12 @@ locals {
   os                   = "sle-micro-61"
 }
 
+resource "random_password" "admin_password" {
+  length           = 16
+  special          = true
+  override_special = "!#$%-_=+"
+}
+
 data "http" "myip" {
   url = "https://ipinfo.io/ip"
 }
@@ -101,6 +107,7 @@ module "tls" {
 module "rancher" {
   depends_on = [
     module.tls,
+    random_password.admin_password,
   ]
   source = "../../"
   # project
@@ -137,13 +144,14 @@ module "rancher" {
 provider "rancher2" {
   alias     = "authenticate"
   bootstrap = true
-  api_url   = "https://${local.domain}.${local.zone}"
-  timeout   = "300s"
+  api_url   = module.rancher.address
   ca_certs  = module.rancher.tls_certificate_chain
+  timeout   = "300s"
 }
 
 resource "rancher2_bootstrap" "authenticate" {
   depends_on = [
+    random_password.admin_password,
     module.tls,
     module.rancher,
   ]
@@ -156,14 +164,15 @@ resource "rancher2_bootstrap" "authenticate" {
 
 provider "rancher2" {
   alias     = "default"
-  api_url   = "https://${local.domain}.${local.zone}"
+  api_url   = module.rancher.address
   token_key = rancher2_bootstrap.authenticate.token
-  timeout   = "300s"
   ca_certs  = module.rancher.tls_certificate_chain
+  timeout   = "300s"
 }
 
 data "rancher2_cluster" "local" {
   depends_on = [
+    random_password.admin_password,
     module.tls,
     module.rancher,
     rancher2_bootstrap.authenticate,

@@ -60,17 +60,22 @@ variable "vpc_id" {
     Currently this expects the same VPC as the Rancher cluster.
   EOT
 }
-variable "security_group_id" {
+variable "downstream_security_group_name" {
   type        = string
   description = <<-EOT
-    The id of the security group to add the downstream cluster's security group to.
+    The name of the security group created for the downstream cluster.
   EOT
 }
-
-variable "load_balancer_security_groups" {
-  type        = list(any)
+variable "downstream_security_group_id" {
+  type        = string
   description = <<-EOT
-    The security groups for the load balancer.
+    The id of the security group created for the downstream cluster.
+  EOT
+}
+variable "load_balancer_security_group_id" {
+  type        = string
+  description = <<-EOT
+    The id of the security group for the load balancer.
   EOT
 }
 variable "subnet_id" {
@@ -80,35 +85,44 @@ variable "subnet_id" {
     Currently we only support deploying to the same subnet as the Rancher cluster.
   EOT
 }
-variable "aws_instance_type" {
-  type        = string
+variable "node_info" {
+  type = map(object({
+    quantity           = number
+    aws_instance_type  = string
+    aws_ami_id         = string
+    ami_ssh_user       = string
+    ami_admin_group    = string
+    control_plane_role = bool
+    etcd_role          = bool
+    worker_role        = bool
+  }))
   description = <<-EOT
-    The AWS instance type to deploy.
-  EOT
-}
-variable "ami_id" {
-  type        = string
-  description = <<-EOT
-    The AWS id for the OS image to deploy the cluster on.
-  EOT
-}
-variable "ami_ssh_user" {
-  type        = string
-  description = <<-EOT
-    The ssh user that is default for the image, the deployment will replace this user.
-  EOT
-}
-variable "ami_admin_group" {
-  type        = string
-  description = <<-EOT
-    The group name for the root/admin user.
-    Usually "wheel" or "admin".
-  EOT
-}
-variable "node_count" {
-  type        = number
-  description = <<-EOT
-    The number of all in one nodes to deploy.
+    A map of node type objects.
+    This information will be used to generate machine pool configurations.
+    The keys of the map will be the name of the pool, so it must comply with kubernetes naming conventions.
+    example:
+    {
+      worker = {
+        quantity           = 2
+        aws_instance_type  = "m5.large"
+        aws_ami_id         = "abc123"
+        ami_ssh_user       = "suse"
+        ami_admin_group    = "wheel"
+        control_plane_role = false
+        etcd_role          = false
+        worker_role        = true
+      }
+      control-plane = { # underscores are not allowed here
+        quantity           = 2
+        aws_instance_type  = "m5.large"
+        aws_ami_id         = "abc123"
+        ami_ssh_user       = "suse"
+        ami_admin_group    = "wheel"
+        control_plane_role = true
+        etcd_role          = true
+        worker_role        = false
+      }
+    }
   EOT
 }
 variable "direct_node_access" {

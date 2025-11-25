@@ -36,7 +36,6 @@ variable "rke2_version" {
   type        = string
   description = <<-EOT
     The version of rke2 to install on the nodes.
-    eg. v1.30.2+rke2r1
   EOT
 }
 variable "rancher_version" {
@@ -44,7 +43,7 @@ variable "rancher_version" {
   description = <<-EOT
     The version of rancher to install on the rke2 cluster.
   EOT
-  default     = "2.9.2"
+  default     = "2.9.1"
 }
 variable "file_path" {
   type        = string
@@ -52,6 +51,22 @@ variable "file_path" {
     The path to the file containing the rke2 install script.
   EOT
   default     = "./rke2"
+}
+variable "acme_server_url" {
+  type        = string
+  description = <<-EOT
+    The ACME server URL to use for cert-manager.
+    This is useful for using the Let's Encrypt staging server for testing.
+  EOT
+  default     = "https://acme-staging-v02.api.letsencrypt.org/directory"
+}
+variable "runner_ip" {
+  type        = string
+  description = <<-EOT
+    The IP of the sever running Terraform.
+    Only this IP will have access to the cluster.
+  EOT
+  default     = ""
 }
 variable "aws_access_key_id" {
   type        = string
@@ -80,22 +95,6 @@ variable "aws_session_token" {
     AWS session token for EC2 services.
     If left empty the AWS provider will assume you are using permanent AWS credentials.
   EOT
+  default     = ""
   sensitive   = true
-  default     = ""
-}
-variable "email" {
-  type        = string
-  description = <<-EOT
-    Email used for TLS certification registration.
-    If left blank this will be <identifier>@<zone>.
-  EOT
-  default     = ""
-}
-variable "acme_server_url" {
-  type        = string
-  description = <<-EOT
-    The ACME server URL to use for cert-manager.
-    This is useful for using the Let's Encrypt staging server for testing.
-  EOT
-  default     = "https://acme-staging-v02.api.letsencrypt.org/directory"
 }

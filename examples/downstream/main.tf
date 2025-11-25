@@ -5,7 +5,6 @@ provider "aws" {
       Owner = local.owner
     }
   }
-  region = local.aws_region
 }
 
 provider "acme" {
@@ -18,65 +17,34 @@ provider "helm" {}       # make sure you set the env variable KUBE_CONFIG_PATH t
 
 
 locals {
-  identifier            = var.identifier
-  example               = "downstream"
-  project_name          = "tf-${substr(md5(join("-", [local.example, local.identifier])), 0, 5)}"
-  username              = local.project_name
-  domain                = local.project_name
-  zone                  = var.zone
-  key_name              = var.key_name
-  key                   = var.key
-  owner                 = var.owner
-  rke2_version          = var.rke2_version
-  local_file_path       = var.file_path
-  runner_ip             = chomp(data.http.myip.response_body) # "runner" is the server running Terraform
-  rancher_version       = var.rancher_version
-  cert_manager_version  = "1.18.1" #"1.16.3" #"1.13.1"
-  os                    = "sle-micro-61"
+  identifier   = var.identifier
+  example      = "downstream"
+  project_name = "tf-${substr(md5(join("-", [local.example, local.identifier])), 0, 5)}"
+  username     = local.project_name
+  domain       = local.project_name
+  zone         = var.zone
+  key_name     = var.key_name
+  key          = var.key
+  # "https://acme-staging-v02.api.letsencrypt.org/directory" or "https://acme-v02.api.letsencrypt.org/directory"
+  acme_server_url      = var.acme_server_url
+  owner                = var.owner
+  rke2_version         = var.rke2_version
+  local_file_path      = var.file_path
+  runner_ip            = (var.runner_ip != "" ? var.runner_ip : chomp(data.http.myip.response_body)) # "runner" is the server running Terraform
+  rancher_version      = var.rancher_version
+  cert_manager_version = "1.18.1"
+  os                   = "sle-micro-61"
+  lbsg                 = sort(module.rancher.load_balancer_security_groups)
+  load_balancer_security_group_id = [
+    for i in range(length(local.lbsg)) :
+    local.lbsg[i] if local.lbsg[i] != module.rancher.security_group.id
+    # load balancers only have 2 security groups, the project and its own
+    # this eliminates the project security group to just return the load balancer's security group
+  ][0]
   aws_access_key_id     = var.aws_access_key_id
   aws_secret_access_key = var.aws_secret_access_key
-  aws_region            = var.aws_region
   aws_session_token     = var.aws_session_token
-  # tflint-ignore: terraform_unused_declarations
-  aws_instance_type = "m5.large"
-  # tflint-ignore: terraform_unused_declarations
-  node_count = 1
-  email      = (var.email != "" ? var.email : "${local.identifier}@${local.zone}")
-  # "https://acme-staging-v02.api.letsencrypt.org/directory" #"https://acme-v02.api.letsencrypt.org/directory"
-  acme_server_url = var.acme_server_url
-  helm_chart_values = {
-    "hostname"                                            = "${local.domain}.${local.zone}"
-    "replicas"                                            = "1"
-    "bootstrapPassword"                                   = "admin"
-    "ingress.enabled"                                     = "true"
-    "ingress.tls.source"                                  = "letsEncrypt"
-    "tls"                                                 = "ingress"
-    "letsEncrypt.ingress.class"                           = "nginx"
-    "letsEncrypt.environment"                             = "staging" # "production"
-    "letsEncrypt.email"                                   = local.email
-    "certmanager.version"                                 = local.cert_manager_version
-    "agentTLSMode"                                        = "strict"
-    "privateCA"                                           = "true"
-    "additionalTrustedCAs"                                = "true"
-    "ingress.extraAnnotations.cert-manager\\.io\\/issuer" = "rancher" # hard coded
-  }
-  cert_manager_config = {
-    aws_access_key_id     = local.aws_access_key_id
-    aws_secret_access_key = local.aws_secret_access_key
-    aws_session_token     = local.aws_session_token
-    aws_region            = local.aws_region
-    acme_email            = local.email
-    acme_server_url       = local.acme_server_url
-  }
-  node_configuration = {
-    "rancher" = {
-      type            = "all-in-one"
-      size            = "large" # this is the smallest size that Rancher will fit in, "xl" or "xxl" are probably more appropriate
-      os              = local.os
-      indirect_access = true
-      initial         = true
-    }
-  }
+  aws_region            = var.aws_region
 }
 
 data "http" "myip" {
@@ -97,18 +65,24 @@ module "rancher" {
   username = local.username
   admin_ip = local.runner_ip
   # rke2
-  rke2_version       = local.rke2_version
-  local_file_path    = local.local_file_path
-  install_method     = "rpm" # rpm only for now, need to figure out local helm chart installs otherwise
-  cni                = "canal"
-  node_configuration = local.node_configuration
+  rke2_version    = local.rke2_version
+  local_file_path = local.local_file_path
+  install_method  = "rpm" # rpm only for now, need to figure out local helm chart installs otherwise
+  cni             = "canal"
+  node_configuration = {
+    "rancher" = {
+      type            = "all-in-one"
+      size            = "xxl"
+      os              = local.os
+      indirect_access = true
+      initial         = true
+    }
+  }
   # rancher
-  rancher_version            = local.rancher_version
-  rancher_helm_chart_values  = local.helm_chart_values
-  cert_manager_version       = local.cert_manager_version
-  cert_use_strategy          = "rancher"
-  cert_manager_configuration = local.cert_manager_config
-  acme_server_url            = local.acme_server_url
+  cert_manager_version = local.cert_manager_version
+  cert_use_strategy    = "module"
+  rancher_version      = local.rancher_version
+  acme_server_url      = local.acme_server_url
 }
 
 module "rke2_image" {
@@ -116,14 +90,54 @@ module "rke2_image" {
   version             = "v1.4.0"
   server_use_strategy = "skip"
   image_use_strategy  = "find"
-  image_type          = local.os # this is not required to match Rancher, it just seemed easier in this example
+  image_type          = local.os
+}
+
+module "downstream_security_group" {
+  depends_on = [
+    module.rancher,
+  ]
+  source                          = "./modules/downstream_securitygroups"
+  name                            = "tf-multipool-sgroup"
+  vpc_id                          = module.rancher.vpc.id
+  load_balancer_security_group_id = local.load_balancer_security_group_id
+  rancher_security_group_id       = module.rancher.security_group.id
 }
 
 provider "rancher2" {
-  api_url   = "https://${local.domain}.${local.zone}"
-  token_key = module.rancher.admin_token
-  timeout   = "300s"
+  alias     = "authenticate"
+  bootstrap = true
+  api_url   = module.rancher.address
   ca_certs  = module.rancher.tls_certificate_chain
+  timeout   = "300s"
+}
+
+resource "rancher2_bootstrap" "authenticate" {
+  depends_on = [
+    module.rancher,
+  ]
+  provider         = rancher2.authenticate
+  initial_password = module.rancher.admin_password
+  password         = module.rancher.admin_password
+  token_update     = true
+  token_ttl        = 7200 # 2 hours
+}
+
+provider "rancher2" {
+  alias     = "default"
+  api_url   = module.rancher.address
+  token_key = rancher2_bootstrap.authenticate.token
+  ca_certs  = module.rancher.tls_certificate_chain
+  timeout   = "300s"
+}
+
+data "rancher2_cluster" "local" {
+  depends_on = [
+    module.rancher,
+    rancher2_bootstrap.authenticate,
+  ]
+  provider = rancher2.default
+  name     = "local"
 }
 
 # you can add this one multiple times, or use a loop to deploy multiple clusters
@@ -131,12 +145,19 @@ module "downstream" {
   depends_on = [
     module.rancher,
     module.rke2_image,
+    module.downstream_security_group,
+    rancher2_bootstrap.authenticate,
+    data.rancher2_cluster.local,
   ]
   source = "./modules/downstream"
+  providers = {
+    rancher2 = rancher2.default
+  }
   # general
-  name       = "tf-all-in-one-config" # this should be unique per cluster
+  name       = "tf-downstream" # this must be unique per cluster
   identifier = local.identifier
   owner      = local.owner
+
   # aws access
   aws_access_key_id     = local.aws_access_key_id
   aws_secret_access_key = local.aws_secret_access_key
@@ -147,17 +168,27 @@ module "downstream" {
     local.aws_region,
     ""
   )
+  downstream_security_group_name = module.downstream_security_group.name
+  downstream_security_group_id   = module.downstream_security_group.id
+
   # aws project info
-  vpc_id                        = module.rancher.vpc.id
-  security_group_id             = module.rancher.security_group.id
-  load_balancer_security_groups = module.rancher.load_balancer_security_groups
-  subnet_id                     = module.rancher.subnets[keys(module.rancher.subnets)[0]].id
+  vpc_id                          = module.rancher.vpc.id
+  load_balancer_security_group_id = local.load_balancer_security_group_id
+  subnet_id                       = module.rancher.subnets[keys(module.rancher.subnets)[0]].id
+
   # node info
-  aws_instance_type = local.aws_instance_type
-  ami_id            = module.rke2_image.image.id
-  ami_ssh_user      = module.rke2_image.image.user
-  ami_admin_group   = module.rke2_image.image.admin_group
-  node_count        = local.node_count
+  node_info = {
+    all-in-one = { # this key can't have underscores
+      quantity           = 1
+      aws_instance_type  = "m5.large"
+      aws_ami_id         = module.rke2_image.image.id
+      ami_ssh_user       = module.rke2_image.image.user
+      ami_admin_group    = module.rke2_image.image.admin_group
+      control_plane_role = true
+      etcd_role          = true
+      worker_role        = true
+    }
+  }
   direct_node_access = {
     runner_ip       = local.runner_ip
     ssh_access_key  = local.key

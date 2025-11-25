@@ -60,3 +60,11 @@ variable "acme_server_url" {
   EOT
   default     = "https://acme-staging-v02.api.letsencrypt.org/directory"
 }
+variable "runner_ip" {
+  type        = string
+  description = <<-EOT
+    The IP of the sever running Terraform.
+    Only this IP will have access to the cluster.
+  EOT
+  default     = ""
+}

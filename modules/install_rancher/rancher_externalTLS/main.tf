@@ -28,12 +28,14 @@ locals {
     (local.helm_chart_use_strategy == "merge" ? merge(local.default_hc_values, local.rancher_helm_chart_values) : null),
     (local.helm_chart_use_strategy == "provide" ? local.rancher_helm_chart_values : null),
   ) # WARNING! helm_chart_use_strategy is required and must be "default", "merge", or "provide", if the strategy isn't found, the coalesce will fail
+  default_admin_password = "admin"
+  bootstrap_password     = (local.helm_chart_values["bootstrapPassword"] != "" ? local.helm_chart_values["bootstrapPassword"] : local.default_admin_password)
 }
 
 resource "random_password" "admin_password" {
   length           = 16
   special          = true
-  override_special = "!#$%&-_=+"
+  override_special = "!#$%-_=+"
 }
 
 resource "file_local" "hcv" {

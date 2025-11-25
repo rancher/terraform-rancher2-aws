@@ -27,17 +27,19 @@ locals {
     (local.helm_chart_use_strategy == "default" ? local.default_hc_values : null),
     (local.helm_chart_use_strategy == "provide" ? local.rancher_helm_chart_values : null),
   )) # WARNING! Some config is necessary, if the result is an empty string the coalesce will fail
-  zone_id              = var.zone_id
-  region               = var.region
-  email                = var.email
-  cert_manager_version = replace(var.cert_manager_version, "v", "") # don't include the v
-  acme_server          = var.acme_server_url
+  default_admin_password = "admin"
+  bootstrap_password     = (local.helm_chart_values["bootstrapPassword"] != "" ? local.helm_chart_values["bootstrapPassword"] : local.default_admin_password)
+  zone_id                = var.zone_id
+  region                 = var.region
+  email                  = var.email
+  cert_manager_version   = replace(var.cert_manager_version, "v", "") # don't include the v
+  acme_server            = var.acme_server_url
 }
 
 resource "random_password" "admin_password" {
   length           = 16
   special          = true
-  override_special = "!#$%&-_=+"
+  override_special = "!#$%-_=+"
 }
 
 resource "time_sleep" "settle_before_rancher" {
