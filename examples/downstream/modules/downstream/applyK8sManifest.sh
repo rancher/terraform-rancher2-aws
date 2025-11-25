@@ -15,9 +15,9 @@
 
 
 TMPFILE=$(mktemp)
-cat > $TMPFILE
-if [ -z "$(cat $TMPFILE)" ]; then echo "no contents supplied, failing..."; exit 1; fi
+cat > "$TMPFILE"
+if [ -z "$(cat "$TMPFILE")" ]; then echo "no contents supplied, failing..."; exit 1; fi
 
-kubectl apply -f $TMPFILE
+kubectl apply -f "$TMPFILE"
 
-rm -f $TMPFILE
+rm -f "$TMPFILE"
