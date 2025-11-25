@@ -36,7 +36,8 @@ func GetRancherReleases() (string, string, string, error) {
 	}
 	zeroPadVersionNumbers(&versions)
 	sortVersions(&versions)
-	filterDuplicateMinors(&versions)
+	filterDuplicatePatches(&versions)
+	getStablePatches(&versions)
 	removeZeroPadding(&versions)
 	latest := versions[0]
 	stable := latest
@@ -62,7 +63,8 @@ func GetRke2Releases() (string, string, string, error) {
 	}
 	zeroPadVersionNumbers(&versions)
 	sortVersions(&versions)
-	filterDuplicateMinors(&versions)
+	filterDuplicatePatches(&versions)
+	getStablePatches(&versions)
 	removeZeroPadding(&versions)
 	latest := versions[0]
 	stable := latest
@@ -142,54 +144,11 @@ func getVersionsFromReleases(r *[]*github.RepositoryRelease) []string {
 	//   "v1.30.0+rke2r1",
 	//   "v1.29.5+rke2r1",
 	//   "v1.28.17+rke2r1",
+	//   "v1.4.1+rke2r3",
+	//   "v1.28.16+rke2r1",
+	//   "v1.28.15+rke2r1",
 	// ]
 }
-
-func sortVersions(v *[]string) {
-	slices.SortFunc(*v, func(a, b string) int {
-		return cmp.Compare(b, a)
-		//[
-		//  v1.4.1+rke2r3,
-		//  v1.30.1+rke2r3,
-		//  v1.30.1+rke2r2,
-		//  v1.30.1+rke2r1,
-		//  v1.30.0+rke2r1,
-		//  v1.29.5+rke2r2,
-		//  v1.29.5+rke2r1,
-		//  v1.29.4+rke2r1,
-		//  v1.28.17+rke2r1,
-		//  v1.28.14+rke2r1,
-		//  v1.27.20+rke2r1,
-		//]
-	})
-}
-
-func filterDuplicateMinors(v *[]string) { // assumes versions are sorted already
-	var fv []string
-	versions := *v
-	fv = append(fv, versions[0])
-	for i := 1; i < len(versions); i++ {
-		c := versions[i]
-		p := versions[i-1]
-		cp := strings.Split(c[1:], "+") //["1.30.1","rke2r3"]
-		pp := strings.Split(p[1:], "+") //["1.30.1","rke2r2"]
-		if cp[0] != pp[0] {
-			cpp := strings.Split(cp[0], ".") //["1","30","1]
-			ppp := strings.Split(pp[0], ".") //["1","30","1]
-			if cpp[1] != ppp[1] {
-				fv = append(fv, c)
-				//[
-				//  v1.30.1+rke2r3,
-				//  v1.29.5+rke2r2,
-				//  v1.28.17+rke2r1,
-				//  v1.27.20+rke2r1,
-				//]
-			}
-		}
-	}
-	*v = fv
-}
-
 func zeroPadVersionNumbers(v *[]string) {
 	var zv []string
 	versions := *v
@@ -218,6 +177,110 @@ func zeroPadVersionNumbers(v *[]string) {
 		}
 	}
 	*v = zv
+	// [
+	//   "v1.28.14+rke2r1",
+	//   "v1.30.01+rke2r3",
+	//   "v1.29.04+rke2r1",
+	//   "v1.30.01+rke2r2",
+	//   "v1.29.05+rke2r2",
+	//   "v1.30.01+rke2r1",
+	//   "v1.27.20+rke2r1",
+	//   "v1.30.00+rke2r1",
+	//   "v1.29.05+rke2r1",
+	//   "v1.28.17+rke2r1",
+	//   "v1.04.01+rke2r3",
+	//   "v1.28.16+rke2r1",
+	//   "v1.28.15+rke2r1",
+	// ]
+}
+
+func sortVersions(v *[]string) { // assumes versions are 0 padded already
+	slices.SortFunc(*v, func(a, b string) int {
+		return cmp.Compare(b, a)
+		//[
+		//  v1.30.01+rke2r3,
+		//  v1.30.01+rke2r2,
+		//  v1.30.01+rke2r1,
+		//  v1.30.00+rke2r1,
+		//  v1.29.05+rke2r2,
+		//  v1.29.05+rke2r1,
+		//  v1.29.04+rke2r1,
+		//  v1.28.17+rke2r1,
+		//  v1.28.16+rke2r1,
+		//  v1.28.15+rke2r1,
+		//  v1.28.14+rke2r1,
+		//  v1.27.20+rke2r1,
+		//  v1.04.01+rke2r3,
+		//]
+	})
+}
+func filterDuplicatePatches(v *[]string) { // assumes versions are sorted already
+	var fv []string
+	versions := *v
+	fv = append(fv, versions[0])
+	for i := 1; i < len(versions); i++ {
+		c := versions[i]                // this is all testing if c should be added
+		p := versions[i-1]              // p should be greater because the index is smaller
+		cp := strings.Split(c[1:], "+") //["1.30.01","rke2r2"] (c eliminated) // ["1.30.01", "rke2r1"]
+		pp := strings.Split(p[1:], "+") //["1.30.01","rke2r3"]                // ["1.30.00", "rke2r1"]
+		if cp[0] != pp[0] {             // if c doesn't share the same version as p
+			cpp := strings.Split(cp[0], ".") //["1","30","00"]
+			ppp := strings.Split(pp[0], ".") //["1","30","01"]
+			if cpp[2] != ppp[2] {            // if c doesn't share the same patch as p add it
+				fv = append(fv, c)
+				//[
+				//  v1.30.01+rke2r3,
+				//  v1.30.00+rke2r1,
+				//  v1.29.05+rke2r2,
+				//  v1.29.04+rke2r1,
+				//  v1.28.17+rke2r1,
+				//  v1.28.16+rke2r1,
+				//  v1.28.15+rke2r1,
+				//  v1.28.14+rke2r1,
+				//  v1.27.20+rke2r1,
+				//  v1.04.01+rke2r3,
+				//]
+			}
+		}
+	}
+	*v = fv
+}
+
+func getStablePatches(v *[]string) { // assumes versions are sorted already
+	var fv []string
+	versions := *v
+	if len(versions) == 0 {
+		return
+	}
+
+	// Group versions by major.minor
+	groupedVersions := make(map[string][]string)
+	for _, version := range versions {
+		parts := strings.Split(strings.Split(version[1:], "+")[0], ".") // ["v1", "30", "01"]
+		majorMinor := fmt.Sprintf("%s.%s", parts[0], parts[1])          // "v1.30"
+		groupedVersions[majorMinor] = append(groupedVersions[majorMinor], version)
+		// {
+		//     "v1.30" = ["v1.30.01+rke2r3", "v1.30.00+rke2r1"]
+		//     "v1.29" = ["v1.29.05+rke2r2", "v1.29.04+rke2r1"]
+		//     "v1.04" = ["v1.04.01+rke2r3"]
+		//     "v1.27" = ["v1.27.20+rke2r1"]
+		//     "v1.28" = ["v1.28.17+rke2r1", "v1.28.16+rke2r1", "v1.28.15+rke2r1", "v1.28.14+rke2r1"]
+		// }
+	}
+
+	// For each group, get the second latest if available, otherwise the latest.
+	for _, group := range groupedVersions {
+		if len(group) > 1 {
+			fv = append(fv, group[1]) // second latest
+		} else if len(group) == 1 {
+			fv = append(fv, group[0]) // latest (as fallback)
+		}
+	}
+	*v = fv
+	// The order is not guaranteed from a map, so we need to sort again.
+	sortVersions(v)
+	// Expected output:
+	// [v1.30.00+rke2r1, v1.29.04+rke2r1, v1.28.16+rke2r1, v1.27.20+rke2r1, v1.04.01+rke2r3]
 }
 
 func removeZeroPadding(v *[]string) {
@@ -244,6 +307,13 @@ func removeZeroPadding(v *[]string) {
 		}
 	}
 	*v = zv
+	//[
+	//  v1.30.0+rke2r1,
+	//  v1.29.4+rke2r1,
+	//  v1.28.16+rke2r1,
+	//  v1.27.20+rke2r1,
+	//  v1.4.1+rke2r3,
+	//]
 }
 
 func CreateKeypair(t *testing.T, region string, owner string, id string) (*aws.Ec2Keypair, error) {
@@ -323,7 +393,7 @@ func GetRetryableTerraformErrors() map[string]string {
 func SetAcmeServer(t *testing.T) string {
 	acmeserver := os.Getenv("ACME_SERVER_URL")
 	if acmeserver == "" {
-		t.Setenv("ACME_SERVER_URL", "https://acme-staging-v02.api.letsencrypt.org/directory")
+		os.Setenv("ACME_SERVER_URL", "https://acme-staging-v02.api.letsencrypt.org/directory") //nolint usetesting
 	}
 	return acmeserver
 }

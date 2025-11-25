@@ -11,6 +11,8 @@ provider "acme" {
   server_url = local.acme_server_url
 }
 
+provider "github" {}
+
 locals {
   identifier                          = var.identifier
   owner                               = var.owner

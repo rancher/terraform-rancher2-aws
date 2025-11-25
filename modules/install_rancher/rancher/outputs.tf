@@ -4,6 +4,6 @@ output "ca_certs" {
 }
 
 output "rancher_admin_password" {
-  value     = random_password.admin_password.result
+  value     = local.bootstrap_password
   sensitive = true
 }

@@ -3,6 +3,7 @@ package downstream
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	aws "github.com/gruntwork-io/terratest/modules/aws"
@@ -51,7 +52,7 @@ func TestDownstreamBasic(t *testing.T) {
 	}
 	keyPairObj := keyPair.KeyPair
 	privateKey := keyPairObj.PrivateKey
-	publicKey := keyPairObj.PublicKey
+	publicKey := strings.TrimSuffix(keyPairObj.PublicKey, "\n")
 	keyPairName := keyPair.Name
 
 	err = os.WriteFile(testDir+"/id_rsa", []byte(privateKey), 0600)
@@ -118,9 +119,9 @@ func TestDownstreamBasic(t *testing.T) {
 			"TF_DATA_DIR":         testDir,
 			"TF_IN_AUTOMATION":    "1",
 			"KUBECONFIG":          testDir + "/kubeconfig",
-			"KUBE_CONFIG_PATH":    testDir,
+			"KUBE_CONFIG_PATH":    testDir + "/kubeconfig",
 			"TF_CLI_ARGS_plan":    "-no-color -state=" + testDir + "/tfstate",
-			"TF_CLI_ARGS_apply":   "-no-color -state=" + testDir + "/tfstate -parallelism=5",
+			"TF_CLI_ARGS_apply":   "-no-color -state=" + testDir + "/tfstate",
 			"TF_CLI_ARGS_destroy": "-no-color -state=" + testDir + "/tfstate",
 			"TF_CLI_ARGS_output":  "-no-color -state=" + testDir + "/tfstate",
 		},

@@ -12,4 +12,5 @@ variable "ca_certs" {
 variable "admin_password" {
   description = "The initial admin password for the Rancher server"
   type        = string
+  sensitive   = true
 }

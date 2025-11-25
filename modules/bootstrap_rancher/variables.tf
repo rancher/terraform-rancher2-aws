@@ -13,4 +13,5 @@ variable "ca_certs" {
 variable "admin_password" {
   description = "The initial admin password for Rancher"
   type        = string
+  sensitive   = true
 }

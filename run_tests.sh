@@ -194,6 +194,10 @@ if [ -z "$cleanup_id" ]; then
   cd "$REPO_ROOT/test/tests" || exit
   if ! go mod tidy; then C=$?; echo "failed to tidy, exit code $C"; exit $C; fi
 
+  echo "formatting tests..."
+  gofmt -s -w -e .
+  echo "done formatting"
+
   echo "checking tests for compile errors..."
   while IFS= read -r file; do
     echo "found $file";
@@ -206,9 +210,6 @@ if [ -z "$cleanup_id" ]; then
   if ! golangci-lint run; then echo "lint failed..."; exit 1; fi
   echo "lint errors complete"
 
-  echo "formatting tests..."
-  gofmt -s -w -e .
-  echo "done formatting"
 
   cd "$D" || exit
 

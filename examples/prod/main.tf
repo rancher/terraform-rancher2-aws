@@ -38,7 +38,7 @@ locals {
   helm_chart_values = {
     "hostname"                                            = "${local.domain}.${local.zone}"
     "replicas"                                            = "3"
-    "bootstrapPassword"                                   = "admin"
+    "bootstrapPassword"                                   = random_password.admin_password.result
     "ingress.enabled"                                     = "true"
     "ingress.tls.source"                                  = "letsEncrypt"
     "tls"                                                 = "ingress"
@@ -59,6 +59,12 @@ locals {
     acme_email            = local.email
     acme_server_url       = local.acme_server_url
   }
+}
+
+resource "random_password" "admin_password" {
+  length           = 16
+  special          = true
+  override_special = "!#$%-_=+"
 }
 
 data "http" "myip" {
@@ -160,9 +166,9 @@ module "rancher" {
 provider "rancher2" {
   alias     = "authenticate"
   bootstrap = true
-  api_url   = "https://${local.domain}.${local.zone}"
-  timeout   = "300s"
+  api_url   = module.rancher.address
   ca_certs  = module.rancher.tls_certificate_chain
+  timeout   = "300s"
 }
 
 resource "rancher2_bootstrap" "authenticate" {
@@ -178,10 +184,10 @@ resource "rancher2_bootstrap" "authenticate" {
 
 provider "rancher2" {
   alias     = "default"
-  api_url   = "https://${local.domain}.${local.zone}"
+  api_url   = module.rancher.address
   token_key = rancher2_bootstrap.authenticate.token
-  timeout   = "300s"
   ca_certs  = module.rancher.tls_certificate_chain
+  timeout   = "300s"
 }
 
 data "rancher2_cluster" "local" {

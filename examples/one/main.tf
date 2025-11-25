@@ -18,7 +18,7 @@ provider "helm" {}       # make sure you set the env variable KUBE_CONFIG_PATH t
 
 locals {
   identifier   = var.identifier
-  example      = "basic"
+  example      = "one"
   project_name = "tf-${substr(md5(join("-", [local.example, local.identifier])), 0, 5)}"
   username     = local.project_name
   domain       = local.project_name
@@ -30,7 +30,7 @@ locals {
   owner                = var.owner
   rke2_version         = var.rke2_version
   local_file_path      = var.file_path
-  runner_ip            = chomp(data.http.myip.response_body) # "runner" is the server running Terraform
+  runner_ip            = (var.runner_ip != "" ? var.runner_ip : chomp(data.http.myip.response_body)) # "runner" is the server running Terraform
   rancher_version      = var.rancher_version
   cert_manager_version = "1.18.1"
   os                   = "sle-micro-61"
@@ -61,7 +61,7 @@ module "rancher" {
   node_configuration = {
     "rancher" = {
       type            = "all-in-one"
-      size            = "medium"
+      size            = "large"
       os              = local.os
       indirect_access = true
       initial         = true
@@ -77,9 +77,9 @@ module "rancher" {
 provider "rancher2" {
   alias     = "authenticate"
   bootstrap = true
-  api_url   = "https://${local.domain}.${local.zone}"
-  timeout   = "300s"
+  api_url   = module.rancher.address
   ca_certs  = module.rancher.tls_certificate_chain
+  timeout   = "300s"
 }
 
 resource "rancher2_bootstrap" "authenticate" {
@@ -95,10 +95,10 @@ resource "rancher2_bootstrap" "authenticate" {
 
 provider "rancher2" {
   alias     = "default"
-  api_url   = "https://${local.domain}.${local.zone}"
+  api_url   = module.rancher.address
   token_key = rancher2_bootstrap.authenticate.token
-  timeout   = "300s"
   ca_certs  = module.rancher.tls_certificate_chain
+  timeout   = "300s"
 }
 
 data "rancher2_cluster" "local" {
