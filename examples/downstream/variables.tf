@@ -43,7 +43,6 @@ variable "rancher_version" {
   description = <<-EOT
     The version of rancher to install on the rke2 cluster.
   EOT
-  default     = "2.9.1"
 }
 variable "file_path" {
   type        = string
@@ -58,7 +57,6 @@ variable "acme_server_url" {
     The ACME server URL to use for cert-manager.
     This is useful for using the Let's Encrypt staging server for testing.
   EOT
-  default     = "https://acme-staging-v02.api.letsencrypt.org/directory"
 }
 variable "runner_ip" {
   type        = string
@@ -66,7 +64,6 @@ variable "runner_ip" {
     The IP of the sever running Terraform.
     Only this IP will have access to the cluster.
   EOT
-  default     = ""
 }
 variable "aws_access_key_id" {
   type        = string

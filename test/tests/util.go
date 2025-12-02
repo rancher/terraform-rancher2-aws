@@ -394,6 +394,7 @@ func SetAcmeServer(t *testing.T) string {
 	acmeserver := os.Getenv("ACME_SERVER_URL")
 	if acmeserver == "" {
 		os.Setenv("ACME_SERVER_URL", "https://acme-staging-v02.api.letsencrypt.org/directory") //nolint usetesting
+		acmeserver = "https://acme-staging-v02.api.letsencrypt.org/directory"
 	}
 	return acmeserver
 }

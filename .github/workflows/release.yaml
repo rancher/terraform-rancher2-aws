@@ -104,15 +104,16 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ steps.aws-creds.outputs.aws-access-key-id }}
           AWS_SECRET_ACCESS_KEY: ${{ steps.aws-creds.outputs.aws-secret-access-key }}
           AWS_SESSION_TOKEN: ${{ steps.aws-creds.outputs.aws-session-token }}
-          AWS_MAX_ATTEMPTS: 100
-          AWS_RETRY_MODE: adaptive
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-          GITHUB_OWNER: rancher
-          IDENTIFIER: ${{github.run_id}}
           ZONE: ${{secrets.ZONE}}
-          ACME_SERVER_URL: https://acme-v02.api.letsencrypt.org/directory
-          RANCHER_INSECURE: false
+          IDENTIFIER: ${{github.run_id}}
         run: |
+          # nix ignores environment variables that are not specifically kept
+          export AWS_MAX_ATTEMPTS="100"
+          export AWS_RETRY_MODE="adaptive"
+          export GITHUB_OWNER="rancher"
+          export ACME_SERVER_URL="https://acme-v02.api.letsencrypt.org/directory"
+          export RANCHER_INSECURE="false"
           ./run_tests.sh -s
 
   cleanup:
@@ -146,9 +147,9 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ steps.aws-creds.outputs.aws-access-key-id }}
           AWS_SECRET_ACCESS_KEY: ${{ steps.aws-creds.outputs.aws-secret-access-key }}
           AWS_SESSION_TOKEN: ${{ steps.aws-creds.outputs.aws-session-token }}
-          AWS_MAX_ATTEMPTS: 100
           IDENTIFIER: ${{github.run_id}}
         run: |
+          export AWS_MAX_ATTEMPTS="100"
           ./run_tests.sh -c $IDENTIFIER
 
   report:
