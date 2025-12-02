@@ -64,6 +64,7 @@ variable "runner_ip" {
     The IP of the sever running Terraform.
     Only this IP will have access to the cluster.
   EOT
+  default     = ""
 }
 variable "aws_access_key_id" {
   type        = string
