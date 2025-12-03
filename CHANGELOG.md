@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.1.2](https://github.com/rancher/terraform-rancher2-aws/compare/v3.1.1...v3.1.2) (2025-12-02)
+
+
+### Bug Fixes
+
+* lint create and destroy scripts ([#137](https://github.com/rancher/terraform-rancher2-aws/issues/137)) ([8af41ae](https://github.com/rancher/terraform-rancher2-aws/commit/8af41ae98e68a62d7d3c913a943c041369d0d1d6))
+* lint errors and add lint check to CI ([#136](https://github.com/rancher/terraform-rancher2-aws/issues/136)) ([c5652b0](https://github.com/rancher/terraform-rancher2-aws/commit/c5652b0ed1897e6baa14400b643a489c214cb69b))
+* manage admin password better ([#140](https://github.com/rancher/terraform-rancher2-aws/issues/140)) ([99bff0d](https://github.com/rancher/terraform-rancher2-aws/commit/99bff0de617b73898a144edd8c26cb51e09573dc))
+* resolve variable problems in nix shell ([#141](https://github.com/rancher/terraform-rancher2-aws/issues/141)) ([593058e](https://github.com/rancher/terraform-rancher2-aws/commit/593058ed2d9ca1d963b2a9b3ceb494f0d882c886))
+* runner should have a default ([#142](https://github.com/rancher/terraform-rancher2-aws/issues/142)) ([ce7a5c4](https://github.com/rancher/terraform-rancher2-aws/commit/ce7a5c43dd7cf16d073131fa3f33fe0ac0808d26))
+* separate install from bootstrap ([#134](https://github.com/rancher/terraform-rancher2-aws/issues/134)) ([f3eaf65](https://github.com/rancher/terraform-rancher2-aws/commit/f3eaf65b024101be2d81a1b3c9ba1591225d3d9c))
+
 ## [3.1.1](https://github.com/rancher/terraform-rancher2-aws/compare/v3.1.0...v3.1.1) (2025-10-22)
 
 
