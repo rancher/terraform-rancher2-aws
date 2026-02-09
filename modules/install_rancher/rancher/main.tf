@@ -190,7 +190,7 @@ data "kubernetes_secret_v1" "certificate" {
 
 # we need to create the tls-ca and tls-ca-additional secrets while the rancher pod is starting up
 # the rancher pod will fail a few times, but once the secrets are in place it will start and everything will start to work
-resource "kubernetes_secret" "rancher_tls_ca" {
+resource "kubernetes_secret_v1" "rancher_tls_ca" {
   depends_on = [
     time_sleep.settle_before_rancher,
     terraform_data.wait_for_nginx,
@@ -203,7 +203,7 @@ resource "kubernetes_secret" "rancher_tls_ca" {
     name      = "tls-ca"
     namespace = "cattle-system"
   }
-  type = "generic"
+  type = "Opaque" # "generic" https://kubernetes.io/docs/concepts/configuration/secret/#secret-types
   data = {
     "cacerts.pem" = data.kubernetes_secret_v1.certificate.data["tls.crt"], # don't base64 encode
   }
@@ -214,7 +214,7 @@ resource "kubernetes_secret" "rancher_tls_ca" {
   }
 }
 
-resource "kubernetes_secret" "rancher_tls_ca_additional" {
+resource "kubernetes_secret_v1" "rancher_tls_ca_additional" {
   depends_on = [
     time_sleep.settle_before_rancher,
     terraform_data.wait_for_nginx,
@@ -227,7 +227,7 @@ resource "kubernetes_secret" "rancher_tls_ca_additional" {
     name      = "tls-ca-additional"
     namespace = "cattle-system"
   }
-  type = "generic"
+  type = "Opaque" # "generic" https://kubernetes.io/docs/concepts/configuration/secret/#secret-types
   data = {
     "ca-additional.pem" = data.kubernetes_secret_v1.certificate.data["tls.crt"], # don't base64 encode
   }
@@ -246,8 +246,8 @@ resource "terraform_data" "wait_for_rancher" {
     kubernetes_manifest.issuer,
     helm_release.rancher,
     data.kubernetes_secret_v1.certificate,
-    kubernetes_secret.rancher_tls_ca,
-    kubernetes_secret.rancher_tls_ca_additional,
+    kubernetes_secret_v1.rancher_tls_ca,
+    kubernetes_secret_v1.rancher_tls_ca_additional,
   ]
   provisioner "local-exec" {
     command = <<-EOT
@@ -268,8 +268,8 @@ resource "terraform_data" "get_public_cert_info" {
     kubernetes_manifest.issuer,
     helm_release.rancher,
     data.kubernetes_secret_v1.certificate,
-    kubernetes_secret.rancher_tls_ca,
-    kubernetes_secret.rancher_tls_ca_additional,
+    kubernetes_secret_v1.rancher_tls_ca,
+    kubernetes_secret_v1.rancher_tls_ca_additional,
     terraform_data.wait_for_rancher,
   ]
   provisioner "local-exec" {
