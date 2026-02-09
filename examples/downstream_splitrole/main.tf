@@ -67,7 +67,7 @@ module "rancher" {
   # rke2
   rke2_version    = local.rke2_version
   local_file_path = local.local_file_path
-  install_method  = "rpm" # rpm only for now, need to figure out local helm chart installs otherwise
+  install_method  = "rpm"
   cni             = "canal"
   node_configuration = {
     "rancher" = {
