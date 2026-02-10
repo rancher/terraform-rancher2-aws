@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.1.3](https://github.com/rancher/terraform-rancher2-aws/compare/v3.1.2...v3.1.3) (2026-02-10)
+
+
+### Bug Fixes
+
+* add FOSSA scanning workflow ([#143](https://github.com/rancher/terraform-rancher2-aws/issues/143)) ([280be2c](https://github.com/rancher/terraform-rancher2-aws/commit/280be2c2e0703f9f238c23b06905567d274ecd92))
+* bump configure aws credentials from 5 to 6 ([#144](https://github.com/rancher/terraform-rancher2-aws/issues/144)) ([2da4485](https://github.com/rancher/terraform-rancher2-aws/commit/2da448577dc6cb421b2ae3ec9ac152e3ec2b6d54))
+* switch out secret for secret_v1 ([#145](https://github.com/rancher/terraform-rancher2-aws/issues/145)) ([5bfb645](https://github.com/rancher/terraform-rancher2-aws/commit/5bfb645529d81f7e93861541714c20bb9a1c176c))
+
 ## [3.1.2](https://github.com/rancher/terraform-rancher2-aws/compare/v3.1.1...v3.1.2) (2025-12-02)
 
 
