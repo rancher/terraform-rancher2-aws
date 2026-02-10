@@ -109,7 +109,7 @@ resource "terraform_data" "cattle-system" {
   }
 }
 
-resource "kubernetes_secret" "tls_rancher_ingress" {
+resource "kubernetes_secret_v1" "tls_rancher_ingress" {
   depends_on = [
     time_sleep.settle_before_rancher,
     terraform_data.wait_for_nginx,
@@ -119,7 +119,7 @@ resource "kubernetes_secret" "tls_rancher_ingress" {
     name      = "tls-rancher-ingress"
     namespace = "cattle-system"
   }
-  type = "kubernetes.io/tls"
+  type = "kubernetes.io/tls" #https://kubernetes.io/docs/concepts/configuration/secret/#secret-types
   data = {
     "tls.crt" = local.full_chain,
     "tls.key" = local.private_key,
@@ -131,18 +131,18 @@ resource "kubernetes_secret" "tls_rancher_ingress" {
   }
 }
 
-resource "kubernetes_secret" "rancher_tls_ca" {
+resource "kubernetes_secret_v1" "rancher_tls_ca" {
   depends_on = [
     time_sleep.settle_before_rancher,
     terraform_data.wait_for_nginx,
     terraform_data.cattle-system,
-    kubernetes_secret.tls_rancher_ingress,
+    kubernetes_secret_v1.tls_rancher_ingress,
   ]
   metadata {
     name      = "tls-ca"
     namespace = "cattle-system"
   }
-  type = "generic"
+  type = "Opaque" #https://kubernetes.io/docs/concepts/configuration/secret/#secret-types
   data = {
     "cacerts.pem" = local.ca_certs
   }
@@ -153,19 +153,19 @@ resource "kubernetes_secret" "rancher_tls_ca" {
   }
 }
 
-resource "kubernetes_secret" "rancher_tls_ca_additional" {
+resource "kubernetes_secret_v1" "rancher_tls_ca_additional" {
   depends_on = [
     time_sleep.settle_before_rancher,
     terraform_data.wait_for_nginx,
     terraform_data.cattle-system,
-    kubernetes_secret.tls_rancher_ingress,
-    kubernetes_secret.rancher_tls_ca,
+    kubernetes_secret_v1.tls_rancher_ingress,
+    kubernetes_secret_v1.rancher_tls_ca,
   ]
   metadata {
     name      = "tls-ca-additional"
     namespace = "cattle-system"
   }
-  type = "generic"
+  type = "Opaque" #"generic" https://kubernetes.io/docs/concepts/configuration/secret/#secret-types
   data = {
     "ca-additional.pem" = local.ca_certs,
   }
@@ -182,9 +182,9 @@ resource "helm_release" "rancher" {
     time_sleep.settle_before_rancher,
     terraform_data.wait_for_nginx,
     terraform_data.cattle-system,
-    kubernetes_secret.tls_rancher_ingress,
-    kubernetes_secret.rancher_tls_ca,
-    kubernetes_secret.rancher_tls_ca_additional,
+    kubernetes_secret_v1.tls_rancher_ingress,
+    kubernetes_secret_v1.rancher_tls_ca,
+    kubernetes_secret_v1.rancher_tls_ca_additional,
   ]
   name             = "rancher"
   chart            = "${local.rancher_helm_repo}/${local.rancher_helm_channel}/rancher-${local.rancher_version}.tgz"
@@ -211,9 +211,9 @@ resource "terraform_data" "wait_for_rancher" {
     time_sleep.settle_before_rancher,
     terraform_data.wait_for_nginx,
     terraform_data.cattle-system,
-    kubernetes_secret.tls_rancher_ingress,
-    kubernetes_secret.rancher_tls_ca,
-    kubernetes_secret.rancher_tls_ca_additional,
+    kubernetes_secret_v1.tls_rancher_ingress,
+    kubernetes_secret_v1.rancher_tls_ca,
+    kubernetes_secret_v1.rancher_tls_ca_additional,
     helm_release.rancher,
   ]
   provisioner "local-exec" {
@@ -231,9 +231,9 @@ resource "terraform_data" "get_public_cert_info" {
     time_sleep.settle_before_rancher,
     terraform_data.wait_for_nginx,
     terraform_data.cattle-system,
-    kubernetes_secret.tls_rancher_ingress,
-    kubernetes_secret.rancher_tls_ca,
-    kubernetes_secret.rancher_tls_ca_additional,
+    kubernetes_secret_v1.tls_rancher_ingress,
+    kubernetes_secret_v1.rancher_tls_ca,
+    kubernetes_secret_v1.rancher_tls_ca_additional,
     helm_release.rancher,
     terraform_data.wait_for_rancher,
   ]
