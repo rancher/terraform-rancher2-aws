@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.1.4](https://github.com/rancher/terraform-rancher2-aws/compare/v3.1.3...v3.1.4) (2026-04-15)
+
+
+### Bug Fixes
+
+* bump actions/checkout from 5 to 6 ([#138](https://github.com/rancher/terraform-rancher2-aws/issues/138)) ([b918e04](https://github.com/rancher/terraform-rancher2-aws/commit/b918e0457f6d4d6652c265b77752882a5468048f))
+* bump actions/github-script from 8 to 9 ([#149](https://github.com/rancher/terraform-rancher2-aws/issues/149)) ([2d116e0](https://github.com/rancher/terraform-rancher2-aws/commit/2d116e0e50fcf5ffa730da97b736081d2dfb4da4))
+* Pin GH Actions to commit sha ([#148](https://github.com/rancher/terraform-rancher2-aws/issues/148)) ([df517db](https://github.com/rancher/terraform-rancher2-aws/commit/df517dbf3109464c5696e3fa642d12a52ea6dc51))
+
 ## [3.1.3](https://github.com/rancher/terraform-rancher2-aws/compare/v3.1.2...v3.1.3) (2026-02-10)
 
 
