@@ -85,7 +85,7 @@ jobs:
           token: ${{secrets.GITHUB_TOKEN}}
           fetch-depth: 0
       - id: aws-creds
-        uses: aws-actions/configure-aws-credentials@ec61189d14ec14c8efccab744f656cffd0e33f37 # v6
+        uses: aws-actions/configure-aws-credentials@d979d5b3a71173a29b74b5b88418bfda9437d885 # v6
         with:
           role-to-assume: ${{env.AWS_ROLE}}
           role-session-name: ${{github.run_id}}
@@ -128,7 +128,7 @@ jobs:
           token: ${{secrets.GITHUB_TOKEN}}
           fetch-depth: 0
       - id: aws-creds
-        uses: aws-actions/configure-aws-credentials@ec61189d14ec14c8efccab744f656cffd0e33f37 # v6
+        uses: aws-actions/configure-aws-credentials@d979d5b3a71173a29b74b5b88418bfda9437d885 # v6
         with:
           role-to-assume: ${{env.AWS_ROLE}}
           role-session-name: ${{github.run_id}}-cleanup
