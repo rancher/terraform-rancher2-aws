@@ -190,6 +190,35 @@ resource "helm_release" "rancher" {
   ]
 }
 
+resource "terraform_data" "wait_for_certificate_secret" {
+  depends_on = [
+    time_sleep.settle_before_rancher,
+    terraform_data.wait_for_ingress,
+    terraform_data.cattle-system,
+    kubernetes_manifest.issuer,
+    helm_release.rancher,
+  ]
+  provisioner "local-exec" {
+    command = <<-EOT
+      EXITCODE=1
+      ATTEMPTS=0
+      MAX=60
+      while [ $EXITCODE -gt 0 ] && [ $ATTEMPTS -lt $MAX ]; do
+        CRT_DATA=$(kubectl get secret tls-rancher-ingress -n cattle-system -o jsonpath='{.data.tls\.crt}' 2>/dev/null || true)
+
+        if [ -n "$CRT_DATA" ]; then
+          EXITCODE=0
+        else
+          sleep 10
+          ATTEMPTS=$((ATTEMPTS+1))
+        fi
+      done
+      exit $EXITCODE
+    EOT
+  }
+}
+
+
 # The Helm resource completes in less than 10 seconds
 #   at which time the tls-rancher-ingress secret is generated
 data "kubernetes_secret_v1" "certificate" {
@@ -199,6 +228,7 @@ data "kubernetes_secret_v1" "certificate" {
     terraform_data.cattle-system,
     kubernetes_manifest.issuer,
     helm_release.rancher,
+    terraform_data.wait_for_certificate_secret,
   ]
   metadata {
     name      = "tls-rancher-ingress"
@@ -215,6 +245,7 @@ resource "kubernetes_secret_v1" "rancher_tls_ca" {
     terraform_data.cattle-system,
     kubernetes_manifest.issuer,
     helm_release.rancher,
+    terraform_data.wait_for_certificate_secret,
     data.kubernetes_secret_v1.certificate,
   ]
   metadata {
@@ -239,6 +270,7 @@ resource "kubernetes_secret_v1" "rancher_tls_ca_additional" {
     terraform_data.cattle-system,
     kubernetes_manifest.issuer,
     helm_release.rancher,
+    terraform_data.wait_for_certificate_secret,
     data.kubernetes_secret_v1.certificate,
   ]
   metadata {
@@ -263,6 +295,7 @@ resource "terraform_data" "wait_for_rancher" {
     terraform_data.cattle-system,
     kubernetes_manifest.issuer,
     helm_release.rancher,
+    terraform_data.wait_for_certificate_secret,
     data.kubernetes_secret_v1.certificate,
     kubernetes_secret_v1.rancher_tls_ca,
     kubernetes_secret_v1.rancher_tls_ca_additional,
@@ -285,6 +318,7 @@ resource "terraform_data" "get_public_cert_info" {
     terraform_data.cattle-system,
     kubernetes_manifest.issuer,
     helm_release.rancher,
+    terraform_data.wait_for_certificate_secret,
     data.kubernetes_secret_v1.certificate,
     kubernetes_secret_v1.rancher_tls_ca,
     kubernetes_secret_v1.rancher_tls_ca_additional,

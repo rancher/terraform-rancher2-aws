@@ -4,8 +4,14 @@
 
 locals {
   # template_files is a map of relative_path => absolute_path
-  template_file_map = var.template_files
-  generated_files   = { for k, v in var.generated_files : k => v if(k != "." && k != ".." && k != "" && v != "") }
+  template_file_map = {
+    for k, v in var.template_files : trimprefix(k, "./") => v
+    if !startswith(k, "/") && length(regexall("(^|/)\\.\\.(/|$)", k)) == 0
+  }
+  generated_files = {
+    for k, v in var.generated_files : trimprefix(k, "./") => v
+    if k != "." && k != ".." && k != "" && v != "" && !startswith(k, "/") && length(regexall("(^|/)\\.\\.(/|$)", k)) == 0
+  }
 
   # Generate all parent directories needed (including nested levels)
   # file_directory will create intermediate directories if they don't exist
@@ -36,7 +42,7 @@ locals {
   interval     = var.interval
   timeout      = var.timeout
   init         = var.init
-  init_script  = (local.init ? "terraform init" : "")
+  init_script  = (local.init ? "terraform init -reconfigure -upgrade" : "")
   tf_data_dir  = (var.data_path != null ? var.data_path : local.root_path)
   skip_destroy = (var.skip_destroy ? "true" : "")
   jitter_min   = var.jitter_min
