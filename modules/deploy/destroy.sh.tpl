@@ -49,12 +49,12 @@ fi
 # Set up plugin cache directory
 # shellcheck disable=SC2154
 if [ ! -d "${plugin_cache}" ]; then
-  install -d "$TF_PLUGIN_CACHE_DIR"
+  install -d "${plugin_cache}"
 fi
 
 if [ -n "$TF_PLUGIN_CACHE_DIR" ]; then
   # shellcheck disable=SC2154
-  cp -r "$TF_PLUGIN_CACHE_DIR" "${plugin_cache}"
+  cp -a "$TF_PLUGIN_CACHE_DIR/." "${plugin_cache}/" 2>/dev/null || true
 fi
 
 # shellcheck disable=SC2154

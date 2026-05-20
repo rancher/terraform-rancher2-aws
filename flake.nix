@@ -142,7 +142,7 @@
           devShells.default = pkgs.mkShell {
             buildInputs = [ devShellPackage ];
             shellHook = ''
-              while read word; do echo -e "*$word\n#" | aspell -a --dont-validate-words 2&>/dev/null; done < aspell_custom.txt
+              while read word; do echo -e "*$word\n#" | aspell -a --dont-validate-words 2>/dev/null; done < aspell_custom.txt
               export PS1="nix:# ";
             '';
           };

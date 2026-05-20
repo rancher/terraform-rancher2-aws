@@ -119,7 +119,7 @@ resource "file_local" "write_tmp_inputs" {
   directory   = local.tf_data_dir
   name        = "inputs.tmp"
   contents    = local.inputs
-  permissions = "0755"
+  permissions = "0600"
 }
 resource "file_local_snapshot" "persist_inputs" {
   depends_on = [
@@ -140,9 +140,10 @@ resource "file_local" "instantiate_inputs_snapshot" {
     file_local.write_tmp_inputs,
     file_local_snapshot.persist_inputs,
   ]
-  directory = local.deploy_path
-  name      = "inputs.tfvars"
-  contents  = base64decode(file_local_snapshot.persist_inputs.snapshot)
+  directory   = local.deploy_path
+  name        = "inputs.tfvars"
+  contents    = base64decode(file_local_snapshot.persist_inputs.snapshot)
+  permissions = "0600"
 }
 
 ### Environment Variables ###
@@ -155,7 +156,7 @@ resource "file_local" "write_tmp_env" {
   directory   = local.tf_data_dir
   name        = "env.tmp"
   contents    = local.export_contents
-  permissions = "0644"
+  permissions = "0600"
 }
 resource "file_local_snapshot" "persist_envrc" {
   depends_on = [
@@ -179,7 +180,7 @@ resource "file_local" "instantiate_envrc_snapshot" {
   directory   = local.deploy_path
   name        = "envrc"
   contents    = base64decode(file_local_snapshot.persist_envrc.snapshot)
-  permissions = "0644"
+  permissions = "0600"
 }
 
 ## Generated Files ##
@@ -236,8 +237,8 @@ resource "terraform_data" "destroy" {
     when = destroy
     # no changing the directory or this won't work on different machines!
     command = <<-EOT
-      # if the original filesystem is wiped out, the destroy script may not exist on a consequetive apply (not the first apply)
-      # in which case we need the generate_destroy resoruce to regenerate the destroy script, and the destroy_end resource will hande the destroy.
+      # if the original filesystem is wiped out, the destroy script may not exist on a consecutive apply (not the first apply)
+      # in which case we need the generate_destroy resource to regenerate the destroy script, and the destroy_end resource will handle the destroy.
       if [ -f ${self.triggers_replace.dp}/destroy.sh ]; then
         ${self.triggers_replace.dp}/destroy.sh
       fi

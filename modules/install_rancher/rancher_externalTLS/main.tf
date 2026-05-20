@@ -4,7 +4,7 @@ locals {
   rancher_helm_channel      = var.rancher_helm_channel
   rancher_version           = replace(var.rancher_version, "v", "") # don't include the v
   rke2_version              = var.rke2_version
-  rke2_minor                = split(".", local.rke2_version)[1]
+  rke2_minor                = tonumber(split(".", local.rke2_version)[1])
   default_ingress           = (local.rke2_minor >= 35 ? "traefik" : "nginx")
   helm_chart_use_strategy   = var.rancher_helm_chart_use_strategy
   rancher_helm_chart_values = jsondecode(base64decode(var.rancher_helm_chart_values))

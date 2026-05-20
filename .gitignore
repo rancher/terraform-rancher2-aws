@@ -32,3 +32,4 @@ run.sh
 static_files.txt
 * copy
 *.tfbackend
+*.log

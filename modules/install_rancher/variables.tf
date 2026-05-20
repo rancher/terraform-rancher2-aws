@@ -47,7 +47,7 @@ variable "rancher_version" {
 variable "rke2_version" {
   type        = string
   description = <<-EOT
-    The version of rke2 powering the cliuster.
+    The version of rke2 powering the cluster.
     This is used for determining ingress configuration.
   EOT
 }

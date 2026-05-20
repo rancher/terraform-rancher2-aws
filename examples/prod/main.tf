@@ -31,7 +31,7 @@ locals {
   acme_server_url      = var.acme_server_url
   owner                = var.owner
   rke2_version         = var.rke2_version
-  rke2_minor           = split(".", local.rke2_version)[1]
+  rke2_minor           = tonumber(split(".", local.rke2_version)[1])
   default_ingress      = local.rke2_minor >= 35 ? "traefik" : "nginx"
   local_file_path      = var.file_path
   runner_ip            = chomp(data.http.myip.response_body) # "runner" is the server running Terraform

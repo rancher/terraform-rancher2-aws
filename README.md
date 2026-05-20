@@ -43,7 +43,7 @@ These tools will need to be installed on the machine running Terraform:
 - helm (v3)
 - git
 - awscli (if using ipv6)
-- age (encrytion tool used for storing env secrets when necessary) https://github.com/filosottile/age
+- age (encryption tool used for storing env secrets when necessary) https://github.com/filosottile/age
 
 Check out the flake.nix file for a list of packages that we use when developing and testing.
 

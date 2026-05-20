@@ -108,7 +108,7 @@ variable "jitter_min" {
   description = <<-EOT
     Number of seconds min to wait before running apply.
     This is part of a range of seconds that will be randomly selected to wait in order to prevent 
-      file cache override curruption from multiple terraform instances running at the same time.
+      file cache override corruption from multiple terraform instances running at the same time.
   EOT
   default     = 0
 }
@@ -117,7 +117,7 @@ variable "jitter_max" {
   description = <<-EOT
     Number of seconds max to wait before running apply.
     This is part of a range of seconds that will be randomly selected to wait in order to prevent 
-      file cache override curruption from multiple terraform instances running at the same time.
+      file cache override corruption from multiple terraform instances running at the same time.
   EOT
   default     = 0
 }
