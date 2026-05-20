@@ -29,6 +29,7 @@ func TestOneBasic(t *testing.T) {
 
 	exampleDir := repoRoot + "/examples/" + directory
 	testDir := repoRoot + "/test/tests/data/" + id
+	pluginsDir := filepath.Join(repoRoot, "test/tests/data", id, "plugins")
 
 	err = util.CreateTestDirectories(t, id)
 	if err != nil {
@@ -109,6 +110,7 @@ func TestOneBasic(t *testing.T) {
 			"AWS_DEFAULT_REGION":  region,
 			"AWS_REGION":          region,
 			"TF_DATA_DIR":         testDir,
+			"TF_PLUGIN_CACHE_DIR": pluginsDir,
 			"TF_IN_AUTOMATION":    "1",
 			"TF_CLI_ARGS_plan":    "-no-color -state=" + testDir + "/tfstate",
 			"TF_CLI_ARGS_apply":   "-no-color -state=" + testDir + "/tfstate -parallelism=5",

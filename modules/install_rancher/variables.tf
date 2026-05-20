@@ -43,7 +43,13 @@ variable "rancher_version" {
   description = <<-EOT
     The version of rancher to install.
   EOT
-  default     = "2.11.2"
+}
+variable "rke2_version" {
+  type        = string
+  description = <<-EOT
+    The version of rke2 powering the cliuster.
+    This is used for determining ingress configuration.
+  EOT
 }
 variable "rancher_helm_repo" {
   type        = string

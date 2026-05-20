@@ -1,6 +1,5 @@
 #!/bin/bash
 set -e
-set -x
 
 if [ "$(id -u)" -ne 0 ]; then
   echo "This script must be run as root" >&2
@@ -58,7 +57,7 @@ EOT
   fi
 
 
-  # Disable IPv6
+  # Disable IPv6 in CIS images
   if grep -q "ipv6.disable=1" /etc/default/grub; then
       echo "IPv6 disable parameter already present. Skipping."
   else
@@ -125,7 +124,7 @@ if [ "rpm" = "${install_method}" ]; then
   fi
 
   # shellcheck disable=SC2154
-  if [ "rhel-8" = "${image}" ] || [ "liberty-8" = "${image}" ]; then
+  if [ "rhel-8" = "${image}" ]; then
     # adding Rocky 8 repos because they are RHEL 8 compatible and support ipv6 native
     DATA="[RockyLinux-AppStream]\nname=Rocky Linux - AppStream\nbaseurl=https://dl.rockylinux.org/pub/rocky/8/AppStream/x86_64/os/\nenabled=1\nmetadata_expire=7d\ngpgcheck=1\ngpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-rocky\nsslverify=1\nsslcacert=/etc/pki/tls/certs/ca-bundle.crt"
     echo -e "$DATA" > /etc/yum.repos.d/Rocky-AppStream.repo
@@ -141,13 +140,6 @@ if [ "rpm" = "${install_method}" ]; then
     dnf clean all
     dnf makecache
     dnf repolist
-  fi
-
-  # shellcheck disable=SC2154
-  if [ "liberty-7" = "${image}" ]; then
-    subscription-manager repos --enable=rhel-7-server-extras-rpms
-    yum clean all
-    yum repolist
   fi
 fi
 

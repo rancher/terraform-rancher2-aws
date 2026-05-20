@@ -21,10 +21,11 @@ locals {
   example      = "downstream"
   project_name = "tf-${substr(md5(join("-", [local.example, local.identifier])), 0, 5)}"
   username     = local.project_name
-  domain       = local.project_name
-  zone         = var.zone
-  key_name     = var.key_name
-  key          = var.key
+  # since domains can't be tagged all domains need to have the identifier in them for cleanup
+  domain   = lower("${local.project_name}-${local.identifier}")
+  zone     = var.zone
+  key_name = var.key_name
+  key      = var.key
   # "https://acme-staging-v02.api.letsencrypt.org/directory" or "https://acme-v02.api.letsencrypt.org/directory"
   acme_server_url      = var.acme_server_url
   owner                = var.owner
@@ -32,7 +33,7 @@ locals {
   local_file_path      = var.file_path
   runner_ip            = (var.runner_ip != "" ? var.runner_ip : chomp(data.http.myip.response_body)) # "runner" is the server running Terraform
   rancher_version      = var.rancher_version
-  cert_manager_version = "1.18.1"
+  cert_manager_version = "1.20.2"
   os                   = "sle-micro-61"
   lbsg                 = sort(module.rancher.load_balancer_security_groups)
   load_balancer_security_group_id = [

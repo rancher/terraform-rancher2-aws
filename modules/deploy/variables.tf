@@ -3,16 +3,21 @@ variable "inputs" {
   description = <<-EOT
     Contents of an inputs.tfvars file to save in the deployment path.
   EOT
-  default     = ""
 }
 variable "template_files" {
-  type        = list(any)
+  type        = map(any)
   description = <<-EOT
-    List of file paths that will be copied to the deploy path.
-    This is optional, but one of template_path or template_files must be specified.
-    Only one of template_path or template_files can be specified.
+    Map of relative path => absolute path for files that will be copied to the deploy path.
+    The key is the relative path (used in deploy_path), the value is the absolute source path.
+    Example: { "modules/deploy/main.tf" => "/home/user/fixture/modules/deploy/main.tf" }
   EOT
-  default     = []
+}
+variable "generated_files" {
+  type        = map(any)
+  description = <<-EOT
+    Map of file name to content, it will be placed in the deploy path.
+  EOT
+  default     = {}
 }
 variable "deploy_path" {
   type        = string
@@ -25,10 +30,17 @@ variable "data_path" {
   description = <<-EOT
     Should match your TF_DATA_DIR environment variable.
     This directory is used to stage all of the various files for your implementation.
-    If left null, this will match "path.root".
-    This should be a full path, not relative.
   EOT
-  default     = null
+}
+variable "plugin_cache_path" {
+  type        = string
+  description = <<-EOT
+    A custom path to use as a plugin cache.
+    This defaults to the data path + plugins, eg. /path/to/data/plugins.
+    If the TF_PLUGIN_CACHE_DIR environment variable is set,
+    then its contents will be copied into this directory to prime the cache.
+  EOT
+  default     = ""
 }
 variable "environment_variables" {
   type        = map(any)
@@ -37,7 +49,7 @@ variable "environment_variables" {
     Key is the name and Value is the value of the variable.
     We export this before running Terraform, eg. "export KEY_1=VARIABLE_1;export KEY_2=VARIABLE_2".
   EOT
-  default     = null
+  default     = {}
 }
 variable "attempts" {
   type        = number
@@ -90,4 +102,22 @@ variable "deploy_trigger" {
     This means that arbitrary changes to this module's inputs don't cause the deployment to trigger,
      the deployment will only trigger when this string changes.
   EOT
+}
+variable "jitter_min" {
+  type        = number
+  description = <<-EOT
+    Number of seconds min to wait before running apply.
+    This is part of a range of seconds that will be randomly selected to wait in order to prevent 
+      file cache override curruption from multiple terraform instances running at the same time.
+  EOT
+  default     = 0
+}
+variable "jitter_max" {
+  type        = number
+  description = <<-EOT
+    Number of seconds max to wait before running apply.
+    This is part of a range of seconds that will be randomly selected to wait in order to prevent 
+      file cache override curruption from multiple terraform instances running at the same time.
+  EOT
+  default     = 0
 }

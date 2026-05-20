@@ -1,5 +1,4 @@
 #!/bin/bash
-set -x
 
 JSONPATH="'{range .items[*]}
   {.metadata.name}{\"\\t\"} \
@@ -11,7 +10,17 @@ JSONPATH="'{range .items[*]}
 
 notReady() {
   # Get the list of nodes and their statuses  
-  NODES="$(kubectl get nodes -o jsonpath="$JSONPATH")"
+  if ! NODES="$(kubectl get nodes -o jsonpath="$JSONPATH")"; then
+    # The cluster is not ready if kubectl fails
+    return 0
+  fi
+
+  NODES=$(echo "$NODES" | tr -d "'")
+  if [ -z "$(echo "$NODES" | tr -d ' \t\n\r')" ]; then
+    # The cluster is not ready if no nodes are found
+    return 0
+  fi
+
   # Example output:
   # master-node   Ready
   # worker-node   Ready MemoryPressure
@@ -28,10 +37,10 @@ notReady() {
   fi
 }
 
-TIMEOUT=5 # 5 minutes
+TIMEOUT=3 # 3 minutes
 TIMEOUT_MINUTES=$((TIMEOUT * 60))
 INTERVAL=10 # 10 seconds
-MAX=$((TIMEOUT_MINUTES / INTERVAL))
+MAX=$((TIMEOUT_MINUTES / INTERVAL)) # defaults to 6
 ATTEMPTS=0
 
 while notReady; do

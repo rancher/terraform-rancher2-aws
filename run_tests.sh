@@ -229,6 +229,8 @@ if [ -z "$cleanup_id" ]; then
   fi
 fi
 
+echo "Wait for settle before cleanup..."
+sleep 120
 echo "Starting cleanup..."
 sh "$REPO_ROOT/cleanup.sh" "$IDENTIFIER"
 C=$?

@@ -17,6 +17,13 @@ variable "rancher_version" {
     The version of rancher to install.
   EOT
 }
+variable "rke2_version" {
+  type        = string
+  description = <<-EOT
+    The version of rke2 powering the cliuster.
+    This is used for determining ingress configuration.
+  EOT
+}
 variable "rancher_helm_repo" {
   type        = string
   description = <<-EOT
@@ -56,7 +63,7 @@ variable "rancher_helm_chart_values" {
       "ingress.enabled"                                     = "true"
       "ingress.tls.source"                                  = "letsEncrypt"
       "tls"                                                 = "ingress"
-      "letsEncrypt.ingress.class"                           = "nginx"
+      "letsEncrypt.ingress.class"                           = "traefik"
       "letsEncrypt.environment"                             = "production"
       "letsEncrypt.email"                                   = "test@example.com"
       "certmanager.version"                                 = "1.18.1"

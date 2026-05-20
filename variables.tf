@@ -128,8 +128,8 @@ variable "node_configuration" {
   default = {
     "initial" = {
       type            = "all-in-one"
-      size            = "medium"
-      os              = "sle-micro-60"
+      size            = "xl"
+      os              = "sle-micro-61"
       indirect_access = true
       initial         = true
     }

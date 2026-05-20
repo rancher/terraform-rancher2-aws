@@ -9,6 +9,7 @@ locals {
   email                           = var.email
   acme_server_url                 = var.acme_server_url
   rancher_version                 = replace(var.rancher_version, "v", "") # don't include the v
+  rke2_version                    = var.rke2_version
   rancher_helm_repo               = var.rancher_helm_repo
   rancher_helm_channel            = var.rancher_helm_channel
   cert_manager_version            = var.cert_manager_version
@@ -28,16 +29,17 @@ module "deploy_rancher" {
   source      = "../deploy"
   deploy_path = local.deploy_path
   data_path   = local.deploy_path
-  template_files = [
-    join("/", [local.rancher_path, "main.tf"]),
-    join("/", [local.rancher_path, "outputs.tf"]),
-    join("/", [local.rancher_path, "variables.tf"]),
-    join("/", [local.rancher_path, "versions.tf"]),
-    join("/", [local.rancher_path, "runningPods.sh"]),
-    join("/", [local.rancher_path, "runningDeployments.sh"]),
-  ]
+  template_files = {
+    "./main.tf"             = join("/", [local.rancher_path, "main.tf"])
+    "outputs.tf"            = join("/", [local.rancher_path, "outputs.tf"])
+    "variables.tf"          = join("/", [local.rancher_path, "variables.tf"])
+    "versions.tf"           = join("/", [local.rancher_path, "versions.tf"])
+    "runningPods.sh"        = join("/", [local.rancher_path, "runningPods.sh"])
+    "runningDeployments.sh" = join("/", [local.rancher_path, "runningDeployments.sh"])
+  }
   attempts     = 5
   interval     = 60
+  timeout      = "15m"
   skip_destroy = true # this is a one way operation, uninstall not supported
   # if any of these change, redeploy/update
   deploy_trigger = md5(join("-", [
@@ -66,6 +68,7 @@ module "deploy_rancher" {
   inputs = <<-EOT
     project_domain                  = "${local.project_domain}"
     rancher_version                 = "${local.rancher_version}"
+    rke2_version                    = "${local.rke2_version}"
     rancher_helm_repo               = "${local.rancher_helm_repo}"
     rancher_helm_channel            = "${local.rancher_helm_channel}"
     rancher_helm_chart_use_strategy = "${local.rancher_helm_chart_use_strategy}"

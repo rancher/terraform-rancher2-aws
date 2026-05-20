@@ -23,11 +23,12 @@ terraform {
 }
 
 locals {
-  identifier           = var.identifier
-  example              = "dev"
-  project_name         = "tf-${substr(md5(join("-", [local.example, local.identifier])), 0, 5)}"
-  username             = local.project_name
-  domain               = local.project_name
+  identifier   = var.identifier
+  example      = "dev"
+  project_name = "tf-${substr(md5(join("-", [local.example, local.identifier])), 0, 5)}"
+  username     = local.project_name
+  # since domains can't be tagged all domains need to have the identifier in them for cleanup
+  domain               = lower("${local.project_name}-${local.identifier}")
   zone                 = var.zone
   key_name             = var.key_name
   key                  = var.key
@@ -63,7 +64,7 @@ locals {
   local_file_path      = var.file_path
   runner_ip            = chomp(data.http.myip.response_body) # "runner" is the server running Terraform
   rancher_version      = var.rancher_version
-  cert_manager_version = "1.18.1"
+  cert_manager_version = "1.20.2"
   os                   = "sle-micro-61"
 }
 

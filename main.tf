@@ -3,14 +3,9 @@ locals {
   identifier   = var.identifier
   owner        = var.owner
   project_name = var.project_name
-  domain       = var.domain
-  zone         = var.zone
-  fqdn         = join(".", [local.domain, local.zone])
-  # tflint-ignore: terraform_unused_declarations
-  fqdn_validate = (can(regex(
-    "^(?:https?://)?[[:alpha:]](?:[[:alnum:]\\p{Pd}]{1,63}\\.)+[[:alnum:]\\p{Pd}]{1,62}[[:alnum:]](?::[[:digit:]]{1,5})?$",
-    local.fqdn
-  )) ? false : one([local.fqdn, "The_fqdn_must_be_a_fully_qualified_domain_name"])) # used like this we can validate local variables
+  domain       = lower(var.domain)
+  zone         = lower(var.zone)
+  fqdn         = lower(join(".", [local.domain, local.zone]))
   # access
   key_name = var.key_name
   key      = var.key
@@ -19,7 +14,8 @@ locals {
   # rke2
   rke2_version = var.rke2_version
   local_file_path = (
-    var.local_file_path != "" ? (var.local_file_path == path.root ? "${path.root}/rke2" : var.local_file_path) :
+    var.local_file_path != "" ?
+    (var.local_file_path == path.root ? "${path.root}/rke2" : var.local_file_path) :
     "${path.root}/rke2"
   )
   install_method     = var.install_method
@@ -33,8 +29,6 @@ locals {
   externalTLS                = contains(["module", "supply"], local.cert_use_strategy)
   configure_cert_manager     = (local.externalTLS ? false : true) # opposite of externalTLS
   cert_manager_configuration = var.cert_manager_configuration
-  # tflint-ignore: terraform_unused_declarations
-  cert_manager_config_validate = (local.cert_use_strategy == "rancher" && local.cert_manager_configuration == null ? one([local.cert_manager_configuration, "cert_manager_configuration_null_when_using_rancher_for_certs"]) : false)
   cert_manager_config = (local.cert_manager_configuration == null ? {
     aws_access_key_id     = ""
     aws_secret_access_key = ""
@@ -46,12 +40,6 @@ locals {
   tls_public_cert  = var.tls_public_cert
   tls_public_chain = var.tls_public_chain
   tls_private_key  = var.tls_private_key
-  # tflint-ignore: terraform_unused_declarations
-  tls_public_cert_validate = (local.cert_use_strategy == "supply" && local.tls_public_cert == "" ? one([local.tls_public_cert, "public_cert_null_when_supplying_certs"]) : false)
-  # # tflint-ignore: terraform_unused_declarations
-  # tls_public_chain_validate       = (local.cert_use_strategy == "supply" && local.tls_public_chain == "" ? one([local.tls_public_chain, "public_chain_null_when_supplying_certs"]) : false )
-  # tflint-ignore: terraform_unused_declarations
-  tls_private_key_validate = (local.cert_use_strategy == "supply" && local.tls_private_key == "" ? one([local.tls_private_key, "private_key_null_when_supplying_certs"]) : false)
   cert_public = coalesce(
     (local.cert_use_strategy == "module" ? module.cluster.cert.public_key : null),
     (local.cert_use_strategy == "supply" ? local.tls_public_cert : null),
@@ -78,11 +66,50 @@ locals {
   acme_server_url                 = var.acme_server_url
 }
 
+resource "terraform_data" "input_validation" {
+  lifecycle {
+    precondition {
+      condition = can(regex(
+        "^(?:https?://)?[[:alpha:]](?:[[:alnum:]\\p{Pd}]{1,63}\\.)+[[:alnum:]\\p{Pd}]{1,62}[[:alnum:]](?::[[:digit:]]{1,5})?$",
+        local.fqdn
+      ))
+      error_message = "The fqdn must be a fully qualified domain name"
+    }
+    precondition {
+      condition     = local.fqdn == lower(local.fqdn)
+      error_message = "fqdn must be lowercase"
+    }
+    precondition {
+      condition = (
+        local.rancher_helm_chart_values != {} &&
+        lookup(local.rancher_helm_chart_values, "hostname", "") != "" &&
+        lookup(local.rancher_helm_chart_values, "hostname", "") != lower(lookup(local.rancher_helm_chart_values, "hostname", ""))
+      ) ? false : true # define the bad condition and flip the boolean to trigger the error
+      error_message = "hostname in rancher_helm_chart_values must be lowercase"
+    }
+    precondition {
+      condition     = local.cert_use_strategy != "rancher" || local.cert_manager_configuration != null
+      error_message = "cert_manager_configuration must not be null when using rancher for certs"
+    }
+    precondition {
+      condition     = local.cert_use_strategy != "supply" || (local.tls_public_cert != null && local.tls_public_cert != "")
+      error_message = "tls_public_cert must not be null or empty when using supply strategy for certs"
+    }
+    precondition {
+      condition     = local.cert_use_strategy != "supply" || (local.tls_private_key != null && local.tls_private_key != "")
+      error_message = "tls_private_key must not be null or empty when using supply strategy for certs"
+    }
+  }
+}
+
 data "aws_route53_zone" "zone" {
   name = "${local.zone}."
 }
 
 module "cluster" {
+  depends_on = [
+    terraform_data.input_validation,
+  ]
   source             = "./modules/cluster"
   identifier         = local.identifier
   owner              = local.owner
@@ -105,6 +132,7 @@ module "cluster" {
 
 module "install_cert_manager" {
   depends_on = [
+    terraform_data.input_validation,
     module.cluster,
   ]
   count                      = (local.install_cert_manager ? 1 : 0)
@@ -120,6 +148,7 @@ module "install_cert_manager" {
 
 module "install_rancher" {
   depends_on = [
+    terraform_data.input_validation,
     module.cluster,
     module.install_cert_manager,
   ]
@@ -132,6 +161,7 @@ module "install_rancher" {
   email                           = local.cert_manager_config.acme_email
   acme_server_url                 = local.acme_server_url
   rancher_version                 = local.rancher_version
+  rke2_version                    = local.rke2_version
   rancher_helm_repo               = local.rancher_helm_repo
   rancher_helm_channel            = local.rancher_helm_channel
   cert_manager_version            = local.cert_manager_version
@@ -145,6 +175,7 @@ module "install_rancher" {
 
 module "bootstrap_rancher" {
   depends_on = [
+    terraform_data.input_validation,
     module.cluster,
     module.install_cert_manager,
     module.install_rancher,

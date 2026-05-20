@@ -1,11 +1,5 @@
 output "output" {
-  value = { for k, v in jsondecode(base64decode(file_local_snapshot.persist_outputs.snapshot)) : k => v.value }
+  # v.value because outputs.json has more than one attribute for the value parameter 
+  # (eg. v.sensitive) and we just want the actual output values
+  value = { for k, v in jsondecode(data.file_local.outputs.contents) : k => v.value }
 }
-
-# output "raw_output" {
-#   value = module.persist_outputs.contents
-# }
-
-# output "state" {
-#   value = module.persist_state.contents
-# }

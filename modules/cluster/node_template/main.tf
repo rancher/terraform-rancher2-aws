@@ -83,7 +83,7 @@ locals {
 
 module "node" {
   source                              = "rancher/rke2/aws"
-  version                             = "2.0.0"
+  version                             = "3.0.0"
   project_use_strategy                = local.project_use_strategy
   project_name                        = local.project_name
   project_admin_cidrs                 = local.project_admin_cidrs
