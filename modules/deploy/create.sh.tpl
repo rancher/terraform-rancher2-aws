@@ -6,6 +6,7 @@ CREATE_AFTER_PERSIST=$1
 # Add ~/bin to PATH for age and aws
 export PATH="$HOME/bin:$PATH"
 
+# shellcheck disable=SC2329
 cleanup() {
   echo "Script interrupted. Cleaning up..."
   if [ "$SECRETS_DECRYPTED" = "1" ] && [ -n "$DECRYPTED_SECRETS" ] && [ -f "$DECRYPTED_SECRETS" ]; then
