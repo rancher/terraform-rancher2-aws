@@ -3,6 +3,7 @@ variable "inputs" {
   description = <<-EOT
     Contents of an inputs.tfvars file to save in the deployment path.
   EOT
+  default     = ""
 }
 variable "template_files" {
   type        = map(any)
@@ -31,6 +32,7 @@ variable "data_path" {
     Should match your TF_DATA_DIR environment variable.
     This directory is used to stage all of the various files for your implementation.
   EOT
+  default     = null
 }
 variable "plugin_cache_path" {
   type        = string

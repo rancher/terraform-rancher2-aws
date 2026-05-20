@@ -103,8 +103,8 @@ resource "file_local" "instantiate_tpl_snapshot" {
     file_local_snapshot.persist_tpl_file,
   ]
   for_each    = local.template_file_map
-  directory   = "${local.deploy_path}/${replace(dirname(each.key), ".", "")}"
-  name        = basename(each.value)
+  directory   = dirname("${local.deploy_path}/${each.key}")
+  name        = basename(each.key)
   permissions = data.file_local.template_files[each.key].permissions
   contents    = base64decode(file_local_snapshot.persist_tpl_file[each.key].snapshot)
 }
@@ -191,7 +191,7 @@ resource "file_local" "generate_files" {
     file_local_directory.template_dirs,
   ]
   for_each    = local.generated_files
-  directory   = "${local.deploy_path}/${replace(dirname(each.key), ".", "")}"
+  directory   = dirname("${local.deploy_path}/${each.key}")
   name        = basename(each.key)
   contents    = each.value
   permissions = "0755"

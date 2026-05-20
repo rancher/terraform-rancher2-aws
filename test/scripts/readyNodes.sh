@@ -40,7 +40,7 @@ notReady() {
 TIMEOUT=3 # 3 minutes
 TIMEOUT_MINUTES=$((TIMEOUT * 60))
 INTERVAL=10 # 10 seconds
-MAX=$((TIMEOUT_MINUTES / INTERVAL)) # defaults to 6
+MAX=$((TIMEOUT_MINUTES / INTERVAL)) # defaults to 18
 ATTEMPTS=0
 
 while notReady; do

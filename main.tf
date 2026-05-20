@@ -76,10 +76,6 @@ resource "terraform_data" "input_validation" {
       error_message = "The fqdn must be a fully qualified domain name"
     }
     precondition {
-      condition     = local.fqdn == lower(local.fqdn)
-      error_message = "fqdn must be lowercase"
-    }
-    precondition {
       condition = (
         local.rancher_helm_chart_values != {} &&
         lookup(local.rancher_helm_chart_values, "hostname", "") != "" &&
