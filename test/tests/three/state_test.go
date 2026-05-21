@@ -30,6 +30,7 @@ func TestThreeState(t *testing.T) {
 	}
 	exampleDir := repoRoot + "/examples/" + directory
 	testDir := repoRoot + "/test/tests/data/" + id
+	pluginsDir := filepath.Join(repoRoot, "test/tests/data", id, "plugins")
 
 	err = util.CreateTestDirectories(t, id)
 	if err != nil {
@@ -112,6 +113,7 @@ func TestThreeState(t *testing.T) {
 			"AWS_DEFAULT_REGION":  region,
 			"AWS_REGION":          region,
 			"TF_DATA_DIR":         testDir,
+			"TF_PLUGIN_CACHE_DIR": pluginsDir,
 			"TF_IN_AUTOMATION":    "1",
 			"TF_CLI_ARGS_init":    "-backend-config=\"bucket=" + strings.ToLower(id) + "\"",
 			"TF_CLI_ARGS_plan":    "-no-color", // using remote state from storage backend
@@ -137,6 +139,7 @@ func TestThreeState(t *testing.T) {
 	util.CheckReady(t, testDir+"/kubeconfig")
 	util.CheckRunning(t, testDir+"/kubeconfig")
 
+	t.Log("Validating remote state by destroying the local filesystem files and allowing Terraform to re-create them from S3")
 	err = os.RemoveAll(testDir)
 	if err != nil {
 		t.Log("Test failed, tearing down...")
@@ -152,8 +155,7 @@ func TestThreeState(t *testing.T) {
 		t.Fatalf("Error creating cluster: %s", err)
 	}
 
-	// Running the apply again should re-create everything from state in S3
-	// This should only recreate the files, the resources should be untouched
+	t.Log("Running the apply again should re-create local files from state in S3, remote AWS resources should not be touched")
 	err = os.WriteFile(testDir+"/id_rsa", []byte(privateKey), 0600)
 	if err != nil {
 		t.Log("Test failed, tearing down...")

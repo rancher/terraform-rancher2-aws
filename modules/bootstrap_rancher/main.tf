@@ -13,12 +13,12 @@ module "bootstrap" {
   source      = "../deploy"
   deploy_path = local.deploy_path
   data_path   = local.data_path
-  template_files = [
-    join("/", [local.bootstrap_path, "main.tf"]),
-    join("/", [local.bootstrap_path, "outputs.tf"]),
-    join("/", [local.bootstrap_path, "variables.tf"]),
-    join("/", [local.bootstrap_path, "versions.tf"]),
-  ]
+  template_files = {
+    "main.tf"      = join("/", [local.bootstrap_path, "main.tf"]),
+    "outputs.tf"   = join("/", [local.bootstrap_path, "outputs.tf"]),
+    "variables.tf" = join("/", [local.bootstrap_path, "variables.tf"]),
+    "versions.tf"  = join("/", [local.bootstrap_path, "versions.tf"]),
+  }
   attempts     = 5
   interval     = 60
   skip_destroy = true # this is a one way operation, un-bootstrap not supported

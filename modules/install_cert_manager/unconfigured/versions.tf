@@ -3,11 +3,11 @@ terraform {
   required_providers {
     helm = {
       source  = "hashicorp/helm"
-      version = "2.14"
+      version = ">= 3.1.1"
     }
     time = {
       source  = "hashicorp/time"
-      version = ">= 0.12.0"
+      version = ">= 0.13.1"
     }
   }
 }

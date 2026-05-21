@@ -450,6 +450,7 @@ func CreateTestDirectories(t *testing.T, id string) error {
 		filepath.Join(fwd, "test/tests/data", id),
 		filepath.Join(fwd, "test/tests/data", id, "backend"),
 		filepath.Join(fwd, "test/tests/data", id, "data"),
+		filepath.Join(fwd, "test/tests/data", id, "plugins"),
 	}
 	for _, path := range paths {
 		err = os.Mkdir(path, 0755)

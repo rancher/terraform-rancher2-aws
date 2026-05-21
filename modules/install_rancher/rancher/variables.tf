@@ -17,6 +17,17 @@ variable "rancher_version" {
     The version of rancher to install.
   EOT
 }
+variable "rke2_version" {
+  type        = string
+  description = <<-EOT
+    The version of rke2 powering the cluster.
+    This is used for determining ingress configuration.
+  EOT
+  validation {
+    condition     = can(regex("^v\\d+\\.\\d+\\.\\d+\\+rke2r\\d+$", var.rke2_version))
+    error_message = "The rke2_version must match the format vX.Y.Z+rke2rN (eg. v1.34.7+rke2r1)."
+  }
+}
 variable "rancher_helm_repo" {
   type        = string
   description = <<-EOT
@@ -56,7 +67,7 @@ variable "rancher_helm_chart_values" {
       "ingress.enabled"                                     = "true"
       "ingress.tls.source"                                  = "letsEncrypt"
       "tls"                                                 = "ingress"
-      "letsEncrypt.ingress.class"                           = "nginx"
+      "letsEncrypt.ingress.class"                           = "traefik"
       "letsEncrypt.environment"                             = "production"
       "letsEncrypt.email"                                   = "test@example.com"
       "certmanager.version"                                 = "1.18.1"

@@ -68,6 +68,10 @@ variable "rke2_version" {
   description = <<-EOT
     The version of rke2 to install on the nodes.
   EOT
+  validation {
+    condition     = can(regex("^v\\d+\\.\\d+\\.\\d+\\+rke2r\\d+$", var.rke2_version))
+    error_message = "The rke2_version must match the format vX.Y.Z+rke2rN (eg. v1.34.7+rke2r1)."
+  }
 }
 variable "local_file_path" {
   type        = string
@@ -128,8 +132,8 @@ variable "node_configuration" {
   default = {
     "initial" = {
       type            = "all-in-one"
-      size            = "medium"
-      os              = "sle-micro-60"
+      size            = "xl"
+      os              = "sle-micro-61"
       indirect_access = true
       initial         = true
     }

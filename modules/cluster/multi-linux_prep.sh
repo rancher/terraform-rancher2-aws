@@ -1,11 +1,13 @@
 #!/bin/sh
 set -e
 
+
 # Ensure the script is run as root
 if [ "$(id -u)" -ne 0 ]; then
   echo "This script must be run as root" >&2
   exit 1
 fi
+
 # shellcheck disable=SC2154
 if [ "rpm" = "${install_method}" ]; then
 
@@ -15,16 +17,7 @@ if [ "rpm" = "${install_method}" ]; then
   rpm --import https://rpm.rancher.io/public.key || true
 
   timeout 10m zypper --gpg-auto-import-keys --non-interactive refresh
-  timeout 5m zypper --gpg-auto-import-keys --non-interactive install -n -y --force restorecond policycoreutils curl
-fi
-
-# shellcheck disable=SC2154
-if [ "ipv4" = "${ip_family}" ]; then
-  echo "net.ipv6.conf.all.disable_ipv6 = 1" > /etc/sysctl.d/99-disable-ipv6.conf
-  echo "net.ipv6.conf.default.disable_ipv6 = 1" >> /etc/sysctl.d/99-disable-ipv6.conf
-  sysctl -p /etc/sysctl.d/99-disable-ipv6.conf || true
-  # Remove IPv6 localhost entry to prevent health probes from hitting ::1
-  sed -i '/^::1/d' /etc/hosts
+  timeout 5m zypper --gpg-auto-import-keys --non-interactive install -n -y --force-resolution restorecond policycoreutils curl bind-utils
 fi
 
 # shellcheck disable=SC2154
@@ -46,7 +39,6 @@ EOT
   CONFIG_FILE="/etc/sysconfig/network/config"
   IPV6_DNS1="2001:4860:4860::8888"
   IPV6_DNS2="2606:4700:4700::1111"
-
 
   sed -i "s|^NETCONFIG_DNS_STATIC_SERVERS=.*|NETCONFIG_DNS_STATIC_SERVERS=\"$IPV6_DNS1 $IPV6_DNS2\"|" "$CONFIG_FILE"
   sed -i "s|^NETWORKMANAGER_DISABLE_IPV6=.*|NETWORKMANAGER_DISABLE_IPV6=\"no\"|" "$CONFIG_FILE"

@@ -22,11 +22,11 @@ module "deploy_cert_manager" {
   source      = "../deploy"
   deploy_path = local.deploy_path
   data_path   = local.deploy_path
-  template_files = [
-    join("/", [local.cert_manager_path, "main.tf"]),
-    join("/", [local.cert_manager_path, "variables.tf"]),
-    join("/", [local.cert_manager_path, "versions.tf"]),
-  ]
+  template_files = {
+    "main.tf"      = join("/", [local.cert_manager_path, "main.tf"]),
+    "variables.tf" = join("/", [local.cert_manager_path, "variables.tf"]),
+    "versions.tf"  = join("/", [local.cert_manager_path, "versions.tf"]),
+  }
   skip_destroy = true # this is a one way operation, uninstall is not supported
   # if any of these change, redeploy/update
   deploy_trigger = md5(
@@ -45,7 +45,7 @@ module "deploy_cert_manager" {
     KUBE_CONFIG_PATH = local.kubeconfig_path
     KUBECONFIG       = local.kubeconfig_path
   }
-  inputs = <<-EOT
+  inputs  = <<-EOT
     cert_manager_version       = "${local.cert_manager_version}"
     project_cert_name          = "${local.project_cert_name}"
     project_cert_key_id        = "${local.project_cert_key_id}"
@@ -59,4 +59,5 @@ module "deploy_cert_manager" {
       aws_secret_access_key = "${local.cert_manager_config.aws_secret_access_key}"
     }
   EOT
+  timeout = "5m"
 }

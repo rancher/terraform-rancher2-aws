@@ -21,9 +21,10 @@ resource "helm_release" "cert_manager_unconfigured" {
   wait_for_jobs    = false
   force_update     = true
   timeout          = 1200 # 20m
-
-  set {
-    name  = "installCRDs"
-    value = "true"
-  }
+  set = [
+    {
+      name  = "installCRDs"
+      value = "true"
+    },
+  ]
 }

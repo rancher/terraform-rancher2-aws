@@ -3,6 +3,9 @@ locals {
   rancher_helm_repo         = var.rancher_helm_repo
   rancher_helm_channel      = var.rancher_helm_channel
   rancher_version           = replace(var.rancher_version, "v", "") # don't include the v
+  rke2_version              = var.rke2_version
+  rke2_minor                = tonumber(split(".", local.rke2_version)[1])
+  default_ingress           = (local.rke2_minor >= 36 ? "traefik" : "nginx")
   helm_chart_use_strategy   = var.rancher_helm_chart_use_strategy
   rancher_helm_chart_values = jsondecode(base64decode(var.rancher_helm_chart_values))
   public_cert               = base64decode(var.public_cert)
@@ -59,7 +62,7 @@ resource "time_sleep" "settle_before_rancher" {
   create_duration = "30s"
 }
 
-resource "terraform_data" "wait_for_nginx" {
+resource "terraform_data" "wait_for_ingress" {
   depends_on = [
     time_sleep.settle_before_rancher,
   ]
@@ -68,9 +71,28 @@ resource "terraform_data" "wait_for_nginx" {
       EXITCODE=1
       ATTEMPTS=0
       MAX=5
+      echo "default ingress should be ${local.default_ingress} for rke2 version ${local.rke2_version}"
       while [ $EXITCODE -gt 0 ] && [ $ATTEMPTS -lt $MAX ]; do
-        timeout 3600 kubectl rollout status daemonset -n kube-system rke2-ingress-nginx-controller --timeout=60s
-        EXITCODE=$?
+        CONTROLLER_VALUE=$(kubectl get ingressclass -o jsonpath='{.items[?(@.metadata.annotations.ingressclass\.kubernetes\.io/is-default-class=="true")].spec.controller}' 2>/dev/null || true)
+        
+        if echo "$CONTROLLER_VALUE" | grep -qi "nginx"; then
+          SEARCH="nginx"
+        elif echo "$CONTROLLER_VALUE" | grep -qi "traefik"; then
+          SEARCH="traefik"
+        else
+          SEARCH="traefik|nginx"
+        fi
+
+        DS_NAME=$(kubectl get daemonset -n kube-system --show-labels | grep -iE "$SEARCH" | awk '{print $1}' | head -n 1)
+
+        if [ -n "$DS_NAME" ]; then
+          timeout 3600 kubectl rollout status daemonset -n kube-system "$DS_NAME" --timeout=60s
+          EXITCODE=$?
+        else
+          sleep 20
+          EXITCODE=1
+        fi
+
         if [ $EXITCODE -gt 0 ]; then
           timeout 3600 kubectl get pods -A
         fi
@@ -85,7 +107,7 @@ resource "terraform_data" "wait_for_nginx" {
 resource "terraform_data" "cattle-system" {
   depends_on = [
     time_sleep.settle_before_rancher,
-    terraform_data.wait_for_nginx,
+    terraform_data.wait_for_ingress,
   ]
   provisioner "local-exec" {
     command = <<-EOT
@@ -112,7 +134,7 @@ resource "terraform_data" "cattle-system" {
 resource "kubernetes_secret_v1" "tls_rancher_ingress" {
   depends_on = [
     time_sleep.settle_before_rancher,
-    terraform_data.wait_for_nginx,
+    terraform_data.wait_for_ingress,
     terraform_data.cattle-system,
   ]
   metadata {
@@ -134,7 +156,7 @@ resource "kubernetes_secret_v1" "tls_rancher_ingress" {
 resource "kubernetes_secret_v1" "rancher_tls_ca" {
   depends_on = [
     time_sleep.settle_before_rancher,
-    terraform_data.wait_for_nginx,
+    terraform_data.wait_for_ingress,
     terraform_data.cattle-system,
     kubernetes_secret_v1.tls_rancher_ingress,
   ]
@@ -156,7 +178,7 @@ resource "kubernetes_secret_v1" "rancher_tls_ca" {
 resource "kubernetes_secret_v1" "rancher_tls_ca_additional" {
   depends_on = [
     time_sleep.settle_before_rancher,
-    terraform_data.wait_for_nginx,
+    terraform_data.wait_for_ingress,
     terraform_data.cattle-system,
     kubernetes_secret_v1.tls_rancher_ingress,
     kubernetes_secret_v1.rancher_tls_ca,
@@ -180,7 +202,7 @@ resource "kubernetes_secret_v1" "rancher_tls_ca_additional" {
 resource "helm_release" "rancher" {
   depends_on = [
     time_sleep.settle_before_rancher,
-    terraform_data.wait_for_nginx,
+    terraform_data.wait_for_ingress,
     terraform_data.cattle-system,
     kubernetes_secret_v1.tls_rancher_ingress,
     kubernetes_secret_v1.rancher_tls_ca,
@@ -190,26 +212,24 @@ resource "helm_release" "rancher" {
   chart            = "${local.rancher_helm_repo}/${local.rancher_helm_channel}/rancher-${local.rancher_version}.tgz"
   namespace        = "cattle-system"
   create_namespace = false
-  wait             = false
-  wait_for_jobs    = false
+  wait             = true
+  wait_for_jobs    = true
   force_update     = true
   timeout          = 1800 # 30m
 
-  dynamic "set" {
-    # Terraform won't iterate over sensitive values, so we have to wrap it in nonsensitive()
-    for_each = nonsensitive(local.helm_chart_values)
-    content {
-      name  = set.key
+  set = [for k, v in local.helm_chart_values :
+    {
+      name  = k
       type  = "string"
-      value = set.value
+      value = v
     }
-  }
+  ]
 }
 
 resource "terraform_data" "wait_for_rancher" {
   depends_on = [
     time_sleep.settle_before_rancher,
-    terraform_data.wait_for_nginx,
+    terraform_data.wait_for_ingress,
     terraform_data.cattle-system,
     kubernetes_secret_v1.tls_rancher_ingress,
     kubernetes_secret_v1.rancher_tls_ca,
@@ -229,7 +249,7 @@ resource "terraform_data" "wait_for_rancher" {
 resource "terraform_data" "get_public_cert_info" {
   depends_on = [
     time_sleep.settle_before_rancher,
-    terraform_data.wait_for_nginx,
+    terraform_data.wait_for_ingress,
     terraform_data.cattle-system,
     kubernetes_secret_v1.tls_rancher_ingress,
     kubernetes_secret_v1.rancher_tls_ca,

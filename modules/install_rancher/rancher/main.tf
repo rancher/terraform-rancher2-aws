@@ -1,11 +1,21 @@
 
 locals {
-  rancher_domain            = var.project_domain
-  rancher_helm_repo         = var.rancher_helm_repo
-  rancher_helm_channel      = var.rancher_helm_channel
-  rancher_version           = replace(var.rancher_version, "v", "") # don't include the v
-  helm_chart_use_strategy   = var.rancher_helm_chart_use_strategy
-  rancher_helm_chart_values = jsondecode(base64decode(var.rancher_helm_chart_values))
+  rancher_domain          = var.project_domain
+  rancher_helm_repo       = var.rancher_helm_repo
+  rancher_helm_channel    = var.rancher_helm_channel
+  rancher_version         = replace(var.rancher_version, "v", "") # don't include the v
+  rke2_version            = var.rke2_version
+  rke2_minor              = tonumber(split(".", local.rke2_version)[1])
+  helm_chart_use_strategy = var.rancher_helm_chart_use_strategy
+  rancher_helm_chart_values = (
+    var.rancher_helm_chart_values != null && var.rancher_helm_chart_values != "" ?
+    try(
+      jsondecode(base64decode(var.rancher_helm_chart_values)),
+      jsondecode(var.rancher_helm_chart_values),
+      {},
+    ) :
+    {}
+  )
   default_hc_values = {
     "hostname"                                            = local.rancher_domain
     "replicas"                                            = "3"
@@ -13,7 +23,7 @@ locals {
     "ingress.enabled"                                     = "true"
     "ingress.tls.source"                                  = "letsEncrypt"
     "tls"                                                 = "ingress"
-    "letsEncrypt.ingress.class"                           = "nginx"
+    "letsEncrypt.ingress.class"                           = (local.rke2_minor >= 36 ? "traefik" : "nginx")
     "letsEncrypt.environment"                             = "production"
     "letsEncrypt.email"                                   = local.email
     "certmanager.version"                                 = local.cert_manager_version
@@ -46,7 +56,7 @@ resource "time_sleep" "settle_before_rancher" {
   create_duration = "30s"
 }
 
-resource "terraform_data" "wait_for_nginx" {
+resource "terraform_data" "wait_for_ingress" {
   depends_on = [
     time_sleep.settle_before_rancher,
   ]
@@ -56,8 +66,26 @@ resource "terraform_data" "wait_for_nginx" {
       ATTEMPTS=0
       MAX=5
       while [ $EXITCODE -gt 0 ] && [ $ATTEMPTS -lt $MAX ]; do
-        timeout 3600 kubectl rollout status daemonset -n kube-system rke2-ingress-nginx-controller --timeout=60s
-        EXITCODE=$?
+        CONTROLLER_VALUE=$(kubectl get ingressclass -o jsonpath='{.items[?(@.metadata.annotations.ingressclass\.kubernetes\.io/is-default-class=="true")].spec.controller}' 2>/dev/null || true)
+        
+        if echo "$CONTROLLER_VALUE" | grep -qi "nginx"; then
+          SEARCH="nginx"
+        elif echo "$CONTROLLER_VALUE" | grep -qi "traefik"; then
+          SEARCH="traefik"
+        else
+          SEARCH="traefik|nginx"
+        fi
+
+        DS_NAME=$(kubectl get daemonset -n kube-system --show-labels | grep -iE "$SEARCH" | awk '{print $1}' | head -n 1)
+
+        if [ -n "$DS_NAME" ]; then
+          timeout 3600 kubectl rollout status daemonset -n kube-system "$DS_NAME" --timeout=60s
+          EXITCODE=$?
+        else
+          sleep 20
+          EXITCODE=1
+        fi
+
         if [ $EXITCODE -gt 0 ]; then
           timeout 3600 kubectl get pods -A
         fi
@@ -72,7 +100,7 @@ resource "terraform_data" "wait_for_nginx" {
 resource "terraform_data" "cattle-system" {
   depends_on = [
     time_sleep.settle_before_rancher,
-    terraform_data.wait_for_nginx,
+    terraform_data.wait_for_ingress,
   ]
   provisioner "local-exec" {
     command = <<-EOT
@@ -99,7 +127,7 @@ resource "terraform_data" "cattle-system" {
 resource "kubernetes_manifest" "issuer" {
   depends_on = [
     time_sleep.settle_before_rancher,
-    terraform_data.wait_for_nginx,
+    terraform_data.wait_for_ingress,
     terraform_data.cattle-system,
   ]
   manifest = {
@@ -148,7 +176,7 @@ resource "kubernetes_manifest" "issuer" {
 resource "helm_release" "rancher" {
   depends_on = [
     time_sleep.settle_before_rancher,
-    terraform_data.wait_for_nginx,
+    terraform_data.wait_for_ingress,
     terraform_data.cattle-system,
     kubernetes_manifest.issuer,
   ]
@@ -156,31 +184,58 @@ resource "helm_release" "rancher" {
   chart            = "${local.rancher_helm_repo}/${local.rancher_helm_channel}/rancher-${local.rancher_version}.tgz"
   namespace        = "cattle-system"
   create_namespace = false
-  wait             = false
-  wait_for_jobs    = false
+  wait             = true
+  wait_for_jobs    = true
   force_update     = true
   timeout          = 1800 # 30m
 
-  dynamic "set" {
-    # Terraform won't iterate over sensitive values, so we have to wrap it in nonsensitive()
-    for_each = nonsensitive(local.helm_chart_values)
-    content {
-      name  = set.key
+  set = [for k, v in local.helm_chart_values :
+    {
+      name  = k
       type  = "string"
-      value = set.value
+      value = v
     }
-  }
+  ]
 }
 
-# The Helm resource completes in less than 10 seconds
-#   at which time the tls-rancher-ingress secret is generated
-data "kubernetes_secret_v1" "certificate" {
+resource "terraform_data" "wait_for_certificate_secret" {
   depends_on = [
     time_sleep.settle_before_rancher,
-    terraform_data.wait_for_nginx,
+    terraform_data.wait_for_ingress,
     terraform_data.cattle-system,
     kubernetes_manifest.issuer,
     helm_release.rancher,
+  ]
+  provisioner "local-exec" {
+    command = <<-EOT
+      EXITCODE=1
+      ATTEMPTS=0
+      MAX=60
+      while [ $EXITCODE -gt 0 ] && [ $ATTEMPTS -lt $MAX ]; do
+        CRT_DATA=$(kubectl get secret tls-rancher-ingress -n cattle-system -o jsonpath='{.data.tls\.crt}' 2>/dev/null || true)
+
+        if [ -n "$CRT_DATA" ]; then
+          EXITCODE=0
+        else
+          sleep 10
+          ATTEMPTS=$((ATTEMPTS+1))
+        fi
+      done
+      exit $EXITCODE
+    EOT
+  }
+}
+
+
+# Wait for the tls-rancher-ingress secret to be generated by the Helm release
+data "kubernetes_secret_v1" "certificate" {
+  depends_on = [
+    time_sleep.settle_before_rancher,
+    terraform_data.wait_for_ingress,
+    terraform_data.cattle-system,
+    kubernetes_manifest.issuer,
+    helm_release.rancher,
+    terraform_data.wait_for_certificate_secret,
   ]
   metadata {
     name      = "tls-rancher-ingress"
@@ -193,10 +248,11 @@ data "kubernetes_secret_v1" "certificate" {
 resource "kubernetes_secret_v1" "rancher_tls_ca" {
   depends_on = [
     time_sleep.settle_before_rancher,
-    terraform_data.wait_for_nginx,
+    terraform_data.wait_for_ingress,
     terraform_data.cattle-system,
     kubernetes_manifest.issuer,
     helm_release.rancher,
+    terraform_data.wait_for_certificate_secret,
     data.kubernetes_secret_v1.certificate,
   ]
   metadata {
@@ -217,10 +273,11 @@ resource "kubernetes_secret_v1" "rancher_tls_ca" {
 resource "kubernetes_secret_v1" "rancher_tls_ca_additional" {
   depends_on = [
     time_sleep.settle_before_rancher,
-    terraform_data.wait_for_nginx,
+    terraform_data.wait_for_ingress,
     terraform_data.cattle-system,
     kubernetes_manifest.issuer,
     helm_release.rancher,
+    terraform_data.wait_for_certificate_secret,
     data.kubernetes_secret_v1.certificate,
   ]
   metadata {
@@ -241,10 +298,11 @@ resource "kubernetes_secret_v1" "rancher_tls_ca_additional" {
 resource "terraform_data" "wait_for_rancher" {
   depends_on = [
     time_sleep.settle_before_rancher,
-    terraform_data.wait_for_nginx,
+    terraform_data.wait_for_ingress,
     terraform_data.cattle-system,
     kubernetes_manifest.issuer,
     helm_release.rancher,
+    terraform_data.wait_for_certificate_secret,
     data.kubernetes_secret_v1.certificate,
     kubernetes_secret_v1.rancher_tls_ca,
     kubernetes_secret_v1.rancher_tls_ca_additional,
@@ -263,10 +321,11 @@ resource "terraform_data" "wait_for_rancher" {
 resource "terraform_data" "get_public_cert_info" {
   depends_on = [
     time_sleep.settle_before_rancher,
-    terraform_data.wait_for_nginx,
+    terraform_data.wait_for_ingress,
     terraform_data.cattle-system,
     kubernetes_manifest.issuer,
     helm_release.rancher,
+    terraform_data.wait_for_certificate_secret,
     data.kubernetes_secret_v1.certificate,
     kubernetes_secret_v1.rancher_tls_ca,
     kubernetes_secret_v1.rancher_tls_ca_additional,

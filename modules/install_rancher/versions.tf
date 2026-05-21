@@ -3,11 +3,11 @@ terraform {
   required_providers {
     file = {
       source  = "rancher/file"
-      version = ">= 2.2.0"
+      version = ">= 2.4.1"
     }
     helm = {
       source  = "hashicorp/helm"
-      version = "2.14"
+      version = ">= 3.1.1"
     }
     random = {
       source  = "hashicorp/random"
@@ -15,7 +15,7 @@ terraform {
     }
     time = {
       source  = "hashicorp/time"
-      version = ">= 0.12.0"
+      version = ">= 0.13.1"
     }
     kubernetes = {
       source  = "hashicorp/kubernetes"

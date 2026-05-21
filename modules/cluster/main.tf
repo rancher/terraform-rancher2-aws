@@ -29,7 +29,7 @@ locals {
   install_method       = var.install_method
   download             = (local.install_method == "tar" ? "download" : "skip")
   cni                  = var.cni
-  cni_file             = (local.cni == "cilium" ? "${path.root}/cilium.yaml" : (local.cni == "calico" ? "${path.root}/calico.yaml" : ""))
+  cni_file             = (local.cni == "cilium" ? "${path.module}/cilium.yaml" : (local.cni == "calico" ? "${path.module}/calico.yaml" : ""))
   cni_config           = (local.cni_file != "" ? file(local.cni_file) : "")
   api_config           = <<-EOT
     node-taint:
@@ -163,12 +163,12 @@ module "deploy_initial_node" {
     local.download,
     local.rke2_version,
   ]))
-  template_files = [
-    join("/", [path.module, "node_template", "main.tf"]),
-    join("/", [path.module, "node_template", "outputs.tf"]),
-    join("/", [path.module, "node_template", "variables.tf"]),
-    join("/", [path.module, "node_template", "versions.tf"]),
-  ]
+  template_files = {
+    "./main.tf"      = join("/", [path.module, "node_template", "main.tf"])
+    "./outputs.tf"   = join("/", [path.module, "node_template", "outputs.tf"])
+    "./variables.tf" = join("/", [path.module, "node_template", "variables.tf"])
+    "./versions.tf"  = join("/", [path.module, "node_template", "versions.tf"])
+  }
   inputs = <<-EOT
     identifier                          = "${local.identifier}"
     owner                               = "${local.owner}"
@@ -200,52 +200,67 @@ module "deploy_initial_node" {
     server_access_addresses             = "${base64encode(jsonencode(local.server_access_addresses))}"
     server_user                         = "${base64encode(jsonencode({
   user                     = local.username
+  timeout                  = 10
   aws_keypair_use_strategy = "select"
   ssh_key_name             = local.ssh_key_name
   public_ssh_key           = local.ssh_key
-  user_workfolder          = strcontains(each.value.os, "cis") ? "/var/tmp" : "/home/${local.username}"
-  timeout                  = 10
+  user_workfolder = (
+    strcontains(each.value.os, "cis-rhel-8") ? "/var/tmp" :
+    strcontains(each.value.os, "cis-rhel-9") ? "/opt/bootstrap" :
+    "/home/${local.username}"
+  )
 }))}"
-    server_add_domain        = false
-    install_use_strategy     = "${local.install_method}"
-    local_file_use_strategy  = "${local.download}"
-    local_file_path          = "${each.value.deploy_path}/configs"
-    install_rke2_version     = "${local.rke2_version}"
-    install_remote_file_path = "${join("/", [(strcontains(each.value.os, "cis") ? "/var/tmp" : "/home/${local.username}"), "rke2"])}"
-    install_prep_script      = "${base64encode((
-strcontains(each.value.os, "sles") ? templatefile("${path.module}/suse_prep.sh", {
-  install_method = local.install_method,
-  ip_family      = local.ip_family,
-  image          = each.value.os,
-}) :
-strcontains(each.value.os, "rhel") ? templatefile("${path.module}/rhel_prep.sh", {
-  install_method = local.install_method,
-  ip_family      = local.ip_family,
-  image          = each.value.os,
-}) :
-strcontains(each.value.os, "ubuntu") ? templatefile("${path.module}/ubuntu_prep.sh", {
-  install_method = local.install_method,
-  ip_family      = local.ip_family,
-  image          = each.value.os,
-}) :
-(strcontains(each.value.os, "sle-micro-60") || strcontains(each.value.os, "sle-micro-61")) ? templatefile("${path.module}/slem60_61_prep.sh", {
-  install_method = local.install_method,
-  ip_family      = local.ip_family,
-  image          = each.value.os,
-}) :
-""
+    server_add_domain                   = false
+    install_use_strategy                = "${local.install_method}"
+    local_file_use_strategy             = "${local.download}"
+    local_file_path                     = "${each.value.deploy_path}/configs"
+    install_rke2_version                = "${local.rke2_version}"
+    install_remote_file_path            = "${join("/", [
+(
+  strcontains(each.value.os, "cis-rhel-8") ? "/var/tmp" :
+  strcontains(each.value.os, "cis-rhel-9") ? "/opt/bootstrap" :
+  "/home/${local.username}"
+), "rke2"]
+)}"
+    install_prep_script                 = "${base64encode((
+  strcontains(each.value.os, "sles") ? templatefile("${path.module}/suse_prep.sh", {
+    install_method = local.install_method,
+    ip_family      = local.ip_family,
+    image          = each.value.os,
+  }) :
+  strcontains(each.value.os, "rhel") ? templatefile("${path.module}/rhel_prep.sh", {
+    install_method = local.install_method,
+    ip_family      = local.ip_family,
+    image          = each.value.os,
+  }) :
+  strcontains(each.value.os, "ubuntu") ? templatefile("${path.module}/ubuntu_prep.sh", {
+    install_method = local.install_method,
+    ip_family      = local.ip_family,
+    image          = each.value.os,
+  }) :
+  strcontains(each.value.os, "multi-linux") ? templatefile("${path.module}/multi-linux_prep.sh", {
+    install_method = local.install_method,
+    ip_family      = local.ip_family,
+    image          = each.value.os,
+  }) :
+  strcontains(each.value.os, "sle-micro") ? templatefile("${path.module}/sle-micro_prep.sh", {
+    install_method = local.install_method,
+    ip_family      = local.ip_family,
+    image          = each.value.os,
+  }) :
+  ""
+  ))}"
+    install_role                        = "${(strcontains(each.value.type, "worker") ? "agent" : "server")}"
+    config_supplied_content             = "${base64encode((
+  strcontains(each.value.type, "all-in-one") ? local.all_in_one_config :
+  strcontains(each.value.type, "control-plane") ? local.control_plane_config :
+  strcontains(each.value.type, "api") ? local.api_config :
+  strcontains(each.value.type, "database") ? local.database_config :
+  "" # worker nodes don't need additional config
 ))}"
-    install_role            = "${(strcontains(each.value.type, "worker") ? "agent" : "server")}"
-    config_supplied_content = "${base64encode((
-strcontains(each.value.type, "all-in-one") ? local.all_in_one_config :
-strcontains(each.value.type, "control-plane") ? local.control_plane_config :
-strcontains(each.value.type, "api") ? local.api_config :
-strcontains(each.value.type, "database") ? local.database_config :
-"" # worker nodes don't need additional config
-))}"
-    config_supplied_name = "51-config.yaml"
-    config_join_strategy = "skip"
-    retrieve_kubeconfig  = "true"
+    config_supplied_name                = "51-config.yaml"
+    config_join_strategy                = "skip"
+    retrieve_kubeconfig                 = "true"
   EOT
 }
 
@@ -285,12 +300,12 @@ module "deploy_additional_nodes" {
     local.download,
     local.rke2_version,
   ]))
-  template_files = [
-    join("/", [path.module, "node_template", "main.tf"]),
-    join("/", [path.module, "node_template", "outputs.tf"]),
-    join("/", [path.module, "node_template", "variables.tf"]),
-    join("/", [path.module, "node_template", "versions.tf"]),
-  ]
+  template_files = {
+    "./main.tf"      = join("/", [path.module, "node_template", "main.tf"])
+    "./outputs.tf"   = join("/", [path.module, "node_template", "outputs.tf"])
+    "./variables.tf" = join("/", [path.module, "node_template", "variables.tf"])
+    "./versions.tf"  = join("/", [path.module, "node_template", "versions.tf"])
+  }
   inputs = <<-EOT
     identifier                  = "${local.identifier}"
     owner                       = "${local.owner}"
@@ -317,48 +332,63 @@ module "deploy_additional_nodes" {
     server_access_addresses             = "${base64encode(jsonencode(local.server_access_addresses))}"
     server_user                         = "${base64encode(jsonencode({
   user                     = local.username
+  timeout                  = 10
   aws_keypair_use_strategy = "select"
   ssh_key_name             = local.ssh_key_name
   public_ssh_key           = local.ssh_key
-  user_workfolder          = strcontains(each.value.os, "cis") ? "/var/tmp" : "/home/${local.username}"
-  timeout                  = 10
+  user_workfolder = (
+    strcontains(each.value.os, "cis-rhel-8") ? "/var/tmp" :
+    strcontains(each.value.os, "cis-rhel-9") ? "/opt/bootstrap" :
+    "/home/${local.username}"
+  )
 }))}"
     server_add_domain        = false
     install_use_strategy     = "${local.install_method}"
     local_file_use_strategy  = "${local.download}"
     local_file_path          = "${each.value.deploy_path}/configs"
     install_rke2_version     = "${local.rke2_version}"
-    install_remote_file_path = "${join("/", [(strcontains(each.value.os, "cis") ? "/var/tmp" : "/home/${local.username}"), "rke2"])}"
+    install_remote_file_path = "${join("/", [
+(
+  strcontains(each.value.os, "cis-rhel-8") ? "/var/tmp" :
+  strcontains(each.value.os, "cis-rhel-9") ? "/opt/bootstrap" :
+  "/home/${local.username}"
+), "rke2"]
+)}"
     install_prep_script      = "${base64encode((
-strcontains(each.value.os, "sles") ? templatefile("${path.module}/suse_prep.sh", {
-  install_method = local.install_method,
-  ip_family      = local.ip_family,
-  image          = each.value.os,
-}) :
-strcontains(each.value.os, "rhel") ? templatefile("${path.module}/rhel_prep.sh", {
-  install_method = local.install_method,
-  ip_family      = local.ip_family,
-  image          = each.value.os,
-}) :
-strcontains(each.value.os, "ubuntu") ? templatefile("${path.module}/ubuntu_prep.sh", {
-  install_method = local.install_method,
-  ip_family      = local.ip_family,
-  image          = each.value.os,
-}) :
-(strcontains(each.value.os, "sle-micro-60") || strcontains(each.value.os, "sle-micro-61")) ? templatefile("${path.module}/slem60_61_prep.sh", {
-  install_method = local.install_method,
-  ip_family      = local.ip_family,
-  image          = each.value.os,
-}) :
-""
-))}"
+  strcontains(each.value.os, "sles") ? templatefile("${path.module}/suse_prep.sh", {
+    install_method = local.install_method,
+    ip_family      = local.ip_family,
+    image          = each.value.os,
+  }) :
+  strcontains(each.value.os, "rhel") ? templatefile("${path.module}/rhel_prep.sh", {
+    install_method = local.install_method,
+    ip_family      = local.ip_family,
+    image          = each.value.os,
+  }) :
+  strcontains(each.value.os, "ubuntu") ? templatefile("${path.module}/ubuntu_prep.sh", {
+    install_method = local.install_method,
+    ip_family      = local.ip_family,
+    image          = each.value.os,
+  }) :
+  strcontains(each.value.os, "multi-linux") ? templatefile("${path.module}/multi-linux_prep.sh", {
+    install_method = local.install_method,
+    ip_family      = local.ip_family,
+    image          = each.value.os,
+  }) :
+  strcontains(each.value.os, "sle-micro") ? templatefile("${path.module}/sle-micro_prep.sh", {
+    install_method = local.install_method,
+    ip_family      = local.ip_family,
+    image          = each.value.os,
+  }) :
+  ""
+  ))}"
     install_role            = "${(strcontains(each.value.type, "worker") ? "agent" : "server")}"
     config_supplied_content = "${base64encode((
-strcontains(each.value.type, "all-in-one") ? local.all_in_one_config :
-strcontains(each.value.type, "control-plane") ? local.control_plane_config :
-strcontains(each.value.type, "api") ? local.api_config :
-strcontains(each.value.type, "database") ? local.database_config :
-"" # worker nodes don't need additional config
+  strcontains(each.value.type, "all-in-one") ? local.all_in_one_config :
+  strcontains(each.value.type, "control-plane") ? local.control_plane_config :
+  strcontains(each.value.type, "api") ? local.api_config :
+  strcontains(each.value.type, "database") ? local.database_config :
+  "" # worker nodes don't need additional config
 ))}"
     config_supplied_name = "51-config.yaml"
     config_join_strategy = "join"
@@ -367,6 +397,10 @@ strcontains(each.value.type, "database") ? local.database_config :
     config_cluster_cidr  = "${base64encode(jsonencode(local.ino.output.cluster_cidr))}"
     config_service_cidr  = "${base64encode(jsonencode(local.ino.output.service_cidr))}"
   EOT
+# add a 20s to 10 min jitter to prevent cache corruption and resource overrun
+jitter_min = 20
+jitter_max = 600
+timeout    = "12m"
 }
 
 resource "file_local" "kubeconfig" {
