@@ -50,6 +50,10 @@ variable "rke2_version" {
     The version of rke2 powering the cluster.
     This is used for determining ingress configuration.
   EOT
+  validation {
+    condition     = can(regex("^v?[0-9]+\\.[0-9]+\\.[0-9]+.*$", var.rke2_version))
+    error_message = "The rke2_version must be a valid version string, e.g., 'v1.28.4+rke2r1'."
+  }
 }
 variable "rancher_helm_repo" {
   type        = string

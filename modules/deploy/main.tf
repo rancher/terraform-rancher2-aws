@@ -51,7 +51,7 @@ locals {
 
 resource "file_local_directory" "deploy_path" {
   path        = local.deploy_path
-  permissions = "0775"
+  permissions = "0755"
 }
 
 resource "file_local_directory" "tf_data_dir" {
@@ -60,7 +60,7 @@ resource "file_local_directory" "tf_data_dir" {
   ]
   count       = (local.tf_data_dir != local.deploy_path ? 1 : 0)
   path        = local.tf_data_dir
-  permissions = "0775"
+  permissions = "0755"
 }
 
 ### Template Files ###
@@ -200,7 +200,7 @@ resource "file_local" "generate_files" {
   directory   = dirname("${local.deploy_path}/${each.key}")
   name        = basename(each.key)
   contents    = each.value
-  permissions = "0644"
+  permissions = "0600"
 }
 
 ## Deploy ##
