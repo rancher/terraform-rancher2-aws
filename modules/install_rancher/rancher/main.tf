@@ -23,7 +23,7 @@ locals {
     "ingress.enabled"                                     = "true"
     "ingress.tls.source"                                  = "letsEncrypt"
     "tls"                                                 = "ingress"
-    "letsEncrypt.ingress.class"                           = (local.rke2_minor >= 35 ? "traefik" : "nginx")
+    "letsEncrypt.ingress.class"                           = (local.rke2_minor >= 36 ? "traefik" : "nginx")
     "letsEncrypt.environment"                             = "production"
     "letsEncrypt.email"                                   = local.email
     "certmanager.version"                                 = local.cert_manager_version

@@ -32,7 +32,7 @@ locals {
   owner                = var.owner
   rke2_version         = var.rke2_version
   rke2_minor           = tonumber(split(".", local.rke2_version)[1])
-  default_ingress      = local.rke2_minor >= 35 ? "traefik" : "nginx"
+  default_ingress      = local.rke2_minor >= 36 ? "traefik" : "nginx"
   local_file_path      = var.file_path
   runner_ip            = chomp(data.http.myip.response_body) # "runner" is the server running Terraform
   rancher_version      = var.rancher_version

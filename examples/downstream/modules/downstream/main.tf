@@ -24,6 +24,8 @@ locals {
   ssh_access_user = (var.direct_node_access != null ? var.direct_node_access.ssh_access_user : "fake")
   # rke2 info
   rke2_version             = var.rke2_version
+  rke2_minor               = tonumber(split(".", local.rke2_version)[1])
+  default_ingress          = local.rke2_minor >= 36 ? "traefik" : "nginx"
   rke2_ingress_config_name = "rke2-ingress-config"
   rke2_ingress_config_key  = "config"
 }
@@ -108,7 +110,7 @@ resource "terraform_data" "ingress_config" {
         annotations:
           rke.cattle.io/object-authorized-for-clusters: ${local.cluster_name}
       data:
-        "${local.rke2_ingress_config_key}": "ingress-controller: traefik"
+        "${local.rke2_ingress_config_key}": "ingress-controller: ${local.default_ingress}"
       EOF
     EOT
   }
@@ -152,7 +154,7 @@ resource "rancher2_cluster_v2" "rke2_cluster" {
           name = local.rke2_ingress_config_name
           items {
             key  = local.rke2_ingress_config_key
-            path = "/etc/rancher/rke2/config.yaml.d/51-rke2-ingress-traefik.yaml"
+            path = "/etc/rancher/rke2/config.yaml.d/51-rke2-ingress.yaml"
           }
         }
       }
