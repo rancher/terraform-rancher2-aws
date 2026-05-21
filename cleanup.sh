@@ -146,6 +146,7 @@ for id in $resources_ids; do
       if [ -z "$hz" ]; then
         continue
       fi
+      hz="${hz#/hostedzone/}"
       while read -r record; do
         if [ -z "$record" ]; then
           continue

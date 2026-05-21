@@ -16,7 +16,7 @@ locals {
   # Generate all parent directories needed (including nested levels)
   # file_directory will create intermediate directories if they don't exist
   all_parent_dirs = toset([
-    for k, v in local.template_file_map : dirname(k) if(
+    for k in concat(keys(local.template_file_map), keys(local.generated_files)) : dirname(k) if(
       dirname(k) != "" &&
       dirname(k) != "." &&
       dirname(k) != ".." &&
@@ -200,7 +200,7 @@ resource "file_local" "generate_files" {
   directory   = dirname("${local.deploy_path}/${each.key}")
   name        = basename(each.key)
   contents    = each.value
-  permissions = "0755"
+  permissions = "0644"
 }
 
 ## Deploy ##

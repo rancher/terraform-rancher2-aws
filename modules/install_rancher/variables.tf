@@ -43,6 +43,7 @@ variable "rancher_version" {
   description = <<-EOT
     The version of rancher to install.
   EOT
+  default     = "2.11.2"
 }
 variable "rke2_version" {
   type        = string
@@ -50,6 +51,7 @@ variable "rke2_version" {
     The version of rke2 powering the cluster.
     This is used for determining ingress configuration.
   EOT
+  default     = ""
 }
 variable "rancher_helm_repo" {
   type        = string
