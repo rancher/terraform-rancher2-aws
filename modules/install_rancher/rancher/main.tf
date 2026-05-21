@@ -7,7 +7,7 @@ locals {
   rke2_version              = var.rke2_version
   rke2_minor                = tonumber(split(".", local.rke2_version)[1])
   helm_chart_use_strategy   = var.rancher_helm_chart_use_strategy
-  rancher_helm_chart_values = try(jsondecode(base64decode(var.rancher_helm_chart_values)), {})
+  rancher_helm_chart_values = var.rancher_helm_chart_values != null && var.rancher_helm_chart_values != "" ? jsondecode(base64decode(var.rancher_helm_chart_values)) : {}
   default_hc_values = {
     "hostname"                                            = local.rancher_domain
     "replicas"                                            = "3"

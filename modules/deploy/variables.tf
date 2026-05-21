@@ -6,7 +6,7 @@ variable "inputs" {
   default     = ""
 }
 variable "template_files" {
-  type        = map(any)
+  type        = map(string)
   description = <<-EOT
     Map of relative path => absolute path for files that will be copied to the deploy path.
     The key is the relative path (used in deploy_path), the value is the absolute source path.
@@ -14,7 +14,7 @@ variable "template_files" {
   EOT
 }
 variable "generated_files" {
-  type        = map(any)
+  type        = map(string)
   description = <<-EOT
     Map of file name to content, it will be placed in the deploy path.
   EOT
@@ -45,7 +45,7 @@ variable "plugin_cache_path" {
   default     = ""
 }
 variable "environment_variables" {
-  type        = map(any)
+  type        = map(string)
   description = <<-EOT
     Map of environment variables to set before running Terraform.
     Key is the name and Value is the value of the variable.
