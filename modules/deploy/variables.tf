@@ -113,6 +113,10 @@ variable "jitter_min" {
       file cache override corruption from multiple terraform instances running at the same time.
   EOT
   default     = 0
+  validation {
+    condition     = var.jitter_min >= 0
+    error_message = "The jitter_min value must be greater than or equal to 0."
+  }
 }
 variable "jitter_max" {
   type        = number
@@ -122,4 +126,8 @@ variable "jitter_max" {
       file cache override corruption from multiple terraform instances running at the same time.
   EOT
   default     = 0
+  validation {
+    condition     = var.jitter_max >= 0 && var.jitter_max >= var.jitter_min
+    error_message = "The jitter_max value must be greater than or equal to 0, and greater than or equal to jitter_min."
+  }
 }
