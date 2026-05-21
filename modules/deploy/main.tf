@@ -60,7 +60,7 @@ resource "terraform_data" "validate_inputs" {
 
 resource "file_local_directory" "deploy_path" {
   depends_on = [
-    terraform_data.validate_jitter,
+    terraform_data.validate_inputs,
   ]
   path        = local.deploy_path
   permissions = "0755"
