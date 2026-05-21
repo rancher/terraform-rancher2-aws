@@ -49,7 +49,19 @@ locals {
   jitter_max   = var.jitter_max
 }
 
+resource "terraform_data" "validate_inputs" {
+  lifecycle {
+    precondition {
+      condition     = var.jitter_max >= var.jitter_min
+      error_message = "The jitter_max value must be greater than or equal to jitter_min."
+    }
+  }
+}
+
 resource "file_local_directory" "deploy_path" {
+  depends_on = [
+    terraform_data.validate_jitter,
+  ]
   path        = local.deploy_path
   permissions = "0755"
 }
