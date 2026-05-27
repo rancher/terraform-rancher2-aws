@@ -3,6 +3,7 @@ package downstream
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	aws "github.com/gruntwork-io/terratest/modules/aws"
@@ -30,9 +31,9 @@ func TestDownstreamSplitrole(t *testing.T) {
 		t.Fatalf("Error getting git root directory: %v", err)
 	}
 
-	exampleDir := repoRoot + "/examples/" + directory
-	testDir := repoRoot + "/test/tests/data/" + id
-	pluginsDir := filepath.Join(repoRoot, "test/tests/data", id, "plugins")
+	exampleDir := filepath.Join(repoRoot, "examples", directory)
+	testDir := filepath.Join(repoRoot, "test/tests/data", id)
+	pluginsDir := filepath.Join(testDir, "plugins")
 
 	err = util.CreateTestDirectories(t, id)
 	if err != nil {
@@ -52,7 +53,7 @@ func TestDownstreamSplitrole(t *testing.T) {
 	}
 	keyPairObj := keyPair.KeyPair
 	privateKey := keyPairObj.PrivateKey
-	publicKey := keyPairObj.PublicKey
+	publicKey := strings.TrimSuffix(keyPairObj.PublicKey, "\n")
 	keyPairName := keyPair.Name
 
 	err = os.WriteFile(testDir+"/id_rsa", []byte(privateKey), 0600)
@@ -113,7 +114,6 @@ func TestDownstreamSplitrole(t *testing.T) {
 			"aws_region":             region,
 			"acme_server_url":        acme_server_url,
 			"downstream_node_config": "split-role-node-config",
-			"data_dir":               testDir,
 		},
 		// Environment variables to set when running Terraform
 		EnvVars: map[string]string{
@@ -123,7 +123,7 @@ func TestDownstreamSplitrole(t *testing.T) {
 			"TF_PLUGIN_CACHE_DIR": pluginsDir,
 			"TF_IN_AUTOMATION":    "1",
 			"KUBECONFIG":          testDir + "/kubeconfig",
-			"KUBE_CONFIG_PATH":    testDir,
+			"KUBE_CONFIG_PATH":    testDir + "/kubeconfig",
 			"TF_CLI_ARGS_plan":    "-no-color -state=" + testDir + "/tfstate",
 			"TF_CLI_ARGS_apply":   "-no-color -state=" + testDir + "/tfstate",
 			"TF_CLI_ARGS_destroy": "-no-color -state=" + testDir + "/tfstate",
