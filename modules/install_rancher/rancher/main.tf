@@ -184,8 +184,8 @@ resource "helm_release" "rancher" {
   chart            = "${local.rancher_helm_repo}/${local.rancher_helm_channel}/rancher-${local.rancher_version}.tgz"
   namespace        = "cattle-system"
   create_namespace = false
-  wait             = true
-  wait_for_jobs    = true
+  wait             = false # if the helm release takes too long we don't want this resource to be recreated, don't wait
+  wait_for_jobs    = false
   force_update     = true
   timeout          = 1800 # 30m
 

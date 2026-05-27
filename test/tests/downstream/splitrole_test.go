@@ -21,7 +21,7 @@ func TestDownstreamSplitrole(t *testing.T) {
 	accessKey := util.GetAwsAccessKey()
 	secretKey := util.GetAwsSecretKey()
 	sessionToken := util.GetAwsSessionToken()
-	directory := "downstream_splitrole"
+	directory := "downstream"
 	owner := "terraform-ci@suse.com"
 	acme_server_url := util.SetAcmeServer(t)
 
@@ -98,20 +98,22 @@ func TestDownstreamSplitrole(t *testing.T) {
 	terraformOptions := terraform.WithDefaultRetryableErrors(t, &terraform.Options{
 		TerraformDir: exampleDir,
 		// Variables to pass to our Terraform code using -var options
-		Vars: map[string]interface{}{
-			"identifier":            id,
-			"owner":                 owner,
-			"key_name":              keyPairName,
-			"key":                   publicKey,
-			"zone":                  os.Getenv("ZONE"),
-			"rke2_version":          rke2Version,
-			"rancher_version":       rancherVersion,
-			"file_path":             testDir,
-			"aws_access_key_id":     accessKey,
-			"aws_secret_access_key": secretKey,
-			"aws_session_token":     sessionToken,
-			"aws_region":            region,
-			"acme_server_url":       acme_server_url,
+		Vars: map[string]any{
+			"identifier":             id,
+			"owner":                  owner,
+			"key_name":               keyPairName,
+			"key":                    publicKey,
+			"zone":                   os.Getenv("ZONE"),
+			"rke2_version":           rke2Version,
+			"rancher_version":        rancherVersion,
+			"file_path":              testDir,
+			"aws_access_key_id":      accessKey,
+			"aws_secret_access_key":  secretKey,
+			"aws_session_token":      sessionToken,
+			"aws_region":             region,
+			"acme_server_url":        acme_server_url,
+			"downstream_node_config": "split-role-node-config",
+			"data_dir":               testDir,
 		},
 		// Environment variables to set when running Terraform
 		EnvVars: map[string]string{
@@ -123,7 +125,7 @@ func TestDownstreamSplitrole(t *testing.T) {
 			"KUBECONFIG":          testDir + "/kubeconfig",
 			"KUBE_CONFIG_PATH":    testDir,
 			"TF_CLI_ARGS_plan":    "-no-color -state=" + testDir + "/tfstate",
-			"TF_CLI_ARGS_apply":   "-no-color -state=" + testDir + "/tfstate -parallelism=5",
+			"TF_CLI_ARGS_apply":   "-no-color -state=" + testDir + "/tfstate",
 			"TF_CLI_ARGS_destroy": "-no-color -state=" + testDir + "/tfstate",
 			"TF_CLI_ARGS_output":  "-no-color -state=" + testDir + "/tfstate",
 		},

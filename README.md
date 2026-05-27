@@ -71,7 +71,7 @@ If you are using remote state files and would like to be able to pass a backend 
 
 #### Paradigms and Expectations
 
-Please make sure to read [terraform.md](./terraform.md) to understand the paradigms and expectations that this module has for development.
+Please make sure to read .claude/rules/terraform.md to understand the paradigms and expectations that this module has for development.
 
 #### Environment
 

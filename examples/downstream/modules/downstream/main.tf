@@ -12,39 +12,108 @@ locals {
   # networking info
   vpc_id                          = var.vpc_id
   subnet_id                       = var.subnet_id
-  downstream_security_group_id    = var.downstream_security_group_id
   downstream_security_group_name  = var.downstream_security_group_name
   load_balancer_security_group_id = var.load_balancer_security_group_id
   # node info
   node_info       = var.node_info
-  node_count      = sum([for i in range(length(local.node_info)) : local.node_info[keys(local.node_info)[i]].quantity])
   node_id         = "${local.cluster_name}-nodes"
-  runner_ip       = (var.direct_node_access != null ? var.direct_node_access.runner_ip : "10.1.1.1") # the IP running Terraform
   ssh_access_key  = (var.direct_node_access != null ? var.direct_node_access.ssh_access_key : "fake123abc")
   ssh_access_user = (var.direct_node_access != null ? var.direct_node_access.ssh_access_user : "fake")
   # rke2 info
-  rke2_version             = var.rke2_version
-  rke2_minor               = tonumber(split(".", local.rke2_version)[1])
-  default_ingress          = local.rke2_minor >= 36 ? "traefik" : "nginx"
-  rke2_ingress_config_name = "rke2-ingress-config"
-  rke2_ingress_config_key  = "config"
+  rke2_version = var.rke2_version
+}
+
+resource "aws_eip" "nat" {
+  domain = "vpc"
+  tags = {
+    Name  = "${local.cluster_name}-nat-eip"
+    Owner = local.owner
+    Id    = local.identifier
+  }
+}
+
+resource "aws_nat_gateway" "nat" {
+  depends_on = [
+    aws_eip.nat
+  ]
+  allocation_id = aws_eip.nat.id
+  subnet_id     = local.subnet_id
+  tags = {
+    Name  = "${local.cluster_name}-nat"
+    Owner = local.owner
+    Id    = local.identifier
+  }
+}
+
+resource "aws_subnet" "private" {
+  vpc_id            = local.vpc_id
+  cidr_block        = var.private_subnet_cidr
+  availability_zone = "${local.aws_region}${local.aws_region_letter}"
+  tags = {
+    Name  = "${local.cluster_name}-private"
+    Owner = local.owner
+    Id    = local.identifier
+  }
+}
+
+resource "aws_route_table" "private" {
+  vpc_id = local.vpc_id
+  tags = {
+    Name  = "${local.cluster_name}-private-rt"
+    Owner = local.owner
+    Id    = local.identifier
+  }
+}
+
+resource "aws_route" "private_nat_gateway" {
+  depends_on = [
+    aws_route_table.private,
+    aws_nat_gateway.nat,
+  ]
+  route_table_id         = aws_route_table.private.id
+  destination_cidr_block = "0.0.0.0/0"
+  nat_gateway_id         = aws_nat_gateway.nat.id
+}
+
+resource "aws_route_table_association" "private" {
+  depends_on = [
+    aws_subnet.private,
+    aws_route_table.private,
+  ]
+  subnet_id      = aws_subnet.private.id
+  route_table_id = aws_route_table.private.id
+}
+
+resource "aws_vpc_security_group_ingress_rule" "downstream_public_ingress_loadbalancer" {
+  depends_on = [
+    aws_eip.nat,
+    aws_nat_gateway.nat,
+    aws_subnet.private,
+    aws_route_table.private,
+    aws_route.private_nat_gateway,
+    aws_route_table_association.private,
+  ]
+  security_group_id = local.load_balancer_security_group_id
+  ip_protocol       = "-1"
+  cidr_ipv4         = "${aws_eip.nat.public_ip}/32"
 }
 
 resource "rancher2_machine_config_v2" "nodes" {
   for_each      = local.node_info
   generate_name = "${each.key}-${local.cluster_name}"
   amazonec2_config {
-    ami            = each.value.aws_ami_id
-    region         = local.aws_region
-    security_group = [local.downstream_security_group_name]
-    subnet_id      = local.subnet_id
-    vpc_id         = local.vpc_id
-    zone           = local.aws_region_letter
-    session_token  = local.aws_session_token
-    instance_type  = each.value.aws_instance_type
-    tags           = join(",", ["Id", local.identifier, "Owner", local.owner, "NodeID", local.node_id])
-    ssh_user       = each.value.ami_ssh_user
-    userdata       = <<-EOT
+    ami                 = each.value.aws_ami_id
+    region              = local.aws_region
+    security_group      = [local.downstream_security_group_name]
+    subnet_id           = aws_subnet.private.id
+    vpc_id              = local.vpc_id
+    zone                = local.aws_region_letter
+    use_private_address = true
+    session_token       = local.aws_session_token
+    instance_type       = each.value.aws_instance_type
+    tags                = join(",", ["Id", local.identifier, "Owner", local.owner, "NodeID", local.node_id])
+    ssh_user            = each.value.ami_ssh_user
+    userdata            = <<-EOT
       #cloud-config
 
       merge_how:
@@ -81,46 +150,17 @@ resource "terraform_data" "patch_machine_configs" {
     EOT
   }
 }
-# resource "terraform_data" "cluster_destroy_helpers" {
-#   depends_on = [
-#     rancher2_machine_config_v2.nodes,
-#     terraform_data.patch_machine_configs,
-#   ]
-#   provisioner "local-exec" {
-#     when    = destroy
-#     command = <<-EOT
-#       # here should be the removal of finalizers for the cluster objects
-#     EOT
-#   }
-# }
-resource "terraform_data" "ingress_config" {
-  depends_on = [
-    rancher2_machine_config_v2.nodes,
-    terraform_data.patch_machine_configs,
-  ]
-  provisioner "local-exec" {
-    # https://ranchermanager.docs.rancher.com/reference-guides/cluster-configuration/rancher-server-configuration/rke2-cluster-configuration#machineselectorfiles
-    command = <<-EOT
-      ${path.module}/applyK8sManifest.sh <<EOF
-      apiVersion: v1
-      kind: ConfigMap
-      metadata:
-        name: "${local.rke2_ingress_config_name}"
-        namespace: "fleet-default"
-        annotations:
-          rke.cattle.io/object-authorized-for-clusters: ${local.cluster_name}
-      data:
-        "${local.rke2_ingress_config_key}": "ingress-controller: ${local.default_ingress}"
-      EOF
-    EOT
-  }
-}
 resource "rancher2_cluster_v2" "rke2_cluster" {
   depends_on = [
+    aws_eip.nat,
+    aws_nat_gateway.nat,
+    aws_subnet.private,
+    aws_route_table.private,
+    aws_route.private_nat_gateway,
+    aws_route_table_association.private,
+    aws_vpc_security_group_ingress_rule.downstream_public_ingress_loadbalancer,
     rancher2_machine_config_v2.nodes,
     terraform_data.patch_machine_configs,
-    # terraform_data.cluster_destroy_helpers,
-    terraform_data.ingress_config,
   ]
   name                  = local.cluster_name
   kubernetes_version    = local.rke2_version
@@ -144,84 +184,58 @@ resource "rancher2_cluster_v2" "rke2_cluster" {
         }
       }
     }
-    machine_selector_files {
-      machine_label_selector {
-        match_expressions {}
-        match_labels = {}
-      }
-      file_sources {
-        configmap {
-          name = local.rke2_ingress_config_name
-          items {
-            key  = local.rke2_ingress_config_key
-            path = "/etc/rancher/rke2/config.yaml.d/51-rke2-ingress.yaml"
-          }
-        }
-      }
-    }
   }
   timeouts {
     create = "120m"
   }
 }
 
-module "get_instances" {
-  source = "../get_instances"
-  depends_on = [
-    rancher2_machine_config_v2.nodes,
-    terraform_data.patch_machine_configs,
-    # terraform_data.cluster_destroy_helpers,
-    terraform_data.ingress_config,
-  ]
-  node_id    = local.node_id
-  node_count = local.node_count
-  max_wait   = 1200 # 20 minutes
-}
-
-# this allows the load balancer to accept connections initiated by the downstream cluster's public ip addresses
-# this weird in-flight grab of the nodes and manipulating the security groups is not good,
-#  but the only way to allow ingress when the downstream cluster has public IPs
-# FYI: security group references only work with private IPs
-resource "aws_vpc_security_group_ingress_rule" "downstream_public_ingress_loadbalancer" {
-  depends_on = [
-    rancher2_machine_config_v2.nodes,
-    terraform_data.patch_machine_configs,
-    # terraform_data.cluster_destroy_helpers,
-    terraform_data.ingress_config,
-    module.get_instances,
-  ]
-  for_each          = module.get_instances.node_ips
-  security_group_id = local.load_balancer_security_group_id
-  ip_protocol       = "-1"
-  cidr_ipv4         = "${each.value}/32"
-}
-
-# this allows the runner to access the downstream cluster's nodes
-resource "aws_vpc_security_group_ingress_rule" "downstream_public_ingress_runner" {
-  depends_on = [
-    rancher2_machine_config_v2.nodes,
-    terraform_data.patch_machine_configs,
-    # terraform_data.cluster_destroy_helpers,
-    terraform_data.ingress_config,
-    module.get_instances,
-  ]
-  security_group_id = local.downstream_security_group_id
-  ip_protocol       = "tcp"
-  from_port         = 22
-  to_port           = 22
-  cidr_ipv4         = "${local.runner_ip}/32"
-}
-
 resource "rancher2_cluster_sync" "sync" {
   depends_on = [
+    aws_eip.nat,
+    aws_nat_gateway.nat,
+    aws_subnet.private,
+    aws_route_table.private,
+    aws_route.private_nat_gateway,
+    aws_route_table_association.private,
+    aws_vpc_security_group_ingress_rule.downstream_public_ingress_loadbalancer,
     rancher2_machine_config_v2.nodes,
     terraform_data.patch_machine_configs,
-    # terraform_data.cluster_destroy_helpers,
-    terraform_data.ingress_config,
     rancher2_cluster_v2.rke2_cluster,
-    module.get_instances,
-    aws_vpc_security_group_ingress_rule.downstream_public_ingress_loadbalancer,
-    aws_vpc_security_group_ingress_rule.downstream_public_ingress_runner,
   ]
   cluster_id = rancher2_cluster_v2.rke2_cluster.cluster_v1_id
+}
+
+data "rancher2_cluster" "downstream" {
+  depends_on = [
+    aws_eip.nat,
+    aws_nat_gateway.nat,
+    aws_subnet.private,
+    aws_route_table.private,
+    aws_route.private_nat_gateway,
+    aws_route_table_association.private,
+    aws_vpc_security_group_ingress_rule.downstream_public_ingress_loadbalancer,
+    rancher2_machine_config_v2.nodes,
+    terraform_data.patch_machine_configs,
+    rancher2_cluster_v2.rke2_cluster,
+    rancher2_cluster_sync.sync,
+  ]
+  name = local.cluster_name
+}
+
+data "rancher2_cluster_v2" "downstream" {
+  depends_on = [
+    aws_eip.nat,
+    aws_nat_gateway.nat,
+    aws_subnet.private,
+    aws_route_table.private,
+    aws_route.private_nat_gateway,
+    aws_route_table_association.private,
+    aws_vpc_security_group_ingress_rule.downstream_public_ingress_loadbalancer,
+    rancher2_machine_config_v2.nodes,
+    terraform_data.patch_machine_configs,
+    rancher2_cluster_v2.rke2_cluster,
+    rancher2_cluster_sync.sync,
+  ]
+  name = local.cluster_name
 }

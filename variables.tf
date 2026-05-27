@@ -145,7 +145,7 @@ variable "cert_manager_version" {
   description = <<-EOT
     The version of cert-manager to install.
   EOT
-  default     = "v1.18.1"
+  default     = "v1.20.2"
 }
 variable "cert_use_strategy" {
   type        = string
@@ -196,7 +196,7 @@ variable "rancher_version" {
   description = <<-EOT
     The version of rancher to install.
   EOT
-  default     = "2.11.2"
+  default     = "2.14.1"
 }
 variable "rancher_helm_repo" {
   type        = string

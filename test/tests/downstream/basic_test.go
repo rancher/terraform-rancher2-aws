@@ -31,9 +31,10 @@ func TestDownstreamBasic(t *testing.T) {
 		t.Fatalf("Error getting git root directory: %v", err)
 	}
 
-	exampleDir := repoRoot + "/examples/" + directory
-	testDir := repoRoot + "/test/tests/data/" + id
-	pluginsDir := filepath.Join(repoRoot, "test/tests/data", id, "plugins")
+	exampleDir := filepath.Join(repoRoot, "examples", directory)
+	testDir := filepath.Join(repoRoot, "test/tests/data", id)
+	pluginsDir := filepath.Join(testDir, "plugins")
+	// relTestDir := "."
 
 	err = util.CreateTestDirectories(t, id)
 	if err != nil {
@@ -99,19 +100,21 @@ func TestDownstreamBasic(t *testing.T) {
 		TerraformDir: exampleDir,
 		// Variables to pass to our Terraform code using -var options
 		Vars: map[string]interface{}{
-			"identifier":            id,
-			"owner":                 owner,
-			"key_name":              keyPairName,
-			"key":                   publicKey,
-			"zone":                  os.Getenv("ZONE"),
-			"rke2_version":          rke2Version,
-			"rancher_version":       rancherVersion,
-			"file_path":             testDir,
-			"aws_access_key_id":     accessKey,
-			"aws_secret_access_key": secretKey,
-			"aws_session_token":     sessionToken,
-			"aws_region":            region,
-			"acme_server_url":       acme_server_url,
+			"identifier":             id,
+			"owner":                  owner,
+			"key_name":               keyPairName,
+			"key":                    publicKey,
+			"zone":                   os.Getenv("ZONE"),
+			"rke2_version":           rke2Version,
+			"rancher_version":        rancherVersion,
+			"file_path":              testDir,
+			"aws_access_key_id":      accessKey,
+			"aws_secret_access_key":  secretKey,
+			"aws_session_token":      sessionToken,
+			"aws_region":             region,
+			"acme_server_url":        acme_server_url,
+			"downstream_node_config": "all-in-one-dev-node-config",
+			// "data_dir":              relTestDir,
 		},
 		// Environment variables to set when running Terraform
 		EnvVars: map[string]string{

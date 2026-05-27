@@ -65,12 +65,21 @@ resource "aws_vpc_security_group_egress_rule" "downstream_egress_project_link" {
   security_group_id            = aws_security_group.downstream_cluster.id
   ip_protocol                  = "-1"
 }
-# this allows nodes to talk to each other
-resource "aws_vpc_security_group_ingress_rule" "downstream_ingress_internal_ipv4" {
+# this allows the project security group to reach out to the downstream cluster
+resource "aws_vpc_security_group_ingress_rule" "downstream_ingress_project_link" {
   depends_on = [
     aws_security_group.downstream_cluster,
   ]
-  ip_protocol       = "-1"
-  cidr_ipv4         = "10.0.0.0/16"
-  security_group_id = aws_security_group.downstream_cluster.id
+  referenced_security_group_id = local.security_group_id
+  security_group_id            = aws_security_group.downstream_cluster.id
+  ip_protocol                  = "-1"
+}
+# this allows nodes within the downstream cluster to talk to each other
+resource "aws_vpc_security_group_ingress_rule" "downstream_ingress_nodes" {
+  depends_on = [
+    aws_security_group.downstream_cluster,
+  ]
+  referenced_security_group_id = aws_security_group.downstream_cluster.id
+  security_group_id            = aws_security_group.downstream_cluster.id
+  ip_protocol                  = "-1"
 }

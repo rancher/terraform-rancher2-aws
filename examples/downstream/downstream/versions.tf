@@ -7,11 +7,11 @@ terraform {
     }
     rancher2 = {
       source  = "rancher/rancher2"
-      version = ">= 5.0.0"
+      version = ">= 14.0.0"
     }
-    time = {
-      source  = "hashicorp/time"
-      version = ">= 0.13.1"
+    external = {
+      source  = "hashicorp/external"
+      version = ">= 2.4.0"
     }
   }
 }

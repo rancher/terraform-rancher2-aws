@@ -18,7 +18,7 @@ output "admin_password" {
   sensitive = true
 }
 output "cluster_data" {
-  value     = jsonencode(data.rancher2_cluster.local)
+  value     = jsonencode(module.deploy_downstream.output.cluster_data)
   sensitive = true
 }
 output "subnets" {
@@ -40,9 +40,4 @@ output "load_balancer_security_groups" {
 output "tls_certificate_chain" {
   value     = module.rancher.tls_certificate_chain
   sensitive = true
-}
-output "downstream_ssh_access" {
-  value = [for i in range(length(module.downstream.public_ips)) :
-    "ssh -i ${local.local_file_path}/id_rsa ${local.username}@${module.downstream.public_ips[i]}"
-  ]
 }
