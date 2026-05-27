@@ -1,6 +1,7 @@
 # Terraform Paradigms
 
 This document explains the paradigms, tricks, tips, standards, and patterns used in the project.
+This document is for humans, agents should ignore this and read AGENTS.md instead.
 
 ## Attribute Order
 

@@ -1,0 +1,89 @@
+provider "aws" {
+  region = local.aws_region
+  default_tags {
+    tags = {
+      Id    = local.identifier
+      Owner = local.owner
+    }
+  }
+}
+
+locals {
+  aws_region                      = base64decode(var.aws_region)
+  identifier                      = base64decode(var.identifier)
+  owner                           = base64decode(var.owner)
+  rancher_address                 = base64decode(var.rancher_address)
+  rancher_admin_password          = base64decode(var.rancher_admin_password)
+  rancher_admin_token             = base64decode(var.rancher_admin_token)
+  tls_certificate_chain           = <<-EOT
+    ${base64decode(var.tls_certificate_chain)}
+  EOT
+  node_config_name                = base64decode(var.node_config_name)
+  aws_access_key_id               = base64decode(var.aws_access_key_id)
+  aws_secret_access_key           = base64decode(var.aws_secret_access_key)
+  aws_session_token               = base64decode(var.aws_session_token)
+  aws_region_letter               = base64decode(var.aws_region_letter)
+  downstream_security_group_name  = base64decode(var.downstream_security_group_name)
+  vpc_id                          = base64decode(var.vpc_id)
+  load_balancer_security_group_id = base64decode(var.load_balancer_security_group_id)
+  subnet_id                       = base64decode(var.subnet_id)
+  node_info                       = jsondecode(base64decode(var.node_info))
+  runner_ip                       = base64decode(var.runner_ip)
+  ssh_access_key                  = base64decode(var.ssh_access_key)
+  ssh_access_user                 = base64decode(var.ssh_access_user)
+  rke2_version                    = base64decode(var.rke2_version)
+}
+
+data "external" "login" {
+  program = ["bash", "./modules/downstream/login.sh"]
+  query = {
+    api_url        = local.rancher_address
+    admin_password = local.rancher_admin_password
+    admin_token    = local.rancher_admin_token
+  }
+}
+
+provider "rancher2" {
+  api_url   = local.rancher_address
+  token_key = data.external.login.result.admin_token
+  ca_certs  = local.tls_certificate_chain
+  timeout   = "300s"
+}
+
+data "rancher2_cluster" "local" {
+  depends_on = [
+    data.external.login
+  ]
+  name = "local"
+}
+
+module "downstream" {
+  depends_on = [
+    data.rancher2_cluster.local
+  ]
+  # 
+  source = "./modules/downstream"
+
+  name       = local.node_config_name
+  identifier = local.identifier
+  owner      = local.owner
+
+  aws_access_key_id     = local.aws_access_key_id
+  aws_secret_access_key = local.aws_secret_access_key
+  aws_session_token     = local.aws_session_token
+  aws_region            = local.aws_region
+  aws_region_letter     = local.aws_region_letter
+  downstream_security_group_name = local.downstream_security_group_name
+
+  vpc_id                          = local.vpc_id
+  load_balancer_security_group_id = local.load_balancer_security_group_id
+  subnet_id                       = local.subnet_id
+
+  node_info = local.node_info
+  direct_node_access = {
+    runner_ip       = local.runner_ip
+    ssh_access_key  = local.ssh_access_key
+    ssh_access_user = local.ssh_access_user
+  }
+  rke2_version = local.rke2_version
+}

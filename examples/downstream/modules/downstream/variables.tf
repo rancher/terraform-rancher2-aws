@@ -66,12 +66,6 @@ variable "downstream_security_group_name" {
     The name of the security group created for the downstream cluster.
   EOT
 }
-variable "downstream_security_group_id" {
-  type        = string
-  description = <<-EOT
-    The id of the security group created for the downstream cluster.
-  EOT
-}
 variable "load_balancer_security_group_id" {
   type        = string
   description = <<-EOT
@@ -144,4 +138,11 @@ variable "rke2_version" {
     The RKE2 version to deploy.
     This module only supports RKE2.
   EOT
+}
+variable "private_subnet_cidr" {
+  type        = string
+  description = <<-EOT
+    The CIDR block to use for the private subnet where the downstream nodes will be deployed.
+  EOT
+  default     = "10.0.200.0/24"
 }

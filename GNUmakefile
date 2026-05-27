@@ -5,7 +5,7 @@ fmt:
 	cd test/tests; gofmt -s -w -e .; cd ../..
 
 lint:
-	tflint --recursive; \
+	tflint --recursive --fix; \
 	cd test/tests; golangci-lint run; cd ../..; \
 	actionlint
 
