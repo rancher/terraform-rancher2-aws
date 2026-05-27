@@ -34,7 +34,6 @@ func TestDownstreamBasic(t *testing.T) {
 	exampleDir := filepath.Join(repoRoot, "examples", directory)
 	testDir := filepath.Join(repoRoot, "test/tests/data", id)
 	pluginsDir := filepath.Join(testDir, "plugins")
-	// relTestDir := "."
 
 	err = util.CreateTestDirectories(t, id)
 	if err != nil {
@@ -65,6 +64,7 @@ func TestDownstreamBasic(t *testing.T) {
 		}
 		t.Fatalf("Error creating test key pair: %s", err)
 	}
+
 	sshAgent := ssh.SshAgentWithKeyPair(t, keyPairObj)
 	t.Logf("Key %s created and added to agent", keyPairName)
 
@@ -99,7 +99,7 @@ func TestDownstreamBasic(t *testing.T) {
 	terraformOptions := terraform.WithDefaultRetryableErrors(t, &terraform.Options{
 		TerraformDir: exampleDir,
 		// Variables to pass to our Terraform code using -var options
-		Vars: map[string]interface{}{
+		Vars: map[string]any{
 			"identifier":             id,
 			"owner":                  owner,
 			"key_name":               keyPairName,
@@ -114,7 +114,6 @@ func TestDownstreamBasic(t *testing.T) {
 			"aws_region":             region,
 			"acme_server_url":        acme_server_url,
 			"downstream_node_config": "all-in-one-dev-node-config",
-			// "data_dir":              relTestDir,
 		},
 		// Environment variables to set when running Terraform
 		EnvVars: map[string]string{
