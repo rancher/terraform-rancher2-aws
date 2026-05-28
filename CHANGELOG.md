@@ -1,5 +1,21 @@
 # Changelog
 
+## [3.1.4](https://github.com/rancher/terraform-rancher2-aws/compare/v3.1.3...v3.1.4) (2026-05-28)
+
+
+### Bug Fixes
+
+* add cloud credentials for downstream deploy ([#160](https://github.com/rancher/terraform-rancher2-aws/issues/160)) ([a0c8a34](https://github.com/rancher/terraform-rancher2-aws/commit/a0c8a3460f018265ee3bbba72c4e8abc5591fc79))
+* add words to spelling list ([#159](https://github.com/rancher/terraform-rancher2-aws/issues/159)) ([f03148f](https://github.com/rancher/terraform-rancher2-aws/commit/f03148f472d3f6029c74445fa5081a3ea7c195c9))
+* bump actions/checkout from 5 to 6 ([#138](https://github.com/rancher/terraform-rancher2-aws/issues/138)) ([b918e04](https://github.com/rancher/terraform-rancher2-aws/commit/b918e0457f6d4d6652c265b77752882a5468048f))
+* bump actions/github-script from 8 to 9 ([#149](https://github.com/rancher/terraform-rancher2-aws/issues/149)) ([2d116e0](https://github.com/rancher/terraform-rancher2-aws/commit/2d116e0e50fcf5ffa730da97b736081d2dfb4da4))
+* bump actions/github-script from d746ffe35508b1917358783b479e04febd2b8f71 to 3a2844b7e9c422d3c10d287c895573f7108da1b3 ([#151](https://github.com/rancher/terraform-rancher2-aws/issues/151)) ([44b6144](https://github.com/rancher/terraform-rancher2-aws/commit/44b6144aef2855680ee095a397cb1b2030204fa9))
+* bump aws-actions/configure-aws-credentials from 6.1.0 to 6.1.1 ([#155](https://github.com/rancher/terraform-rancher2-aws/issues/155)) ([64ffe21](https://github.com/rancher/terraform-rancher2-aws/commit/64ffe213d6c28ffa7edecdd5f665f46ada2786a2))
+* downstream split node ([#158](https://github.com/rancher/terraform-rancher2-aws/issues/158)) ([a77ee84](https://github.com/rancher/terraform-rancher2-aws/commit/a77ee8472158cd1e4c303761a3bb723ab6d99913))
+* Pin GH Actions to commit sha ([#148](https://github.com/rancher/terraform-rancher2-aws/issues/148)) ([df517db](https://github.com/rancher/terraform-rancher2-aws/commit/df517dbf3109464c5696e3fa642d12a52ea6dc51))
+* update modules, workflows, tests, examples, etc ([#156](https://github.com/rancher/terraform-rancher2-aws/issues/156)) ([4c86acd](https://github.com/rancher/terraform-rancher2-aws/commit/4c86acd691371be6257158675064f62b3191958a))
+* update to new module versions ([#157](https://github.com/rancher/terraform-rancher2-aws/issues/157)) ([6f9162b](https://github.com/rancher/terraform-rancher2-aws/commit/6f9162bfa6a1885f01d7ae77928b6c6de10bf8ed))
+
 ## [3.1.3](https://github.com/rancher/terraform-rancher2-aws/compare/v3.1.2...v3.1.3) (2026-02-10)
 
 
