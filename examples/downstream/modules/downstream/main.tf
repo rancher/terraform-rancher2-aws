@@ -98,9 +98,17 @@ resource "aws_vpc_security_group_ingress_rule" "downstream_public_ingress_loadba
   cidr_ipv4         = "${aws_eip.nat.public_ip}/32"
 }
 
+resource "rancher2_cloud_credential" "ec2" {
+  name        = "ec2"
+  description = "ec2 credentials"
+  amazonec2_credential_config {
+    access_key = local.aws_access_key_id
+    secret_key = local.aws_secret_access_key
+  }
+}
 resource "rancher2_machine_config_v2" "nodes" {
   for_each      = local.node_info
-  generate_name = "${each.key}-${local.cluster_name}"
+  generate_name = each.key
   amazonec2_config {
     ami                 = each.value.aws_ami_id
     region              = local.aws_region
