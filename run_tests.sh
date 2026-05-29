@@ -81,6 +81,8 @@ run_tests() {
     TEST_DIR="tests"
   elif [ -d "test/tests" ]; then
     TEST_DIR="test/tests"
+  elif [ -d "test" ]; then
+    TEST_DIR="test"
   else
     echo "Error: Unable to find tests directory" >&2
     exit 1
@@ -191,7 +193,7 @@ if [ -z "$cleanup_id" ]; then
   D="$(pwd)"
 
   echo "tidying..."
-  cd "$REPO_ROOT/test/tests" || exit
+  cd "$REPO_ROOT/test" || exit
   if ! go mod tidy; then C=$?; echo "failed to tidy, exit code $C"; exit $C; fi
 
   echo "formatting tests..."
@@ -203,7 +205,7 @@ if [ -z "$cleanup_id" ]; then
     echo "found $file";
     if ! go test -c "$file" -o "${file}.test"; then C=$?; echo "failed to compile $file, exit code $C"; exit $C; fi
     rm -rf "${file}.test"
-  done <<< "$(find "$REPO_ROOT/test" -not \( -path "$REPO_ROOT/test/tests/data" -prune \) -name '*.go')"
+  done <<< "$(find "$REPO_ROOT/test" -not \( -path "$REPO_ROOT/test/data" -prune \) -name '*.go')"
   echo "compile checks passed..."
 
   echo "checking tests for go lint errors..."

@@ -24,7 +24,7 @@ examples/**/51-*
 tests/test/data/*
 examples/*/data/*
 examples/*/kubeconfig
-test/tests/data/*
+test/data/*
 examples/basic/rancher_bootstrap
 .terraform.lock.hcl
 run.sh

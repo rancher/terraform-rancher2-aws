@@ -1,4 +1,4 @@
-package tests
+package test
 
 import (
 	"cmp"
@@ -12,7 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	ec2 "github.com/aws/aws-sdk-go/service/ec2"
+	ec2 "github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/google/go-github/v53/github"
 	aws "github.com/gruntwork-io/terratest/modules/aws"
 	g "github.com/gruntwork-io/terratest/modules/git"
@@ -36,8 +37,7 @@ func GetRancherReleases() (string, string, string, error) {
 	}
 	zeroPadVersionNumbers(&versions)
 	sortVersions(&versions)
-	filterDuplicatePatches(&versions)
-	getStablePatches(&versions)
+	filterDuplicateMinors(&versions)
 	removeZeroPadding(&versions)
 	latest := versions[0]
 	stable := latest
@@ -63,8 +63,7 @@ func GetRke2Releases() (string, string, string, error) {
 	}
 	zeroPadVersionNumbers(&versions)
 	sortVersions(&versions)
-	filterDuplicatePatches(&versions)
-	getStablePatches(&versions)
+	filterDuplicateMinors(&versions)
 	removeZeroPadding(&versions)
 	latest := versions[0]
 	stable := latest
@@ -114,7 +113,7 @@ func filterPrimeOnly(r *[]*github.RepositoryRelease) {
 	*r = fr
 }
 
-// This effectively removes release candidates as well as pending releases.
+// this effectively removes release candidates as well as pending releases.
 func filterPrerelease(r *[]*github.RepositoryRelease) {
 	var fr []*github.RepositoryRelease
 	releases := *r
@@ -144,11 +143,54 @@ func getVersionsFromReleases(r *[]*github.RepositoryRelease) []string {
 	//   "v1.30.0+rke2r1",
 	//   "v1.29.5+rke2r1",
 	//   "v1.28.17+rke2r1",
-	//   "v1.4.1+rke2r3",
-	//   "v1.28.16+rke2r1",
-	//   "v1.28.15+rke2r1",
 	// ]
 }
+
+func sortVersions(v *[]string) {
+	slices.SortFunc(*v, func(a, b string) int {
+		return cmp.Compare(b, a)
+		//[
+		//  v1.4.1+rke2r3,
+		//  v1.30.1+rke2r3,
+		//  v1.30.1+rke2r2,
+		//  v1.30.1+rke2r1,
+		//  v1.30.0+rke2r1,
+		//  v1.29.5+rke2r2,
+		//  v1.29.5+rke2r1,
+		//  v1.29.4+rke2r1,
+		//  v1.28.17+rke2r1,
+		//  v1.28.14+rke2r1,
+		//  v1.27.20+rke2r1,
+		//]
+	})
+}
+
+func filterDuplicateMinors(v *[]string) { // assumes versions are sorted already
+	var fv []string
+	versions := *v
+	fv = append(fv, versions[0])
+	for i := 1; i < len(versions); i++ {
+		c := versions[i]
+		p := versions[i-1]
+		cp := strings.Split(c[1:], "+") //["1.30.1","rke2r3"]
+		pp := strings.Split(p[1:], "+") //["1.30.1","rke2r2"]
+		if cp[0] != pp[0] {
+			cpp := strings.Split(cp[0], ".") //["1","30","1]
+			ppp := strings.Split(pp[0], ".") //["1","30","1]
+			if cpp[1] != ppp[1] {
+				fv = append(fv, c)
+				//[
+				//  v1.30.1+rke2r3,
+				//  v1.29.5+rke2r2,
+				//  v1.28.17+rke2r1,
+				//  v1.27.20+rke2r1,
+				//]
+			}
+		}
+	}
+	*v = fv
+}
+
 func zeroPadVersionNumbers(v *[]string) {
 	var zv []string
 	versions := *v
@@ -177,110 +219,6 @@ func zeroPadVersionNumbers(v *[]string) {
 		}
 	}
 	*v = zv
-	// [
-	//   "v1.28.14+rke2r1",
-	//   "v1.30.01+rke2r3",
-	//   "v1.29.04+rke2r1",
-	//   "v1.30.01+rke2r2",
-	//   "v1.29.05+rke2r2",
-	//   "v1.30.01+rke2r1",
-	//   "v1.27.20+rke2r1",
-	//   "v1.30.00+rke2r1",
-	//   "v1.29.05+rke2r1",
-	//   "v1.28.17+rke2r1",
-	//   "v1.04.01+rke2r3",
-	//   "v1.28.16+rke2r1",
-	//   "v1.28.15+rke2r1",
-	// ]
-}
-
-func sortVersions(v *[]string) { // assumes versions are 0 padded already
-	slices.SortFunc(*v, func(a, b string) int {
-		return cmp.Compare(b, a)
-		//[
-		//  v1.30.01+rke2r3,
-		//  v1.30.01+rke2r2,
-		//  v1.30.01+rke2r1,
-		//  v1.30.00+rke2r1,
-		//  v1.29.05+rke2r2,
-		//  v1.29.05+rke2r1,
-		//  v1.29.04+rke2r1,
-		//  v1.28.17+rke2r1,
-		//  v1.28.16+rke2r1,
-		//  v1.28.15+rke2r1,
-		//  v1.28.14+rke2r1,
-		//  v1.27.20+rke2r1,
-		//  v1.04.01+rke2r3,
-		//]
-	})
-}
-func filterDuplicatePatches(v *[]string) { // assumes versions are sorted already
-	var fv []string
-	versions := *v
-	fv = append(fv, versions[0])
-	for i := 1; i < len(versions); i++ {
-		c := versions[i]                // this is all testing if c should be added
-		p := versions[i-1]              // p should be greater because the index is smaller
-		cp := strings.Split(c[1:], "+") //["1.30.01","rke2r2"] (c eliminated) // ["1.30.01", "rke2r1"]
-		pp := strings.Split(p[1:], "+") //["1.30.01","rke2r3"]                // ["1.30.00", "rke2r1"]
-		if cp[0] != pp[0] {             // if c doesn't share the same version as p
-			cpp := strings.Split(cp[0], ".") //["1","30","00"]
-			ppp := strings.Split(pp[0], ".") //["1","30","01"]
-			if cpp[2] != ppp[2] {            // if c doesn't share the same patch as p add it
-				fv = append(fv, c)
-				//[
-				//  v1.30.01+rke2r3,
-				//  v1.30.00+rke2r1,
-				//  v1.29.05+rke2r2,
-				//  v1.29.04+rke2r1,
-				//  v1.28.17+rke2r1,
-				//  v1.28.16+rke2r1,
-				//  v1.28.15+rke2r1,
-				//  v1.28.14+rke2r1,
-				//  v1.27.20+rke2r1,
-				//  v1.04.01+rke2r3,
-				//]
-			}
-		}
-	}
-	*v = fv
-}
-
-func getStablePatches(v *[]string) { // assumes versions are sorted already
-	var fv []string
-	versions := *v
-	if len(versions) == 0 {
-		return
-	}
-
-	// Group versions by major.minor
-	groupedVersions := make(map[string][]string)
-	for _, version := range versions {
-		parts := strings.Split(strings.Split(version[1:], "+")[0], ".") // ["v1", "30", "01"]
-		majorMinor := fmt.Sprintf("%s.%s", parts[0], parts[1])          // "v1.30"
-		groupedVersions[majorMinor] = append(groupedVersions[majorMinor], version)
-		// {
-		//     "v1.30" = ["v1.30.01+rke2r3", "v1.30.00+rke2r1"]
-		//     "v1.29" = ["v1.29.05+rke2r2", "v1.29.04+rke2r1"]
-		//     "v1.04" = ["v1.04.01+rke2r3"]
-		//     "v1.27" = ["v1.27.20+rke2r1"]
-		//     "v1.28" = ["v1.28.17+rke2r1", "v1.28.16+rke2r1", "v1.28.15+rke2r1", "v1.28.14+rke2r1"]
-		// }
-	}
-
-	// For each group, get the second latest if available, otherwise the latest.
-	for _, group := range groupedVersions {
-		if len(group) > 1 {
-			fv = append(fv, group[1]) // second latest
-		} else if len(group) == 1 {
-			fv = append(fv, group[0]) // latest (as fallback)
-		}
-	}
-	*v = fv
-	// The order is not guaranteed from a map, so we need to sort again.
-	sortVersions(v)
-	// Expected output:
-	// [v1.30.00+rke2r1, v1.29.04+rke2r1, v1.28.16+rke2r1, v1.27.20+rke2r1, v1.04.01+rke2r3]
 }
 
 func removeZeroPadding(v *[]string) {
@@ -307,19 +245,12 @@ func removeZeroPadding(v *[]string) {
 		}
 	}
 	*v = zv
-	//[
-	//  v1.30.0+rke2r1,
-	//  v1.29.4+rke2r1,
-	//  v1.28.16+rke2r1,
-	//  v1.27.20+rke2r1,
-	//  v1.4.1+rke2r3,
-	//]
 }
 
 func CreateKeypair(t *testing.T, region string, owner string, id string) (*aws.Ec2Keypair, error) {
 	t.Log("Creating keypair...")
 	// Create an EC2 KeyPair that we can use for SSH access
-	keyPairName := id
+	keyPairName := fmt.Sprintf("terraform-ci-%s", id)
 	keyPair := aws.CreateAndImportEC2KeyPair(t, region, keyPairName)
 
 	// tag the key pair so we can find in the access module
@@ -329,14 +260,14 @@ func CreateKeypair(t *testing.T, region string, owner string, id string) (*aws.E
 	}
 
 	k := "key-name"
-	keyNameFilter := ec2.Filter{
+	keyNameFilter := ec2types.Filter{
 		Name:   &k,
-		Values: []*string{&keyPairName},
+		Values: []string{keyPairName},
 	}
 	input := &ec2.DescribeKeyPairsInput{
-		Filters: []*ec2.Filter{&keyNameFilter},
+		Filters: []ec2types.Filter{keyNameFilter},
 	}
-	result, err := client.DescribeKeyPairs(input)
+	result, err := client.DescribeKeyPairs(context.Background(), input)
 	if err != nil {
 		return nil, err
 	}
@@ -348,27 +279,27 @@ func CreateKeypair(t *testing.T, region string, owner string, id string) (*aws.E
 
 	// Verify that the name and owner tags were placed properly
 	k = "tag:Name"
-	keyNameFilter = ec2.Filter{
+	keyNameFilter = ec2types.Filter{
 		Name:   &k,
-		Values: []*string{&keyPairName},
+		Values: []string{keyPairName},
 	}
 	input = &ec2.DescribeKeyPairsInput{
-		Filters: []*ec2.Filter{&keyNameFilter},
+		Filters: []ec2types.Filter{keyNameFilter},
 	}
-	_, err = client.DescribeKeyPairs(input)
+	_, err = client.DescribeKeyPairs(context.Background(), input)
 	if err != nil {
 		return nil, err
 	}
 
 	k = "tag:Owner"
-	keyNameFilter = ec2.Filter{
+	keyNameFilter = ec2types.Filter{
 		Name:   &k,
-		Values: []*string{&owner},
+		Values: []string{owner},
 	}
 	input = &ec2.DescribeKeyPairsInput{
-		Filters: []*ec2.Filter{&keyNameFilter},
+		Filters: []ec2types.Filter{keyNameFilter},
 	}
-	_, err = client.DescribeKeyPairs(input)
+	_, err = client.DescribeKeyPairs(context.Background(), input)
 	if err != nil {
 		return nil, err
 	}
@@ -390,11 +321,10 @@ func GetRetryableTerraformErrors() map[string]string {
 	return retryableTerraformErrors
 }
 
-func SetAcmeServer(t *testing.T) string {
+func SetAcmeServer() string {
 	acmeserver := os.Getenv("ACME_SERVER_URL")
 	if acmeserver == "" {
-		os.Setenv("ACME_SERVER_URL", "https://acme-staging-v02.api.letsencrypt.org/directory") //nolint usetesting
-		acmeserver = "https://acme-staging-v02.api.letsencrypt.org/directory"
+		os.Setenv("ACME_SERVER_URL", "https://acme-staging-v02.api.letsencrypt.org/directory")
 	}
 	return acmeserver
 }
@@ -440,17 +370,16 @@ func GetId() string {
 }
 
 func CreateTestDirectories(t *testing.T, id string) error {
-	gwd := g.GetRepoRoot(t)
+	gwd := g.GetRepoRootContext(t, t.Context(), "")
 	fwd, err := filepath.Abs(gwd)
 	if err != nil {
 		return err
 	}
 	paths := []string{
-		filepath.Join(fwd, "test/tests/data"),
-		filepath.Join(fwd, "test/tests/data", id),
-		filepath.Join(fwd, "test/tests/data", id, "backend"),
-		filepath.Join(fwd, "test/tests/data", id, "data"),
-		filepath.Join(fwd, "test/tests/data", id, "plugins"),
+		filepath.Join(fwd, "test", "data"),
+		filepath.Join(fwd, "test", "data", id),
+		filepath.Join(fwd, "test", "data", id+"-backend"),
+		filepath.Join(fwd, "test", "data", id, "data"),
 	}
 	for _, path := range paths {
 		err = os.Mkdir(path, 0755)
@@ -461,7 +390,7 @@ func CreateTestDirectories(t *testing.T, id string) error {
 	return nil
 }
 
-func Teardown(t *testing.T, dataDir string, exampleDir string, options []*terraform.Options, keyPair *aws.Ec2Keypair, agent *ssh.SshAgent) {
+func Teardown(t *testing.T, dataDir string, exampleDir string, options []*terraform.Options, keyPair *aws.Ec2Keypair, agent *ssh.SSHAgent) {
 	directoryExists := true
 	_, err := os.Stat(dataDir)
 	if err != nil {
@@ -492,22 +421,19 @@ func Teardown(t *testing.T, dataDir string, exampleDir string, options []*terraf
 		}
 	}
 	agent.Stop()
-	err = aws.DeleteEC2KeyPairE(t, keyPair)
+	err = aws.DeleteEC2KeyPairContextE(t, t.Context(), keyPair)
 	if err != nil {
 		t.Logf("Failed to destroy key pair: %v", err)
 	}
-	err = os.Remove(exampleDir + "/.terraform.lock.hcl")
-	if err != nil {
-		t.Logf("Failed to remove lock file: %v", err)
-	}
+	os.Remove(filepath.Join(exampleDir, ".terraform.lock.hcl"))
 }
 
 func GetErrorLogs(t *testing.T, kubeconfigPath string) {
-	repoRoot, err := filepath.Abs(g.GetRepoRoot(t))
+	repoRoot, err := filepath.Abs(g.GetRepoRootContext(t, t.Context(), ""))
 	if err != nil {
 		t.Logf("Error getting git root directory: %v", err)
 	}
-	script, err := os.ReadFile(repoRoot + "/test/scripts/getLogs.sh")
+	script, err := os.ReadFile(filepath.Join(repoRoot, "test", "scripts", "getLogs.sh"))
 	if err != nil {
 		t.Logf("Error reading script: %v", err)
 	}
@@ -526,12 +452,12 @@ func GetErrorLogs(t *testing.T, kubeconfigPath string) {
 }
 
 func CheckReady(t *testing.T, kubeconfigPath string) {
-	repoRoot, err := filepath.Abs(g.GetRepoRoot(t))
+	repoRoot, err := filepath.Abs(g.GetRepoRootContext(t, t.Context(), ""))
 	if err != nil {
 		t.Logf("Error getting git root directory: %v", err)
 		t.Fail()
 	}
-	script, err := os.ReadFile(repoRoot + "/test/scripts/readyNodes.sh")
+	script, err := os.ReadFile(filepath.Join(repoRoot, "test", "scripts", "readyNodes.sh"))
 	if err != nil {
 		t.Logf("Error reading script: %v", err)
 		t.Fail()
@@ -552,12 +478,12 @@ func CheckReady(t *testing.T, kubeconfigPath string) {
 }
 
 func CheckRunning(t *testing.T, kubeconfigPath string) {
-	repoRoot, err := filepath.Abs(g.GetRepoRoot(t))
+	repoRoot, err := filepath.Abs(g.GetRepoRootContext(t, t.Context(), ""))
 	if err != nil {
 		t.Logf("Error getting git root directory: %v", err)
 		t.Fail()
 	}
-	script, err := os.ReadFile(repoRoot + "/test/scripts/runningPods.sh")
+	script, err := os.ReadFile(filepath.Join(repoRoot, "test", "scripts", "runningPods.sh"))
 	if err != nil {
 		t.Logf("Error reading script: %v", err)
 		t.Fail()
@@ -577,37 +503,55 @@ func CheckRunning(t *testing.T, kubeconfigPath string) {
 	t.Logf("Ready script output: %s", out)
 }
 
-func CreateObjectStorageBackend(t *testing.T, testDir string, id string, owner string, region string) (*terraform.Options, error) {
-	repoRoot, err := filepath.Abs(g.GetRepoRoot(t))
+func CreateObjectStorageBackend(t *testing.T, id string, owner string, region string) (*terraform.Options, error) {
+	repoRoot, err := filepath.Abs(g.GetRepoRootContext(t, t.Context(), ""))
 	if err != nil {
 		t.Fatalf("Error getting git root directory: %v", err)
 	}
-	exampleDir := repoRoot + "/examples/backend_s3"
+	exampleDir := filepath.Join(repoRoot, "examples", "use-cases", "backend_s3")
+	backendDir := filepath.Join(repoRoot, "test", "data", id+"-backend")
 
 	terraformOptions := terraform.WithDefaultRetryableErrors(t, &terraform.Options{
+		// https://pkg.go.dev/github.com/gruntwork-io/terratest/modules/terraform#Options
 		TerraformDir: exampleDir,
 		// Variables to pass to our Terraform code using -var options
-		Vars: map[string]interface{}{
+		Vars: map[string]any{
 			"identifier": id,
 			"owner":      owner,
 		},
 		// Environment variables to set when running Terraform
 		EnvVars: map[string]string{
-			"AWS_DEFAULT_REGION":  region,
-			"AWS_REGION":          region,
-			"TF_DATA_DIR":         testDir + "/backend",
-			"TF_IN_AUTOMATION":    "1",
-			"TF_CLI_ARGS_plan":    "-state=" + testDir + "/backend/tfstate",
-			"TF_CLI_ARGS_apply":   "-state=" + testDir + "/backend/tfstate",
-			"TF_CLI_ARGS_destroy": "-state=" + testDir + "/backend/tfstate",
-			"TF_CLI_ARGS_output":  "-state=" + testDir + "/backend/tfstate",
+			"AWS_DEFAULT_REGION": region,
+			"AWS_REGION":         region,
+			"TF_IN_AUTOMATION":   "1",
+			"TF_DATA_DIR":        backendDir,
 		},
 		RetryableTerraformErrors: GetRetryableTerraformErrors(),
-		Reconfigure:              true,
-		NoColor:                  true,
-		Upgrade:                  true,
+		BackendConfig: map[string]any{
+			"path": filepath.Join(backendDir, "tfstate"),
+		},
+		Reconfigure: true,
+		NoColor:     true,
+		Upgrade:     true,
 	})
 
-	_, err = terraform.InitAndApplyE(t, terraformOptions)
+	_, err = terraform.InitAndApplyContextE(t, t.Context(), terraformOptions)
 	return terraformOptions, err
+}
+
+func WriteTerraformRc(t *testing.T, path string) error {
+	repoRoot, err := filepath.Abs(g.GetRepoRootContext(t, t.Context(), ""))
+	if err != nil {
+		t.Fatalf("Error getting git root directory: %v", err)
+	}
+	formatString := `provider_installation {
+  dev_overrides {
+    "rancher/rancher2" = "%s/bin"
+  }
+  direct {
+    exclude = []
+  }
+}`
+	content := fmt.Sprintf(formatString, repoRoot)
+	return os.WriteFile(path, []byte(content), 0644)
 }
