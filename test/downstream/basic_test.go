@@ -10,7 +10,7 @@ import (
 	g "github.com/gruntwork-io/terratest/modules/git"
 	"github.com/gruntwork-io/terratest/modules/ssh"
 	"github.com/gruntwork-io/terratest/modules/terraform"
-	util "github.com/rancher/terraform-rancher2-aws/test/tests"
+	util "github.com/rancher/terraform-rancher2-aws/test"
 )
 
 func TestDownstreamBasic(t *testing.T) {
@@ -24,15 +24,15 @@ func TestDownstreamBasic(t *testing.T) {
 	sessionToken := util.GetAwsSessionToken()
 	directory := "downstream"
 	owner := "terraform-ci@suse.com"
-	acme_server_url := util.SetAcmeServer(t)
+	acme_server_url := util.SetAcmeServer()
 
-	repoRoot, err := filepath.Abs(g.GetRepoRoot(t))
+	repoRoot, err := filepath.Abs(g.GetRepoRootContext(t, t.Context(), ""))
 	if err != nil {
 		t.Fatalf("Error getting git root directory: %v", err)
 	}
 
 	exampleDir := filepath.Join(repoRoot, "examples", directory)
-	testDir := filepath.Join(repoRoot, "test/tests/data", id)
+	testDir := filepath.Join(repoRoot, "test/data", id)
 	pluginsDir := filepath.Join(testDir, "plugins")
 
 	err = util.CreateTestDirectories(t, id)
@@ -65,7 +65,7 @@ func TestDownstreamBasic(t *testing.T) {
 		t.Fatalf("Error creating test key pair: %s", err)
 	}
 
-	sshAgent := ssh.SshAgentWithKeyPair(t, keyPairObj)
+	sshAgent := ssh.SSHAgentWithKeyPair(t, t.Context(), keyPairObj)
 	t.Logf("Key %s created and added to agent", keyPairName)
 
 	// use oldest RKE2, remember it releases much more than Rancher
@@ -75,7 +75,7 @@ func TestDownstreamBasic(t *testing.T) {
 		if err2 != nil {
 			t.Logf("Error removing data directories: %s", err2)
 		}
-		aws.DeleteEC2KeyPair(t, keyPair)
+		aws.DeleteEC2KeyPairContext(t, t.Context(), keyPair)
 		sshAgent.Stop()
 		t.Fatalf("Error getting Rke2 release version: %s", err)
 	}
@@ -91,7 +91,7 @@ func TestDownstreamBasic(t *testing.T) {
 		if err2 != nil {
 			t.Logf("Error removing data directories: %s", err2)
 		}
-		aws.DeleteEC2KeyPair(t, keyPair)
+		aws.DeleteEC2KeyPairContext(t, t.Context(), keyPair)
 		sshAgent.Stop()
 		t.Fatalf("Error getting Rancher release version: %s", err)
 	}
@@ -137,7 +137,7 @@ func TestDownstreamBasic(t *testing.T) {
 
 	var tfOptions []*terraform.Options
 	tfOptions = append(tfOptions, terraformOptions)
-	_, err = terraform.InitAndApplyE(t, terraformOptions)
+	_, err = terraform.InitAndApplyContextE(t, t.Context(), terraformOptions)
 	if err != nil {
 		t.Log("Test failed, tearing down...")
 		util.GetErrorLogs(t, testDir+"/kubeconfig")

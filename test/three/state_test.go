@@ -10,27 +10,27 @@ import (
 	g "github.com/gruntwork-io/terratest/modules/git"
 	"github.com/gruntwork-io/terratest/modules/ssh"
 	"github.com/gruntwork-io/terratest/modules/terraform"
-	util "github.com/rancher/terraform-rancher2-aws/test/tests"
+	util "github.com/rancher/terraform-rancher2-aws/test"
 )
 
-func TestThreeBasic(t *testing.T) {
+// This test is the same as basic but it also tests that the state is correctly stored in S3 and can be used to re-create the cluster.
+func TestThreeState(t *testing.T) {
 	t.Parallel()
 	var err error
 	var err2 error
+	acme_server_url := util.SetAcmeServer()
+
 	id := util.GetId()
 	region := util.GetRegion()
 	directory := "three"
 	owner := "terraform-ci@suse.com"
-	acme_server_url := util.SetAcmeServer(t)
-
-	repoRoot, err := filepath.Abs(g.GetRepoRoot(t))
+	repoRoot, err := filepath.Abs(g.GetRepoRootContext(t, t.Context(), ""))
 	if err != nil {
 		t.Fatalf("Error getting git root directory: %v", err)
 	}
-
 	exampleDir := repoRoot + "/examples/" + directory
-	testDir := repoRoot + "/test/tests/data/" + id
-	pluginsDir := filepath.Join(repoRoot, "test/tests/data", id, "plugins")
+	testDir := repoRoot + "/test/data/" + id
+	pluginsDir := filepath.Join(repoRoot, "test/data", id, "plugins")
 
 	err = util.CreateTestDirectories(t, id)
 	if err != nil {
@@ -55,7 +55,7 @@ func TestThreeBasic(t *testing.T) {
 
 	err = os.WriteFile(testDir+"/id_rsa", []byte(privateKey), 0600)
 	if err != nil {
-		err2 = aws.DeleteEC2KeyPairE(t, keyPair)
+		err2 = aws.DeleteEC2KeyPairContextE(t, t.Context(), keyPair)
 		if err2 != nil {
 			t.Logf("Failed to destroy key pair: %v", err2)
 		}
@@ -65,10 +65,10 @@ func TestThreeBasic(t *testing.T) {
 		}
 		t.Fatalf("Error creating test key pair: %s", err)
 	}
-	sshAgent := ssh.SshAgentWithKeyPair(t, keyPairObj)
+	sshAgent := ssh.SSHAgentWithKeyPair(t, t.Context(), keyPairObj)
 	t.Logf("Key %s created and added to agent", keyPairName)
 
-	backendTerraformOptions, err := util.CreateObjectStorageBackend(t, testDir, id, owner, region)
+	backendTerraformOptions, err := util.CreateObjectStorageBackend(t, id, owner, region)
 	tfOptions := []*terraform.Options{backendTerraformOptions}
 	if err != nil {
 		t.Log("Test failed, tearing down...")
@@ -97,7 +97,7 @@ func TestThreeBasic(t *testing.T) {
 	terraformOptions := terraform.WithDefaultRetryableErrors(t, &terraform.Options{
 		TerraformDir: exampleDir,
 		// Variables to pass to our Terraform code using -var options
-		Vars: map[string]interface{}{
+		Vars: map[string]any{
 			"identifier":      id,
 			"owner":           owner,
 			"key_name":        keyPairName,
@@ -129,7 +129,7 @@ func TestThreeBasic(t *testing.T) {
 	})
 	// we need to prepend the main options because we need to destroy it before the backend
 	newTfOptions := []*terraform.Options{terraformOptions, backendTerraformOptions}
-	_, err = terraform.InitAndApplyE(t, terraformOptions)
+	_, err = terraform.InitAndApplyContextE(t, t.Context(), terraformOptions)
 	if err != nil {
 		t.Log("Test failed, tearing down...")
 		util.GetErrorLogs(t, testDir+"/kubeconfig")
@@ -138,6 +138,52 @@ func TestThreeBasic(t *testing.T) {
 	}
 	util.CheckReady(t, testDir+"/kubeconfig")
 	util.CheckRunning(t, testDir+"/kubeconfig")
+
+	t.Log("Validating remote state by destroying the local filesystem files and allowing Terraform to re-create them from S3")
+	err = os.RemoveAll(testDir)
+	if err != nil {
+		t.Log("Test failed, tearing down...")
+		util.GetErrorLogs(t, testDir+"/kubeconfig")
+		util.Teardown(t, testDir, exampleDir, newTfOptions, keyPair, sshAgent)
+		t.Fatalf("Error removing test files: %s", err)
+	}
+	err = util.CreateTestDirectories(t, id)
+	if err != nil {
+		t.Log("Test failed, tearing down...")
+		util.GetErrorLogs(t, testDir+"/kubeconfig")
+		util.Teardown(t, testDir, exampleDir, newTfOptions, keyPair, sshAgent)
+		t.Fatalf("Error creating cluster: %s", err)
+	}
+
+	t.Log("Running the apply again should re-create local files from state in S3, remote AWS resources should not be touched")
+	err = os.WriteFile(testDir+"/id_rsa", []byte(privateKey), 0600)
+	if err != nil {
+		t.Log("Test failed, tearing down...")
+		util.GetErrorLogs(t, testDir+"/kubeconfig")
+		util.Teardown(t, testDir, exampleDir, newTfOptions, keyPair, sshAgent)
+		t.Fatalf("Error creating cluster: %s", err)
+	}
+	_, err = terraform.InitAndApplyContextE(t, t.Context(), terraformOptions)
+	if err != nil {
+		t.Log("Test failed, tearing down...")
+		util.GetErrorLogs(t, testDir+"/kubeconfig")
+		util.Teardown(t, testDir, exampleDir, newTfOptions, keyPair, sshAgent)
+		t.Fatalf("Error creating cluster: %s", err)
+	}
+	util.CheckReady(t, testDir+"/kubeconfig")
+	util.CheckRunning(t, testDir+"/kubeconfig")
+
+	// Running the apply again should not change anything
+	_, err = terraform.InitAndApplyContextE(t, t.Context(), terraformOptions)
+	if err != nil {
+		t.Log("Test failed, tearing down...")
+		util.GetErrorLogs(t, testDir+"/kubeconfig")
+		util.Teardown(t, testDir, exampleDir, newTfOptions, keyPair, sshAgent)
+		t.Fatalf("Error creating cluster: %s", err)
+	}
+	util.CheckReady(t, testDir+"/kubeconfig")
+	util.CheckRunning(t, testDir+"/kubeconfig")
+
 	if t.Failed() {
 		t.Log("Test failed...")
 	} else {
