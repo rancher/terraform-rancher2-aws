@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.1.5](https://github.com/rancher/terraform-rancher2-aws/compare/v3.1.4...v3.1.5) (2026-06-08)
+
+
+### Bug Fixes
+
+* bump actions/checkout from 6.0.2 to 6.0.3 ([#163](https://github.com/rancher/terraform-rancher2-aws/issues/163)) ([6f0cbc7](https://github.com/rancher/terraform-rancher2-aws/commit/6f0cbc7643e17ccf93bfef6b37e1cac768135553))
+* bump aws-actions/configure-aws-credentials from 6.1.1 to 6.2.0 ([#164](https://github.com/rancher/terraform-rancher2-aws/issues/164)) ([939d6eb](https://github.com/rancher/terraform-rancher2-aws/commit/939d6eb9532a47d6b7b3f0ba394001bf8e9f55bc))
+
 ## [3.1.4](https://github.com/rancher/terraform-rancher2-aws/compare/v3.1.3...v3.1.4) (2026-05-28)
 
 
