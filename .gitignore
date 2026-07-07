@@ -6,6 +6,7 @@ terraform*
 override.*
 *_override.tf
 !terraform.md
+!terraform.instructions.md
 rke2*
 *.gz
 examples/*/installer.sh
@@ -33,3 +34,5 @@ static_files.txt
 * copy
 *.tfbackend
 *.log
+.agent/agent-memory/*.md
+!.agent/agent-memory/README.md

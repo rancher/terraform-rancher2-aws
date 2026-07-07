@@ -3,6 +3,7 @@ api
 auth
 authconfig
 aws
+agentic
 azure
 backport
 ci
