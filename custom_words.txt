@@ -1,0 +1,6 @@
+agentic
+authconfig
+kubeconfig
+nutanix
+pathing
+variablize
