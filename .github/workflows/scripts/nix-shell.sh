@@ -1,6 +1,7 @@
 #!/bin/bash
 set -e
-
+whoami
+chown /home/suse/.profile
 source /home/suse/.profile
 
 nix develop \
@@ -22,5 +23,4 @@ nix develop \
   --keep XDG_DATA_DIRS \
   --keep NIX_SSL_CERT_FILE \
   --keep NIX_PROFILE \
-  --profile "$profile" \
   --command bash -c "{0}"
