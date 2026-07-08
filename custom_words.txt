@@ -1,5 +1,6 @@
 agentic
 authconfig
+containerize
 kubeconfig
 nutanix
 pathing
