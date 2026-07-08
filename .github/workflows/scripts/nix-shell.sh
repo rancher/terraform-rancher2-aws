@@ -1,8 +1,11 @@
 #!/bin/bash
 set -e
+
 source /home/suse/.profile
 
-sudo nix develop \
+nix --version
+
+nix develop \
   --extra-experimental-features nix-command \
   --extra-experimental-features flakes \
   --ignore-environment \
