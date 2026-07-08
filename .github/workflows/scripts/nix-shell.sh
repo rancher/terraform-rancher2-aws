@@ -1,10 +1,8 @@
 #!/bin/bash
 set -e
-whoami
-chown root:users /home/suse/.profile
 source /home/suse/.profile
 
-nix develop \
+sudo nix develop \
   --extra-experimental-features nix-command \
   --extra-experimental-features flakes \
   --ignore-environment \
