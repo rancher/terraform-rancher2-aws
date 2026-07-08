@@ -3,6 +3,7 @@
 # Skill: run-in-nix.sh
 # Description: Executes a given command inside the standardized Nix development environment.
 # Usage: ./run-in-nix.sh "<command>"
+# - quotes around the command are critical
 
 set -euo pipefail
 
