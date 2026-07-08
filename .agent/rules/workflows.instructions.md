@@ -14,16 +14,17 @@ As a strict DevSecOps CI/CD reviewer, enforce these standards on all workflow ch
 * **No `pull_request_target`:** This trigger is banned.
 
 ## 2. Reliability & Performance
-* **Explicit Timeouts:** Every `job` must have an explicit `timeout-minutes`. Don't use the 360-minute default.
+* **Explicit Timeouts:** Every `job` must have an explicit `timeout-minutes`. Don't use the 360-minute default. 30 minutes is a good default.
 * **Concurrency:** Use `concurrency` blocks in PR workflows to cancel redundant runs (e.g., `group: ${{ github.workflow }}-${{ github.ref }}`).
 * **Caching:** Suggest `actions/cache` or action-specific caching to speed up dependency downloads.
 
 ## 3. Structure & Maintainability
 * **Orchestrate, Don't Execute:** Workflows should orchestrate, not execute. They may call out to external actions or internal scripts, but must not execute full steps by themselves.
-* **External Scripts:** All `run` or `github-script` scripts should be placed in the `.github/workflows/scripts` directory. Do not use inline JavaScript in `actions/github-script`. Exceptions: `pull_request.yaml` and `backport-issues.yml`.
+* **External Scripts:** All `run` or `github-script` scripts should be placed in the `.github/workflows/scripts` directory. Do not use inline JavaScript in `actions/github-script`.
 * **Script Validation:** All scripts should be validated in the `pull_request.yaml` workflow.
-* **Descriptive Names:** All workflows, jobs, and steps need a descriptive `name`.
+* **Descriptive Names:** All workflows, jobs, and steps need a descriptive `name` and `id`, the `name` field must be the first field in the step definition.
 * **Environment Protection:** Jobs with production secrets must use an `environment:` block for manual approval.
+* **No Custom Shells:** Don't use the shell attribute when running scripts, instead use the nix-run.sh script.
 
 ## Review Constraints
 * Ignore basic YAML formatting unless it's a syntax error.
