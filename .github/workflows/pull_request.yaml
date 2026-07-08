@@ -1,0 +1,315 @@
+name: pull_request
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  GITHUB_OWNER: ${{ github.repository_owner }}
+
+permissions: {}
+
+jobs:
+  terraform:
+    name: 'Terraform'
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/rancher/ci-image/nix:20260603-18
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        id: checkout
+        # https://github.com/actions/checkout/releases
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+      - name: lint terraform
+        id: lint-terraform
+        shell: >-
+          su suse bash -c "source /home/suse/.profile; \
+          nix develop
+            --ignore-environment
+            --extra-experimental-features nix-command
+            --extra-experimental-features flakes
+            --keep HOME
+            --keep SSH_AUTH_SOCK
+            --keep GITHUB_TOKEN
+            --keep AWS_ROLE
+            --keep AWS_REGION
+            --keep AWS_DEFAULT_REGION
+            --keep AWS_ACCESS_KEY_ID
+            --keep AWS_SECRET_ACCESS_KEY
+            --keep AWS_SESSION_TOKEN
+            --keep UPDATECLI_GPGTOKEN
+            --keep UPDATECLI_GITHUB_TOKEN
+            --keep UPDATECLI_GITHUB_ACTOR
+            --keep GPG_SIGNING_KEY
+            --keep NIX_SSL_CERT_FILE
+            --keep NIX_ENV_LOADED
+            --keep TERM
+            --command bash -e {0}"
+        run: ${{ github.workspace }}/.github/workflows/scripts/lint-terraform.sh
+
+  actionlint:
+    name: 'Lint Workflows'
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/rancher/ci-image/nix:20260603-18
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        id: checkout
+        # https://github.com/actions/checkout/releases
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+      - name: action lint
+        id: action-lint
+        shell: >-
+          su suse bash -c "source /home/suse/.profile; \
+          nix develop
+            --ignore-environment
+            --extra-experimental-features nix-command
+            --extra-experimental-features flakes
+            --keep HOME
+            --keep SSH_AUTH_SOCK
+            --keep GITHUB_TOKEN
+            --keep AWS_ROLE
+            --keep AWS_REGION
+            --keep AWS_DEFAULT_REGION
+            --keep AWS_ACCESS_KEY_ID
+            --keep AWS_SECRET_ACCESS_KEY
+            --keep AWS_SESSION_TOKEN
+            --keep UPDATECLI_GPGTOKEN
+            --keep UPDATECLI_GITHUB_TOKEN
+            --keep UPDATECLI_GITHUB_ACTOR
+            --keep GPG_SIGNING_KEY
+            --keep NIX_SSL_CERT_FILE
+            --keep NIX_ENV_LOADED
+            --keep TERM
+            --command bash -e {0}"
+        run: ${{ github.workspace }}/.github/workflows/scripts/action-lint.sh
+
+  shellcheck:
+    name: 'Shellcheck'
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/rancher/ci-image/nix:20260603-18
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        id: checkout
+        # https://github.com/actions/checkout/releases
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+      - name: shell check
+        id: shell-check
+        shell: >-
+          su suse bash -c "source /home/suse/.profile; \
+          nix develop
+            --ignore-environment
+            --extra-experimental-features nix-command
+            --extra-experimental-features flakes
+            --keep HOME
+            --keep SSH_AUTH_SOCK
+            --keep GITHUB_TOKEN
+            --keep AWS_ROLE
+            --keep AWS_REGION
+            --keep AWS_DEFAULT_REGION
+            --keep AWS_ACCESS_KEY_ID
+            --keep AWS_SECRET_ACCESS_KEY
+            --keep AWS_SESSION_TOKEN
+            --keep UPDATECLI_GPGTOKEN
+            --keep UPDATECLI_GITHUB_TOKEN
+            --keep UPDATECLI_GITHUB_ACTOR
+            --keep GPG_SIGNING_KEY
+            --keep NIX_SSL_CERT_FILE
+            --keep NIX_ENV_LOADED
+            --keep TERM
+            --command bash -e {0}"
+        run: ${{ github.workspace }}/.github/workflows/scripts/shell-check.sh
+
+  validate-commit-message:
+    name: 'Validate Commit Message'
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/rancher/ci-image/nix:20260603-18
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Checkout
+        id: checkout
+        # https://github.com/actions/checkout/releases
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0 # fetch all history so that we can validate the commit messages
+      - name: Check commit message
+        id: check-commit-message
+        shell: >-
+          su suse bash -c "source /home/suse/.profile; \
+          nix develop
+            --ignore-environment
+            --extra-experimental-features nix-command
+            --extra-experimental-features flakes
+            --keep HOME
+            --keep SSH_AUTH_SOCK
+            --keep GITHUB_TOKEN
+            --keep AWS_ROLE
+            --keep AWS_REGION
+            --keep AWS_DEFAULT_REGION
+            --keep AWS_ACCESS_KEY_ID
+            --keep AWS_SECRET_ACCESS_KEY
+            --keep AWS_SESSION_TOKEN
+            --keep UPDATECLI_GPGTOKEN
+            --keep UPDATECLI_GITHUB_TOKEN
+            --keep UPDATECLI_GITHUB_ACTOR
+            --keep GPG_SIGNING_KEY
+            --keep NIX_SSL_CERT_FILE
+            --keep NIX_ENV_LOADED
+            --keep TERM
+            --command bash -e {0}"
+        env:
+          PR_NUMBER: ${{ github.event.number }}
+        run: ${{ github.workspace }}/.github/workflows/scripts/check-commit-message.sh
+
+  gitleaks:
+    name: 'Scan for Secrets'
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/rancher/ci-image/nix:20260603-18
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        id: checkout
+        # https://github.com/actions/checkout/releases
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+      - name: Check for secrets
+        id: check-for-secrets
+        shell: >-
+          su suse bash -c "source /home/suse/.profile; \
+          nix develop
+            --ignore-environment
+            --extra-experimental-features nix-command
+            --extra-experimental-features flakes
+            --keep HOME
+            --keep SSH_AUTH_SOCK
+            --keep GITHUB_TOKEN
+            --keep AWS_ROLE
+            --keep AWS_REGION
+            --keep AWS_DEFAULT_REGION
+            --keep AWS_ACCESS_KEY_ID
+            --keep AWS_SECRET_ACCESS_KEY
+            --keep AWS_SESSION_TOKEN
+            --keep UPDATECLI_GPGTOKEN
+            --keep UPDATECLI_GITHUB_TOKEN
+            --keep UPDATECLI_GITHUB_ACTOR
+            --keep GPG_SIGNING_KEY
+            --keep NIX_SSL_CERT_FILE
+            --keep NIX_ENV_LOADED
+            --keep TERM
+            --command bash -e {0}"
+        run: ${{ github.workspace }}/.github/workflows/scripts/gitleaks-scan.sh
+        continue-on-error: true
+
+  test-compile-check:
+    name: 'Compile Check Tests'
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/rancher/ci-image/nix:20260603-18
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        id: checkout
+        # https://github.com/actions/checkout/releases
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+      - name: compile-check
+        id: compile-check
+        shell: >-
+          su suse bash -c "source /home/suse/.profile; \
+          nix develop
+            --ignore-environment
+            --extra-experimental-features nix-command
+            --extra-experimental-features flakes
+            --keep HOME
+            --keep SSH_AUTH_SOCK
+            --keep GITHUB_TOKEN
+            --keep AWS_ROLE
+            --keep AWS_REGION
+            --keep AWS_DEFAULT_REGION
+            --keep AWS_ACCESS_KEY_ID
+            --keep AWS_SECRET_ACCESS_KEY
+            --keep AWS_SESSION_TOKEN
+            --keep UPDATECLI_GPGTOKEN
+            --keep UPDATECLI_GITHUB_TOKEN
+            --keep UPDATECLI_GITHUB_ACTOR
+            --keep GPG_SIGNING_KEY
+            --keep NIX_SSL_CERT_FILE
+            --keep NIX_ENV_LOADED
+            --keep TERM
+            --command bash -e {0}"
+        run: ${{ github.workspace }}/.github/workflows/scripts/test-compile-check.sh
+
+  lint-tests:
+    name: 'Lint Tests'
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/rancher/ci-image/nix:20260603-18
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        id: checkout
+        # https://github.com/actions/checkout/releases
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+      - name: lint-tests
+        id: lint-tests
+        shell: >-
+          su suse bash -c "source /home/suse/.profile; \
+          nix develop
+            --ignore-environment
+            --extra-experimental-features nix-command
+            --extra-experimental-features flakes
+            --keep HOME
+            --keep SSH_AUTH_SOCK
+            --keep GITHUB_TOKEN
+            --keep AWS_ROLE
+            --keep AWS_REGION
+            --keep AWS_DEFAULT_REGION
+            --keep AWS_ACCESS_KEY_ID
+            --keep AWS_SECRET_ACCESS_KEY
+            --keep AWS_SESSION_TOKEN
+            --keep UPDATECLI_GPGTOKEN
+            --keep UPDATECLI_GITHUB_TOKEN
+            --keep UPDATECLI_GITHUB_ACTOR
+            --keep GPG_SIGNING_KEY
+            --keep NIX_SSL_CERT_FILE
+            --keep NIX_ENV_LOADED
+            --keep TERM
+            --command bash -e {0}"
+        run: ${{ github.workspace }}/.github/workflows/scripts/lint-tests.sh

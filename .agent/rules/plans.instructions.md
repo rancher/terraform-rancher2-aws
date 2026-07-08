@@ -12,8 +12,9 @@ A "temporary plan" is different than a normal plan. It doesn't follow the same r
 
 Plan execution automatic cut-off:
 Before executing an operation, agents must check their context.
-If context % is greater than 40% or if they have greater than 50000 tokens they need to stop.
-Agents should then update the temporary plan with progress and inform the user that the context is getting large.
+If context reaches 25% or 200,000 tokens, Gemini Code Assist slows down dramatically. 
+At this point, agents MUST NOT execute any further operations.
+Agents should instead update the temporary plan with progress, inform the user that the context limit has been reached, and instruct them to stop operations and start a new session.
 
 ## Creating Plans
 

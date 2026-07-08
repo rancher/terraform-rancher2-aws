@@ -13,36 +13,49 @@ env:
   AWS_MAX_ATTEMPTS: 100
   AWS_RETRY_MODE: adaptive
 
-permissions: write-all
+permissions: {}
 
 jobs:
   release:
+    name: 'Release'
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/rancher/ci-image/nix:20260603-18
     timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: write
     outputs:
       release_pr: ${{ steps.release-please.outputs.pr }}
     steps:
-      # https://github.com/googleapis/release-please-action/releases
-      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+      - name: Checkout
+        id: checkout
+        # https://github.com/actions/checkout/releases
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          token: ${{secrets.GITHUB_TOKEN}}
+          fetch-depth: 0
+      - name: Release Please
         id: release-please
+        # https://github.com/googleapis/release-please-action/releases
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
           release-type: terraform-module
-      # https://github.com/actions/github-script/releases
-      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+      - name: Create PR Comment
+        id: create-pr-comment
+        # https://github.com/actions/github-script/releases
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         if: steps.release-please.outputs.pr
+        env:
+          PR_NUMBER: ${{ fromJson(steps.release-please.outputs.pr).number }}
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
-            github.rest.issues.createComment({
-              issue_number: ${{ fromJson(steps.release-please.outputs.pr).number }},
-              owner: "${{ github.repository_owner }}",
-              repo: "${{ github.event.repository.name }}",
-              body: "Please make sure e2e tests pass before merging this PR! \n ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-            })
+            const script = await import('${{ github.workspace }}/.github/workflows/scripts/release-pr-comment.js');
+            await script.default({ github, context, core, process });
 
   test:
+    name: 'Test'
     needs:
       - release
     if: needs.release.outputs.release_pr
@@ -50,13 +63,19 @@ jobs:
     container:
       image: ghcr.io/rancher/ci-image/nix:20260603-18
     timeout-minutes: 120
+    permissions:
+      contents: read
+      id-token: write
     steps:
-      # https://github.com/actions/checkout/releases
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Checkout
+        id: checkout
+        # https://github.com/actions/checkout/releases
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           token: ${{secrets.GITHUB_TOKEN}}
           fetch-depth: 0
-      - id: aws-creds
+      - name: Configure AWS Credentials
+        id: aws-creds
         # https://github.com/aws-actions/configure-aws-credentials/releases
         uses: aws-actions/configure-aws-credentials@254c19bd240aabef8777f48595e9d2d7b972184b # v6.2.1
         with:
@@ -66,7 +85,33 @@ jobs:
           role-duration-seconds: 28800 # 8 hours
           output-credentials: true
       - name: run_tests
-        shell: su suse bash -c "source /home/suse/.profile;nix develop --ignore-environment --extra-experimental-features nix-command --extra-experimental-features flakes --keep HOME --keep SSH_AUTH_SOCK --keep IDENTIFIER --keep GITHUB_TOKEN --keep GITHUB_OWNER --keep ZONE --keep AWS_ROLE --keep AWS_REGION --keep AWS_DEFAULT_REGION --keep AWS_ACCESS_KEY_ID --keep AWS_SECRET_ACCESS_KEY --keep AWS_SESSION_TOKEN --keep UPDATECLI_GPGTOKEN --keep UPDATECLI_GITHUB_TOKEN --keep UPDATECLI_GITHUB_ACTOR --keep GPG_SIGNING_KEY --keep NIX_SSL_CERT_FILE --keep NIX_ENV_LOADED --keep TERM --command bash -e {0}"
+        id: run-tests
+        shell: >-
+          su suse bash -c "source /home/suse/.profile; \
+          nix develop
+            --ignore-environment
+            --extra-experimental-features nix-command
+            --extra-experimental-features flakes
+            --keep HOME
+            --keep SSH_AUTH_SOCK
+            --keep IDENTIFIER
+            --keep GITHUB_TOKEN
+            --keep GITHUB_OWNER
+            --keep ZONE
+            --keep AWS_ROLE
+            --keep AWS_REGION
+            --keep AWS_DEFAULT_REGION
+            --keep AWS_ACCESS_KEY_ID
+            --keep AWS_SECRET_ACCESS_KEY
+            --keep AWS_SESSION_TOKEN
+            --keep UPDATECLI_GPGTOKEN
+            --keep UPDATECLI_GITHUB_TOKEN
+            --keep UPDATECLI_GITHUB_ACTOR
+            --keep GPG_SIGNING_KEY
+            --keep NIX_SSL_CERT_FILE
+            --keep NIX_ENV_LOADED
+            --keep TERM
+            --command bash -e {0}"
         env:
           AWS_ACCESS_KEY_ID: ${{ steps.aws-creds.outputs.aws-access-key-id }}
           AWS_SECRET_ACCESS_KEY: ${{ steps.aws-creds.outputs.aws-secret-access-key }}
@@ -74,16 +119,10 @@ jobs:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
           ZONE: ${{secrets.ZONE}}
           IDENTIFIER: ${{github.run_id}}
-        run: |
-          # nix ignores environment variables that are not specifically kept
-          export AWS_MAX_ATTEMPTS="100"
-          export AWS_RETRY_MODE="adaptive"
-          export GITHUB_OWNER="rancher"
-          export ACME_SERVER_URL="https://acme-v02.api.letsencrypt.org/directory"
-          export RANCHER_INSECURE="false"
-          ./run_tests.sh -s
+        run: ${{ github.workspace }}/.github/workflows/scripts/run-tests.sh
 
   cleanup:
+    name: 'Cleanup'
     needs:
       - release
       - test
@@ -92,13 +131,19 @@ jobs:
     container:
       image: ghcr.io/rancher/ci-image/nix:20260603-18
     timeout-minutes: 60
+    permissions:
+      contents: read
+      id-token: write
     steps:
-      # https://github.com/actions/checkout/releases
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Checkout
+        id: checkout
+        # https://github.com/actions/checkout/releases
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           token: ${{secrets.GITHUB_TOKEN}}
           fetch-depth: 0
-      - id: aws-creds
+      - name: Configure AWS Credentials
+        id: aws-creds
         # https://github.com/aws-actions/configure-aws-credentials/releases
         uses: aws-actions/configure-aws-credentials@254c19bd240aabef8777f48595e9d2d7b972184b # v6.2.1
         with:
@@ -108,35 +153,70 @@ jobs:
           role-duration-seconds: 3600 # 1 hour
           output-credentials: true
       - name: cleanup
-        shell: su suse bash -c "source /home/suse/.profile;nix develop --ignore-environment --extra-experimental-features nix-command --extra-experimental-features flakes --keep HOME --keep SSH_AUTH_SOCK --keep IDENTIFIER --keep GITHUB_TOKEN --keep GITHUB_OWNER --keep ZONE --keep AWS_ROLE --keep AWS_REGION --keep AWS_DEFAULT_REGION --keep AWS_ACCESS_KEY_ID --keep AWS_SECRET_ACCESS_KEY --keep AWS_SESSION_TOKEN --keep UPDATECLI_GPGTOKEN --keep UPDATECLI_GITHUB_TOKEN --keep UPDATECLI_GITHUB_ACTOR --keep GPG_SIGNING_KEY --keep NIX_SSL_CERT_FILE --keep NIX_ENV_LOADED --keep TERM --command bash -e {0}"
+        id: cleanup
+        shell: >-
+          su suse bash -c "source /home/suse/.profile; \
+          nix develop
+            --ignore-environment
+            --extra-experimental-features nix-command
+            --extra-experimental-features flakes
+            --keep HOME
+            --keep SSH_AUTH_SOCK
+            --keep IDENTIFIER
+            --keep GITHUB_TOKEN
+            --keep GITHUB_OWNER
+            --keep ZONE
+            --keep AWS_ROLE
+            --keep AWS_REGION
+            --keep AWS_DEFAULT_REGION
+            --keep AWS_ACCESS_KEY_ID
+            --keep AWS_SECRET_ACCESS_KEY
+            --keep AWS_SESSION_TOKEN
+            --keep UPDATECLI_GPGTOKEN
+            --keep UPDATECLI_GITHUB_TOKEN
+            --keep UPDATECLI_GITHUB_ACTOR
+            --keep GPG_SIGNING_KEY
+            --keep NIX_SSL_CERT_FILE
+            --keep NIX_ENV_LOADED
+            --keep TERM
+            --command bash -e {0}"
         env:
           AWS_ACCESS_KEY_ID: ${{ steps.aws-creds.outputs.aws-access-key-id }}
           AWS_SECRET_ACCESS_KEY: ${{ steps.aws-creds.outputs.aws-secret-access-key }}
           AWS_SESSION_TOKEN: ${{ steps.aws-creds.outputs.aws-session-token }}
           IDENTIFIER: ${{github.run_id}}
-        run: |
-          export AWS_MAX_ATTEMPTS="100"
-          ./run_tests.sh -c $IDENTIFIER
+        run: ${{ github.workspace }}/.github/workflows/scripts/cleanup-tests.sh
 
   report:
+    name: 'Report'
     needs:
       - release
       - test
       - cleanup
-    if: success() && needs.release.outputs.release_pr #Ensure the test jobs succeeded, and that a release PR was created.
+    if: success() && needs.release.outputs.release_pr # Ensure the test jobs succeeded, and that a release PR was created.
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/rancher/ci-image/nix:20260603-18
     timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
-      # https://github.com/actions/github-script/releases
-      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+      - name: Checkout
+        id: checkout
+        # https://github.com/actions/checkout/releases
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          token: ${{secrets.GITHUB_TOKEN}}
+          fetch-depth: 0
+      - name: Report Success
+        id: report-success
+        # https://github.com/actions/github-script/releases
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          PR_NUMBER: ${{ fromJson(needs.release.outputs.release_pr).number }}
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
-            github.rest.issues.createComment({
-              issue_number: ${{ fromJson(needs.release.outputs.release_pr).number }},
-              owner: "${{ github.repository_owner }}",
-              repo: "${{ github.event.repository.name }}",
-              body: "End to End Tests Passed! \n ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-            })
+            const script = await import('${{ github.workspace }}/.github/workflows/scripts/report-success.js');
+            await script.default({ github, context, core, process });
