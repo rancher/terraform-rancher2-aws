@@ -160,7 +160,7 @@ jobs:
           fetch-depth: 0 # fetch all history so that we can validate the commit messages
       - name: Check commit message
         id: check-commit-message
-        shell: su suse bash -c "./.github/workflows/scripts/nix-shell.sh {0}"
+        shell: bash -c "./.github/workflows/scripts/nix-shell.sh {0}"
         env:
           PR_NUMBER: ${{ github.event.number }}
         run: ${{ github.workspace }}/.github/workflows/scripts/check-commit-message.sh
