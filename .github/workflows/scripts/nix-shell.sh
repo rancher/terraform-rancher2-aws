@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 whoami
-chown /home/suse/.profile
+chown root:users /home/suse/.profile
 source /home/suse/.profile
 
 nix develop \
