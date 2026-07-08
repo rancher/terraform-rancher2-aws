@@ -87,14 +87,12 @@ jobs:
         id: checkout
         # https://github.com/actions/checkout/releases
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          fetch-depth: 0 # fetch all history so that we can validate the commit messages
       - name: Check commit message
         id: check-commit-message
         env:
           PR_NUMBER: ${{ github.event.number }}
         run: |
-          bash .github/workflows/scripts/nix-run.sh "bash .github/workflows/scripts/check-commit-message.sh"
+          bash .github/workflows/scripts/nix-run.sh "bash .github/workflows/scripts/check-commit-message.sh $PR_NUMBER"
 
   gitleaks:
     name: 'Scan for Secrets'

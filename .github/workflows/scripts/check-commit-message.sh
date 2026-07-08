@@ -1,13 +1,16 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
+
 # Check commit messages
 # This steps enforces https://www.conventionalcommits.org/en/v1.0.0/
 # This format enables automatic generation of changelogs and versioning
+
 filter() {
   COMMIT="$1"
-  output="$(echo "$COMMIT" | grep -v -e '^fix: ' -e '^feature: ' -e '^feat: ' -e '^refactor!: ' -e '^feature!: ' -e '^feat!: ' -e '^chore(main): ' -e '^Merge branch ' || true)"
+  output="$(echo "$COMMIT" | grep -v -e '^fix: ' -e '^feature: ' -e '^feat: ' -e '^refactor!: ' -e '^feature!: ' -e '^feat!: ' -e '^chore(main): ' -e '^Merge ')"
   echo "$output"
 }
+
 prefix_check() {
   message="$1"
   if [ "" != "$(filter "$message")" ]; then
@@ -22,6 +25,7 @@ EOF
     echo "...Commit message starts with the required prefix."
   fi
 }
+
 empty_check() {
   message="$1"
   if [ "" == "$message" ]; then
@@ -31,23 +35,26 @@ empty_check() {
     echo "...Commit message isnt empty."
   fi
 }
+
 length_check() {
   message="$1"
   length="$(wc -m <<<"$message")"
-  if [ $length -gt 100 ]; then
+  if [ "$length" -gt 100 ]; then
     echo "...Commit message subject line should be less than 100 characters, found $length."
     exit 1
   else
     echo "...Commit message subject line is less than 100 characters."
   fi
 }
+
 spell_check() {
   message="$1"
-  WORDS="$(cspell list --dont-validate-words <<<"$message")"
+  if grep -e '^Merge ' <<<"$message"; then exit 0; fi
+  WORDS="$(cspell stdin --quiet --words-only <<<"$message")"
   if [ "" != "$WORDS" ]; then
     echo "...Commit message contains spelling errors on: ^$WORDS\$"
     echo "...Also try updating the PR title."
-    echo "...If this is a mistake, add your word to the aspell_custom.txt file, it is case insensitive."
+    echo "...If this is a mistake, add your word to the custom_words.txt file."
     exit 1
   else
     echo "...Commit message doesnt contain spelling errors."
@@ -55,8 +62,9 @@ spell_check() {
 }
 
 # Fetch the commit messages
+PR_NUMBER="$1"
+COMMIT_MESSAGES="$(gh pr view "$PR_NUMBER" --json commits | jq -r '.commits[].messageHeadline')"
 
-COMMIT_MESSAGES="$(gh pr view "${PR_NUMBER}" --json commits | jq -r '.commits[].messageHeadline')"
 echo "Commit messages found: "
 echo "$COMMIT_MESSAGES"
 
