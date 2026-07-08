@@ -24,4 +24,4 @@ nix develop \
   --keep XDG_DATA_DIRS \
   --keep NIX_SSL_CERT_FILE \
   --keep NIX_PROFILE \
-  --command bash -c "{0}"
+  --command bash -c "$@"
