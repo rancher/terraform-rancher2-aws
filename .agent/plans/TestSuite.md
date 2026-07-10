@@ -1,13 +1,21 @@
-# Update Test Suite
+# Test Suite
+
+**Date Completed:** Pending
+**Purpose:** Update the testsuite to be a single multi-package module in the `./test` directory. Update Go to the latest version and update all dependencies to their latest version. Provide a CI workflow to maintain this in the future.
+
+---
+
+The `./test` directory should be a stand-alone Go module named `test`.
+The `./test` module should have a package for each test.
+The test structure should be as DRY as possible. If possible, extract the creation of fixtures into its own package. Test packages should validate a specific fixture or validate a specific test on multiple fixtures.
+The `./test` module should establish a terraform plugin cache for each test. This cache should be seeded from the global cache established in the `run_tests.sh` script.
 
 We want to automatically update as much as possible in a GitHub workflow that generates a PR.
-If we find updates that the workflow can't resolve it should error.
+If we find updates that the workflow can't resolve, it should error.
 
 Create ./.github/workflows/update-go-deps.yaml and update-go-deps.sh to facilitate this.
 
-We have been working on update-go-deps.sh. which is failing because the aws-sdk-go to aws-sdk-go-v2 migration requires significant rework. We will upgrade the package manually by using t.Context() for any contexts that need to be added and indirecting any variables that need it.
-
-I want you to check your context % and stop if your context % is greater than 40%. I want you to report that the context window is 40% full and give a summary of what you are working on, accomplished, and what next steps should be.
+The aws-sdk-go to aws-sdk-go-v2 migration requires significant rework. We will upgrade the package manually by using t.Context() for any contexts that need to be added and indirecting any variables that need it.
 
 * Find and update all deprecated functions.
   * `random.UniqueId()` to `random.UniqueID()`

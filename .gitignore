@@ -36,3 +36,4 @@ static_files.txt
 *.log
 .agent/agent-memory/*.md
 !.agent/agent-memory/README.md
+*.bak
