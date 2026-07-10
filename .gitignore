@@ -34,6 +34,4 @@ static_files.txt
 * copy
 *.tfbackend
 *.log
-.agent/agent-memory/*.md
-!.agent/agent-memory/README.md
 *.bak

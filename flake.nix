@@ -157,8 +157,8 @@
             buildInputs = [ devShellPackage ];
             shellHook = ''
               export PS1="nix:# ";
-              install -d ~/.docker/cli-plugins/
-              ln -sfn $(which docker-compose) ~/.docker/cli-plugins/docker-compose;
+              install -d ~/.docker/cli-plugins/ || true;
+              ln -sfn $(which docker-compose) ~/.docker/cli-plugins/docker-compose || true;
             '';
           };
         }
