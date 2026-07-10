@@ -1,4 +1,4 @@
-# Workflow Standards
+# Workflow Refactor
 
 **Date Completed:** Pending
 **Purpose:** Update all workflows to have a standard step structure, extract all scripts so they can be linted, use commit hashes for action versioning, and implement least privilege security principle.
@@ -33,3 +33,37 @@
       ...
     ```
   Update any workflow steps necessary to meet this guideline.
+- Shell attributes need to be formatted in a way that a human can read and understand them effectively.
+  - Bad:
+    ```yaml
+      shell: su suse bash -c "source /home/suse/.profile;nix develop --ignore-environment --extra-experimental-features nix-command --extra-experimental-features flakes --keep HOME --keep SSH_AUTH_SOCK --keep IDENTIFIER --keep GITHUB_TOKEN --keep GITHUB_OWNER --keep ZONE --keep AWS_ROLE --keep AWS_REGION --keep AWS_DEFAULT_REGION --keep AWS_ACCESS_KEY_ID --keep AWS_SECRET_ACCESS_KEY --keep AWS_SESSION_TOKEN --keep UPDATECLI_GPGTOKEN --keep UPDATECLI_GITHUB_TOKEN --keep UPDATECLI_GITHUB_ACTOR --keep GPG_SIGNING_KEY --keep NIX_SSL_CERT_FILE --keep NIX_ENV_LOADED --keep TERM --command bash -e {0}"
+    ```
+  - Better:
+    ```yaml
+        shell: >-
+          su suse bash -c "source /home/suse/.profile; \
+          nix develop
+            --ignore-environment
+            --extra-experimental-features nix-command
+            --extra-experimental-features flakes
+            --keep HOME
+            --keep SSH_AUTH_SOCK
+            --keep IDENTIFIER
+            --keep GITHUB_TOKEN
+            --keep GITHUB_OWNER
+            --keep ZONE
+            --keep AWS_ROLE
+            --keep AWS_REGION
+            --keep AWS_DEFAULT_REGION
+            --keep AWS_ACCESS_KEY_ID
+            --keep AWS_SECRET_ACCESS_KEY
+            --keep AWS_SESSION_TOKEN
+            --keep UPDATECLI_GPGTOKEN
+            --keep UPDATECLI_GITHUB_TOKEN
+            --keep UPDATECLI_GITHUB_ACTOR
+            --keep GPG_SIGNING_KEY
+            --keep NIX_SSL_CERT_FILE
+            --keep NIX_ENV_LOADED
+            --keep TERM
+            --command bash -e {0}"
+    ```
