@@ -22,10 +22,10 @@ examples/*/51-*
 examples/**/51-*
 *.lock
 *.DS_*
-tests/test/data/*
+test/data/*
 examples/*/data/*
 examples/*/kubeconfig
-test/tests/data/*
+test/data/*
 examples/basic/rancher_bootstrap
 .terraform.lock.hcl
 run.sh
@@ -35,3 +35,4 @@ static_files.txt
 *.tfbackend
 *.log
 *.bak
+node_modules

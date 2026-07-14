@@ -1,1 +1,10 @@
-{}
+{
+  "hooks": [
+    {
+      "events": ["BeforeTool", "BeforeToolSelection"],
+      "command": "bash",
+      "args": [".agent/hooks/check-context.sh"],
+      "description": "Enforces maximum context token limit to prevent execution failures"
+    }
+  ]
+}

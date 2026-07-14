@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-cd test/tests
+cd test
 echo "checking tests for go lint errors..."
 if ! golangci-lint run; then echo "lint failed..."; exit 1; fi
 echo "lint errors complete"

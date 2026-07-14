@@ -2,12 +2,14 @@ default: fmt lint
 
 fmt:
 	terraform fmt -recursive; \
-	cd test/tests; gofmt -s -w -e .; cd ../..
+	cd test; gofmt -s -w -e .; cd ..;
 
 lint:
 	tflint --recursive --fix; \
-	cd test/tests; golangci-lint run; cd ../..; \
-	actionlint
+	cd test; \
+	golangci-lint run -c "../.golangci.yml"; \
+	cd ..; \
+	actionlint;
 
 test:
 	./run_tests.sh -s

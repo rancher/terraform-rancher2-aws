@@ -1,1 +1,17 @@
-{}
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash",
+            "args": [".agent/hooks/check-context.sh"],
+            "timeout": 600
+          }
+        ]
+      }
+    ]
+  }
+}
