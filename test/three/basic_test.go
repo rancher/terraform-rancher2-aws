@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/gruntwork-io/terratest/modules/terraform"
+	"github.com/rancher/terraform-rancher2-aws/test"
 	"github.com/rancher/terraform-rancher2-aws/test/fixture"
 )
 
@@ -14,7 +15,7 @@ func TestThreeBasic(t *testing.T) {
 	f := fixture.NewFixture(t, "three")
 	defer f.Teardown(t)
 
-	backendTerraformOptions, err := fixture.CreateObjectStorageBackend(t, f.TestDir, f.ID, f.Owner, f.Region)
+	backendTerraformOptions, err := fixture.CreateObjectStorageBackend(t.Context(), t, f.TestDir, f.ID, f.Owner, f.Region)
 	f.TeardownOptions = append(f.TeardownOptions, backendTerraformOptions)
 	if err != nil {
 		t.Log("Test failed, tearing down...")
@@ -48,7 +49,7 @@ func TestThreeBasic(t *testing.T) {
 			"TF_CLI_ARGS_destroy": "-no-color",
 			"TF_CLI_ARGS_output":  "-no-color",
 		},
-		RetryableTerraformErrors: fixture.GetRetryableTerraformErrors(),
+		RetryableTerraformErrors: test.GetRetryableTerraformErrors(),
 		NoColor:                  true,
 		SshAgent:                 f.SSHAgent,
 		Reconfigure:              true,
@@ -60,11 +61,11 @@ func TestThreeBasic(t *testing.T) {
 	_, err = terraform.InitAndApplyContextE(t, t.Context(), terraformOptions)
 	if err != nil {
 		t.Log("Test failed, tearing down...")
-		fixture.GetErrorLogs(t, f.TestDir+"/kubeconfig")
+		fixture.GetErrorLogs(t.Context(), t, f.TestDir+"/kubeconfig")
 		t.Fatalf("Error creating cluster: %s", err)
 	}
-	fixture.CheckReady(t, f.TestDir+"/kubeconfig")
-	fixture.CheckRunning(t, f.TestDir+"/kubeconfig")
+	fixture.CheckReady(t.Context(), t, f.TestDir+"/kubeconfig")
+	fixture.CheckRunning(t.Context(), t, f.TestDir+"/kubeconfig")
 	if t.Failed() {
 		t.Log("Test failed...")
 	} else {

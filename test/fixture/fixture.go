@@ -17,18 +17,18 @@ import (
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/google/go-github/v53/github"
 	aws "github.com/gruntwork-io/terratest/modules/aws"
-	"github.com/gruntwork-io/terratest/modules/random"
 	"github.com/gruntwork-io/terratest/modules/shell"
 	"github.com/gruntwork-io/terratest/modules/ssh"
 	"github.com/gruntwork-io/terratest/modules/terraform"
+	"github.com/rancher/terraform-rancher2-aws/test"
 	"golang.org/x/oauth2"
 )
 
 // GetRancherReleases retrieves the available Rancher releases from GitHub.
-func GetRancherReleases() (string, string, string, error) {
-	releases, err := getReleases("rancher", "rancher")
+func GetRancherReleases(ctx context.Context) (string, string, string, error) {
+	releases, err := getReleases(ctx, "rancher", "rancher")
 	if err != nil {
-		return "", "", "", err
+		return "", "", "", fmt.Errorf("getting rancher releases: %w", err)
 	}
 	filterPrerelease(&releases)
 	filterPrimeOnly(&releases)
@@ -54,10 +54,10 @@ func GetRancherReleases() (string, string, string, error) {
 }
 
 // GetRke2Releases retrieves the available RKE2 releases from GitHub.
-func GetRke2Releases() (string, string, string, error) {
-	releases, err := getReleases("rancher", "rke2")
+func GetRke2Releases(ctx context.Context) (string, string, string, error) {
+	releases, err := getReleases(ctx, "rancher", "rke2")
 	if err != nil {
-		return "", "", "", err
+		return "", "", "", fmt.Errorf("getting rke2 releases: %w", err)
 	}
 	filterPrerelease(&releases)
 	versions := getVersionsFromReleases(&releases)
@@ -81,7 +81,7 @@ func GetRke2Releases() (string, string, string, error) {
 	return latest, stable, lts, nil
 }
 
-func getReleases(org string, repo string) ([]*github.RepositoryRelease, error) {
+func getReleases(ctx context.Context, org string, repo string) ([]*github.RepositoryRelease, error) {
 	githubToken := os.Getenv("GITHUB_TOKEN")
 	if githubToken == "" {
 		fmt.Println("GITHUB_TOKEN environment variable not set")
@@ -90,15 +90,15 @@ func getReleases(org string, repo string) ([]*github.RepositoryRelease, error) {
 
 	// Create a new OAuth2 token using the GitHub token
 	tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: githubToken})
-	tokenClient := oauth2.NewClient(context.Background(), tokenSource)
+	tokenClient := oauth2.NewClient(ctx, tokenSource)
 
 	// Create a new GitHub client using the authenticated HTTP client
 	client := github.NewClient(tokenClient)
 
 	var releases []*github.RepositoryRelease
-	releases, _, err := client.Repositories.ListReleases(context.Background(), org, repo, &github.ListOptions{})
+	releases, _, err := client.Repositories.ListReleases(ctx, org, repo, &github.ListOptions{})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("listing repository releases: %w", err)
 	}
 
 	return releases, nil
@@ -320,16 +320,16 @@ func removeZeroPadding(v *[]string) {
 }
 
 // CreateKeypair generates a new EC2 key pair for testing and tags it appropriately.
-func CreateKeypair(t *testing.T, region string, owner string, id string) (*aws.Ec2Keypair, error) {
+func CreateKeypair(ctx context.Context, t *testing.T, region string, owner string, id string) (*aws.Ec2Keypair, error) {
 	t.Log("Creating keypair...")
 	// Create an EC2 KeyPair that we can use for SSH access
 	keyPairName := id
-	keyPair := aws.CreateAndImportEC2KeyPairContext(t, t.Context(), region, keyPairName)
+	keyPair := aws.CreateAndImportEC2KeyPairContext(t, ctx, region, keyPairName)
 
 	// tag the key pair so we can find in the access module
-	client, err := aws.NewEc2ClientContextE(t, t.Context(), region)
+	client, err := aws.NewEc2ClientContextE(t, ctx, region)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("creating ec2 client: %w", err)
 	}
 
 	k := "key-name"
@@ -340,14 +340,14 @@ func CreateKeypair(t *testing.T, region string, owner string, id string) (*aws.E
 	input := &ec2.DescribeKeyPairsInput{
 		Filters: []ec2types.Filter{keyNameFilter},
 	}
-	result, err := client.DescribeKeyPairs(t.Context(), input)
+	result, err := client.DescribeKeyPairs(ctx, input)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("describing key pairs: %w", err)
 	}
 
-	err = aws.AddTagsToResourceContextE(t, t.Context(), region, *result.KeyPairs[0].KeyPairId, map[string]string{"Name": keyPairName, "Owner": owner})
+	err = aws.AddTagsToResourceContextE(t, ctx, region, *result.KeyPairs[0].KeyPairId, map[string]string{"Name": keyPairName, "Owner": owner})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("adding tags to key pair: %w", err)
 	}
 
 	// Verify that the name and owner tags were placed properly
@@ -359,9 +359,9 @@ func CreateKeypair(t *testing.T, region string, owner string, id string) (*aws.E
 	input = &ec2.DescribeKeyPairsInput{
 		Filters: []ec2types.Filter{keyNameFilter},
 	}
-	_, err = client.DescribeKeyPairs(t.Context(), input)
+	_, err = client.DescribeKeyPairs(ctx, input)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("verifying Name tag: %w", err)
 	}
 
 	k = "tag:Owner"
@@ -372,118 +372,11 @@ func CreateKeypair(t *testing.T, region string, owner string, id string) (*aws.E
 	input = &ec2.DescribeKeyPairsInput{
 		Filters: []ec2types.Filter{keyNameFilter},
 	}
-	_, err = client.DescribeKeyPairs(t.Context(), input)
+	_, err = client.DescribeKeyPairs(ctx, input)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("verifying Owner tag: %w", err)
 	}
 	return keyPair, nil
-}
-
-// GetRetryableTerraformErrors returns a map of Terraform errors that should be retried.
-func GetRetryableTerraformErrors() map[string]string {
-	retryableTerraformErrors := map[string]string{
-		// The reason is unknown, but eventually these succeed after a few retries.
-		".*unable to verify signature.*":             "Failed due to transient network error.",
-		".*unable to verify checksum.*":              "Failed due to transient network error.",
-		".*no provider exists with the given name.*": "Failed due to transient network error.",
-		".*registry service is unreachable.*":        "Failed due to transient network error.",
-		".*connection reset by peer.*":               "Failed due to transient network error.",
-		".*TLS handshake timeout.*":                  "Failed due to transient network error.",
-		".*context deadline exceeded.*":              "Failed due to kubernetes timeout, retrying.",
-		".*http2: client connection lost.*":          "Failed due to transient network error.",
-	}
-	return retryableTerraformErrors
-}
-
-// SetAcmeServer sets the ACME server URL environment variable if not already set.
-func SetAcmeServer(t *testing.T) string {
-	acmeserver := os.Getenv("ACME_SERVER_URL")
-	if acmeserver == "" {
-		t.Setenv("ACME_SERVER_URL", "https://acme-staging-v02.api.letsencrypt.org/directory")
-		acmeserver = "https://acme-staging-v02.api.letsencrypt.org/directory"
-	}
-	return acmeserver
-}
-
-// GetRegion retrieves the AWS region from environment variables, defaulting to us-west-2.
-func GetRegion() string {
-	region := os.Getenv("AWS_REGION")
-	if region == "" {
-		region = os.Getenv("AWS_DEFAULT_REGION")
-	}
-	if region == "" {
-		region = "us-west-2"
-	}
-	return region
-}
-
-// GetAwsAccessKey retrieves the AWS access key from the environment.
-func GetAwsAccessKey() string {
-	key := os.Getenv("AWS_ACCESS_KEY_ID")
-	if key == "" {
-		key = "FAKE123-ABC"
-	}
-	return key
-}
-
-// GetAwsSecretKey retrieves the AWS secret key from the environment.
-func GetAwsSecretKey() string {
-	secret := os.Getenv("AWS_SECRET_ACCESS_KEY")
-	if secret == "" {
-		secret = "FAKE123-ABC"
-	}
-	return secret
-}
-
-// GetAwsSessionToken retrieves the AWS session token from the environment.
-func GetAwsSessionToken() string {
-	return os.Getenv("AWS_SESSION_TOKEN")
-}
-
-// GetID generates a unique identifier for test resources.
-func GetID() string {
-	id := os.Getenv("IDENTIFIER")
-	if id == "" {
-		id = random.UniqueID()
-	}
-	id += "-" + random.UniqueID()
-	return id
-}
-
-// GetRepoRoot returns the absolute path to the repository root directory.
-func GetRepoRoot(t *testing.T) string {
-	cmd := shell.Command{
-		Command: "bash",
-		Args:    []string{"../scripts/get_repo_root.sh"},
-	}
-	out, err := shell.RunCommandContextAndGetOutputE(t, t.Context(), &cmd)
-	if err != nil {
-		t.Fatalf("Error getting git root directory: %v", err)
-	}
-	return strings.TrimSpace(out)
-}
-
-// CreateTestDirectories sets up the necessary directory structure for tests.
-func CreateTestDirectories(t *testing.T, id string) error {
-	gwd := GetRepoRoot(t)
-	fwd, err := filepath.Abs(gwd)
-	if err != nil {
-		return err
-	}
-	paths := []string{
-		filepath.Join(fwd, "test/data"),
-		filepath.Join(fwd, "test/data", id),
-		filepath.Join(fwd, "test/data", id, "backend"),
-		filepath.Join(fwd, "test/data", id, "data"),
-		filepath.Join(fwd, "test/data", id, "plugins"),
-	}
-	for _, path := range paths {
-		err = os.Mkdir(path, 0750)
-		if err != nil && !os.IsExist(err) {
-			return err
-		}
-	}
-	return nil
 }
 
 // Fixture holds the state and configuration for a Terraform test run.
@@ -505,12 +398,12 @@ type Fixture struct {
 
 // NewFixture initializes a new test Fixture with the necessary dependencies and state.
 func NewFixture(t *testing.T, directory string) *Fixture {
-	id := GetID()
-	region := GetRegion()
+	id := test.GetID()
+	region := test.GetRegion()
 	owner := "terraform-ci@suse.com"
-	acmeServerURL := SetAcmeServer(t)
+	acmeServerURL := test.SetAcmeServer(t)
 
-	repoRoot, err := filepath.Abs(GetRepoRoot(t))
+	repoRoot, err := filepath.Abs(test.GetRepoRoot(t.Context(), t))
 	if err != nil {
 		t.Fatalf("Error getting git root directory: %v", err)
 	}
@@ -519,7 +412,7 @@ func NewFixture(t *testing.T, directory string) *Fixture {
 	testDir := filepath.Join(repoRoot, "test", "data", id)
 	pluginsDir := filepath.Join(testDir, "plugins")
 
-	err = CreateTestDirectories(t, id)
+	err = test.CreateTestDirectories(t.Context(), t, id)
 	if err != nil {
 		_ = os.RemoveAll(testDir)
 		t.Fatalf("Error creating test data directories: %s", err)
@@ -538,7 +431,7 @@ func NewFixture(t *testing.T, directory string) *Fixture {
 		}
 	}
 
-	keyPair, err := CreateKeypair(t, region, owner, id)
+	keyPair, err := CreateKeypair(t.Context(), t, region, owner, id)
 	if err != nil {
 		_ = os.RemoveAll(testDir)
 		t.Fatalf("Error creating test key pair: %s", err)
@@ -557,7 +450,7 @@ func NewFixture(t *testing.T, directory string) *Fixture {
 	sshAgent := ssh.SSHAgentWithKeyPair(t, t.Context(), keyPairObj)
 	t.Logf("Key %s created and added to agent", keyPair.Name)
 
-	_, _, rke2Version, err := GetRke2Releases()
+	_, _, rke2Version, err := GetRke2Releases(t.Context())
 	if err != nil {
 		_ = aws.DeleteEC2KeyPairContextE(t, t.Context(), keyPair)
 		sshAgent.Stop()
@@ -567,7 +460,7 @@ func NewFixture(t *testing.T, directory string) *Fixture {
 
 	rancherVersion := os.Getenv("RANCHER_VERSION")
 	if rancherVersion == "" {
-		_, rancherVersion, _, err = GetRancherReleases()
+		_, rancherVersion, _, err = GetRancherReleases(t.Context())
 	}
 	if err != nil {
 		_ = aws.DeleteEC2KeyPairContextE(t, t.Context(), keyPair)
@@ -636,8 +529,8 @@ func (f *Fixture) Teardown(t *testing.T) {
 }
 
 // GetErrorLogs retrieves error logs from the cluster.
-func GetErrorLogs(t *testing.T, kubeconfigPath string) {
-	repoRoot, err := filepath.Abs(GetRepoRoot(t))
+func GetErrorLogs(ctx context.Context, t *testing.T, kubeconfigPath string) {
+	repoRoot, err := filepath.Abs(test.GetRepoRoot(ctx, t))
 	if err != nil {
 		t.Logf("Error getting git root directory: %v", err)
 		return
@@ -655,7 +548,7 @@ func GetErrorLogs(t *testing.T, kubeconfigPath string) {
 			"KUBECONFIG": kubeconfigPath,
 		},
 	}
-	out, err := shell.RunCommandContextAndGetOutputE(t, t.Context(), &errorLogsScript)
+	out, err := shell.RunCommandContextAndGetOutputE(t, ctx, &errorLogsScript)
 	if err != nil {
 		t.Logf("Error running script: %s", err)
 	}
@@ -663,8 +556,8 @@ func GetErrorLogs(t *testing.T, kubeconfigPath string) {
 }
 
 // CheckReady executes a script to verify if nodes are ready.
-func CheckReady(t *testing.T, kubeconfigPath string) {
-	repoRoot, err := filepath.Abs(GetRepoRoot(t))
+func CheckReady(ctx context.Context, t *testing.T, kubeconfigPath string) {
+	repoRoot, err := filepath.Abs(test.GetRepoRoot(ctx, t))
 	if err != nil {
 		t.Fatalf("Error getting git root directory: %v", err)
 	}
@@ -680,7 +573,7 @@ func CheckReady(t *testing.T, kubeconfigPath string) {
 			"KUBECONFIG": kubeconfigPath,
 		},
 	}
-	out, err := shell.RunCommandContextAndGetOutputE(t, t.Context(), &readyScript)
+	out, err := shell.RunCommandContextAndGetOutputE(t, ctx, &readyScript)
 	if err != nil {
 		t.Fatalf("Error running script: %s", err)
 	}
@@ -688,8 +581,8 @@ func CheckReady(t *testing.T, kubeconfigPath string) {
 }
 
 // CheckRunning executes a script to verify if pods are running.
-func CheckRunning(t *testing.T, kubeconfigPath string) {
-	repoRoot, err := filepath.Abs(GetRepoRoot(t))
+func CheckRunning(ctx context.Context, t *testing.T, kubeconfigPath string) {
+	repoRoot, err := filepath.Abs(test.GetRepoRoot(ctx, t))
 	if err != nil {
 		t.Fatalf("Error getting git root directory: %v", err)
 	}
@@ -705,7 +598,7 @@ func CheckRunning(t *testing.T, kubeconfigPath string) {
 			"KUBECONFIG": kubeconfigPath,
 		},
 	}
-	out, err := shell.RunCommandContextAndGetOutputE(t, t.Context(), &readyScript)
+	out, err := shell.RunCommandContextAndGetOutputE(t, ctx, &readyScript)
 	if err != nil {
 		t.Fatalf("Error running script: %s", err)
 	}
@@ -713,8 +606,8 @@ func CheckRunning(t *testing.T, kubeconfigPath string) {
 }
 
 // CreateObjectStorageBackend provisions an S3 backend for Terraform state storage.
-func CreateObjectStorageBackend(t *testing.T, testDir string, id string, owner string, region string) (*terraform.Options, error) {
-	repoRoot, err := filepath.Abs(GetRepoRoot(t))
+func CreateObjectStorageBackend(ctx context.Context, t *testing.T, testDir string, id string, owner string, region string) (*terraform.Options, error) {
+	repoRoot, err := filepath.Abs(test.GetRepoRoot(ctx, t))
 	if err != nil {
 		t.Fatalf("Error getting git root directory: %v", err)
 	}
@@ -738,12 +631,15 @@ func CreateObjectStorageBackend(t *testing.T, testDir string, id string, owner s
 			"TF_CLI_ARGS_destroy": "-state=" + filepath.Join(testDir, "backend", "tfstate"),
 			"TF_CLI_ARGS_output":  "-state=" + filepath.Join(testDir, "backend", "tfstate"),
 		},
-		RetryableTerraformErrors: GetRetryableTerraformErrors(),
+		RetryableTerraformErrors: test.GetRetryableTerraformErrors(),
 		Reconfigure:              true,
 		NoColor:                  true,
 		Upgrade:                  true,
 	})
 
-	_, err = terraform.InitAndApplyContextE(t, t.Context(), terraformOptions)
-	return terraformOptions, err
+	_, err = terraform.InitAndApplyContextE(t, ctx, terraformOptions)
+	if err != nil {
+		return terraformOptions, fmt.Errorf("applying object storage backend: %w", err)
+	}
+	return terraformOptions, nil
 }

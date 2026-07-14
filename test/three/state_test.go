@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/gruntwork-io/terratest/modules/terraform"
+	"github.com/rancher/terraform-rancher2-aws/test"
 	"github.com/rancher/terraform-rancher2-aws/test/fixture"
 )
 
@@ -15,7 +16,7 @@ func TestThreeState(t *testing.T) {
 	f := fixture.NewFixture(t, "three")
 	defer f.Teardown(t)
 
-	backendTerraformOptions, err := fixture.CreateObjectStorageBackend(t, f.TestDir, f.ID, f.Owner, f.Region)
+	backendTerraformOptions, err := fixture.CreateObjectStorageBackend(t.Context(), t, f.TestDir, f.ID, f.Owner, f.Region)
 	f.TeardownOptions = append(f.TeardownOptions, backendTerraformOptions)
 	if err != nil {
 		t.Log("Test failed, tearing down...")
@@ -49,7 +50,7 @@ func TestThreeState(t *testing.T) {
 			"TF_CLI_ARGS_destroy": "-no-color",
 			"TF_CLI_ARGS_output":  "-no-color",
 		},
-		RetryableTerraformErrors: fixture.GetRetryableTerraformErrors(),
+		RetryableTerraformErrors: test.GetRetryableTerraformErrors(),
 		NoColor:                  true,
 		SshAgent:                 f.SSHAgent,
 		Reconfigure:              true,
@@ -61,23 +62,23 @@ func TestThreeState(t *testing.T) {
 	_, err = terraform.InitAndApplyContextE(t, t.Context(), terraformOptions)
 	if err != nil {
 		t.Log("Test failed, tearing down...")
-		fixture.GetErrorLogs(t, f.TestDir+"/kubeconfig")
+		fixture.GetErrorLogs(t.Context(), t, f.TestDir+"/kubeconfig")
 		t.Fatalf("Error creating cluster: %s", err)
 	}
-	fixture.CheckReady(t, f.TestDir+"/kubeconfig")
-	fixture.CheckRunning(t, f.TestDir+"/kubeconfig")
+	fixture.CheckReady(t.Context(), t, f.TestDir+"/kubeconfig")
+	fixture.CheckRunning(t.Context(), t, f.TestDir+"/kubeconfig")
 
 	t.Log("Validating remote state by destroying the local filesystem files and allowing Terraform to re-create them from S3")
 	err = os.RemoveAll(f.TestDir)
 	if err != nil {
 		t.Log("Test failed, tearing down...")
-		fixture.GetErrorLogs(t, f.TestDir+"/kubeconfig")
+		fixture.GetErrorLogs(t.Context(), t, f.TestDir+"/kubeconfig")
 		t.Fatalf("Error removing test files: %s", err)
 	}
-	err = fixture.CreateTestDirectories(t, f.ID)
+	err = test.CreateTestDirectories(t.Context(), t, f.ID)
 	if err != nil {
 		t.Log("Test failed, tearing down...")
-		fixture.GetErrorLogs(t, f.TestDir+"/kubeconfig")
+		fixture.GetErrorLogs(t.Context(), t, f.TestDir+"/kubeconfig")
 		t.Fatalf("Error creating cluster: %s", err)
 	}
 
@@ -85,27 +86,27 @@ func TestThreeState(t *testing.T) {
 	err = os.WriteFile(f.TestDir+"/id_rsa", []byte(f.KeyPair.PrivateKey), 0600)
 	if err != nil {
 		t.Log("Test failed, tearing down...")
-		fixture.GetErrorLogs(t, f.TestDir+"/kubeconfig")
+		fixture.GetErrorLogs(t.Context(), t, f.TestDir+"/kubeconfig")
 		t.Fatalf("Error creating cluster: %s", err)
 	}
 	_, err = terraform.InitAndApplyContextE(t, t.Context(), terraformOptions)
 	if err != nil {
 		t.Log("Test failed, tearing down...")
-		fixture.GetErrorLogs(t, f.TestDir+"/kubeconfig")
+		fixture.GetErrorLogs(t.Context(), t, f.TestDir+"/kubeconfig")
 		t.Fatalf("Error creating cluster: %s", err)
 	}
-	fixture.CheckReady(t, f.TestDir+"/kubeconfig")
-	fixture.CheckRunning(t, f.TestDir+"/kubeconfig")
+	fixture.CheckReady(t.Context(), t, f.TestDir+"/kubeconfig")
+	fixture.CheckRunning(t.Context(), t, f.TestDir+"/kubeconfig")
 
 	// Running the apply again should not change anything
 	_, err = terraform.InitAndApplyContextE(t, t.Context(), terraformOptions)
 	if err != nil {
 		t.Log("Test failed, tearing down...")
-		fixture.GetErrorLogs(t, f.TestDir+"/kubeconfig")
+		fixture.GetErrorLogs(t.Context(), t, f.TestDir+"/kubeconfig")
 		t.Fatalf("Error creating cluster: %s", err)
 	}
-	fixture.CheckReady(t, f.TestDir+"/kubeconfig")
-	fixture.CheckRunning(t, f.TestDir+"/kubeconfig")
+	fixture.CheckReady(t.Context(), t, f.TestDir+"/kubeconfig")
+	fixture.CheckRunning(t.Context(), t, f.TestDir+"/kubeconfig")
 
 	if t.Failed() {
 		t.Log("Test failed...")

@@ -393,12 +393,13 @@ pre_test_validation() {
   echo "Checking for compile errors..."
   while IFS= read -r dir; do
     if [ -n "$dir" ]; then
+      echo "  compiling ${dir}..."
       if ! go test -c "$dir" -o /dev/null 2>&1; then
         echo "ERROR: Failed to compile package in $dir"
         exit 1
       fi
     fi
-  done <<< "$(find "$REPO_ROOT/$TEST_DIR" -not \( -path "$REPO_ROOT/$TEST_DIR/data" -prune \) -name '*.go' -exec dirname {} \; | sort -u)"
+  done <<< "$(find . -path './data' -prune -o -type f -name '*.go' -exec dirname {} \; | sort -u)"
   echo "✓ Compile checks passed"
 
   echo "Running go lint..."

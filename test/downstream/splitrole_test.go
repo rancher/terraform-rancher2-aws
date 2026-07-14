@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/gruntwork-io/terratest/modules/terraform"
+	"github.com/rancher/terraform-rancher2-aws/test"
 	"github.com/rancher/terraform-rancher2-aws/test/fixture"
 )
 
@@ -13,9 +14,9 @@ func TestDownstreamSplitrole(t *testing.T) {
 	f := fixture.NewFixture(t, "downstream")
 	defer f.Teardown(t)
 
-	accessKey := fixture.GetAwsAccessKey()
-	secretKey := fixture.GetAwsSecretKey()
-	sessionToken := fixture.GetAwsSessionToken()
+	accessKey := test.GetAwsAccessKey()
+	secretKey := test.GetAwsSecretKey()
+	sessionToken := test.GetAwsSessionToken()
 
 	terraformOptions := terraform.WithDefaultRetryableErrors(t, &terraform.Options{
 		TerraformDir: f.ExampleDir,
@@ -50,7 +51,7 @@ func TestDownstreamSplitrole(t *testing.T) {
 			"TF_CLI_ARGS_destroy": "-no-color -state=" + f.TestDir + "/tfstate",
 			"TF_CLI_ARGS_output":  "-no-color -state=" + f.TestDir + "/tfstate",
 		},
-		RetryableTerraformErrors: fixture.GetRetryableTerraformErrors(),
+		RetryableTerraformErrors: test.GetRetryableTerraformErrors(),
 		NoColor:                  true,
 		SshAgent:                 f.SSHAgent,
 		Upgrade:                  true,
@@ -61,11 +62,11 @@ func TestDownstreamSplitrole(t *testing.T) {
 	_, err := terraform.InitAndApplyContextE(t, t.Context(), terraformOptions)
 	if err != nil {
 		t.Log("Test failed, tearing down...")
-		fixture.GetErrorLogs(t, f.TestDir+"/kubeconfig")
+		fixture.GetErrorLogs(t.Context(), t, f.TestDir+"/kubeconfig")
 		t.Fatalf("Error creating cluster: %s", err)
 	}
-	fixture.CheckReady(t, f.TestDir+"/kubeconfig")
-	fixture.CheckRunning(t, f.TestDir+"/kubeconfig")
+	fixture.CheckReady(t.Context(), t, f.TestDir+"/kubeconfig")
+	fixture.CheckRunning(t.Context(), t, f.TestDir+"/kubeconfig")
 	if t.Failed() {
 		t.Log("Test failed...")
 	} else {
