@@ -115,6 +115,7 @@
           gnupg
           go
           golangci-lint
+          google-cloud-sdk
           goreleaser
           gotestfmt
           gotestsum

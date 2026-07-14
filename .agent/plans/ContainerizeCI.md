@@ -1,6 +1,6 @@
 # Plan: Update GitHub Workflows to Use `ci-image` Container
 
-**Executed Date:** July 7, 2026
+**Executed Date:** 2026 July
 **Purpose:** Update all GitHub workflows to use the `ghcr.io/rancher/ci-image/nix:20260603-18` container which comes with Nix pre-installed, and remove redundant steps that install Nix manually.
 
 ## Goals

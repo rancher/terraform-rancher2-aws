@@ -1,13 +1,13 @@
 # Workflow Refactor
 
-**Date Completed:** Pending
+**Executed Date:** 2026 August
 **Purpose:** Update all workflows to have a standard step structure, extract all scripts so they can be linted, use commit hashes for action versioning, and implement least privilege security principle.
 
 ---
 
 - All jobs must define explicit `permissions:`. All workflows should have `permissions: {}` at the top level. Set scopes to `none` as needed. Permissions should implement least privilege necessary access.
 - Pin all actions (including `actions/*`, `github/*`, `rancher/*`) to a full 40-character commit SHA, not a tag. The `uses:` line MUST include the version (e.g., `# v6.0.2`). On the line before the `uses:` there should be a comment with a link to the releases page for the action (e.g. `# https://github.com/actions/github-script/releases`).
-- Only pre-approved action namespaces are allowed. Approved namespaces are documented at: https://github.com/rancher/security-team/blob/main/docs/standards/rancher-gha-standards.md#allowed-github-actions. Important ones include: `https://github.com/actions/*`, `https://github.com/aquasecurity/*`, `https://github.com/aws-actions/*`, `https://github.com/dependabot/*`, `https://github.com/fossas/fossa-action@*`, `https://github.com/golang/*`, `https://github.com/golangci/*`, `https://github.com/google-github-actions/*`, `https://github.com/google/*`, `https://github.com/googleapis/release-please-action@*`, `https://github.com/goreleaser/*`, `https://github.com/hashicorp/setup-terraform@*`, `https://github.com/hashicorp/vault-action@*`, `https://github.com/rancher-eio/*`, `https://github.com/renovatebot/*`, and `https://github.com/updatecli/*`.
+- Only pre-approved action namespaces are allowed. Approved namespaces are documented at: `https://github.com/rancher/security-team/blob/main/docs/standards/rancher-gha-standards.md#allowed-github-actions`. Important ones include: `https://github.com/actions/*`, `https://github.com/aquasecurity/*`, `https://github.com/aws-actions/*`, `https://github.com/dependabot/*`, `https://github.com/fossas/fossa-action@*`, `https://github.com/golang/*`, `https://github.com/golangci/*`, `https://github.com/google-github-actions/*`, `https://github.com/google/*`, `https://github.com/googleapis/release-please-action@*`, `https://github.com/goreleaser/*`, `https://github.com/hashicorp/setup-terraform@*`, `https://github.com/hashicorp/vault-action@*`, `https://github.com/rancher-eio/*`, `https://github.com/renovatebot/*`, and `https://github.com/updatecli/*`.
 - Never inline untrusted context variables in `run` scripts. Use environment variables (e.g., `env: VAR: ${{...}}`).
 - Remove and replace any `pull_request_target` triggered workflows, this trigger is banned.
 - Every `job` must have an explicit `timeout-minutes`. Don't use the 360-minute default.

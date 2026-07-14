@@ -35,3 +35,4 @@ static_files.txt
 *.tfbackend
 *.log
 *.bak
+node_modules

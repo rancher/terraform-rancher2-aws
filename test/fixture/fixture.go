@@ -1,4 +1,5 @@
-package tests
+// Package fixture provides testing fixtures and helper functions.
+package fixture
 
 import (
 	"cmp"
@@ -12,10 +13,10 @@ import (
 	"strings"
 	"testing"
 
-	ec2 "github.com/aws/aws-sdk-go/service/ec2"
+	ec2 "github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/google/go-github/v53/github"
 	aws "github.com/gruntwork-io/terratest/modules/aws"
-	g "github.com/gruntwork-io/terratest/modules/git"
 	"github.com/gruntwork-io/terratest/modules/random"
 	"github.com/gruntwork-io/terratest/modules/shell"
 	"github.com/gruntwork-io/terratest/modules/ssh"
@@ -23,6 +24,7 @@ import (
 	"golang.org/x/oauth2"
 )
 
+// GetRancherReleases retrieves the available Rancher releases from GitHub.
 func GetRancherReleases() (string, string, string, error) {
 	releases, err := getReleases("rancher", "rancher")
 	if err != nil {
@@ -51,6 +53,7 @@ func GetRancherReleases() (string, string, string, error) {
 	return latest, stable, lts, nil
 }
 
+// GetRke2Releases retrieves the available RKE2 releases from GitHub.
 func GetRke2Releases() (string, string, string, error) {
 	releases, err := getReleases("rancher", "rke2")
 	if err != nil {
@@ -153,8 +156,8 @@ func zeroPadVersionNumbers(v *[]string) {
 	var zv []string
 	versions := *v
 	for i := 0; i < len(versions); i++ {
-		vp := strings.Split(versions[i], "+") //["v1.3.1","rke2r3"] OR ["v2.5.4"] if no "+"
-		vpp := strings.Split(vp[0], ".")      //["v1","3","1]
+		vp := strings.Split(versions[i], "+") // ["v1.3.1","rke2r3"] OR ["v2.5.4"] if no "+"
+		vpp := strings.Split(vp[0], ".")      // ["v1","3","1]
 		major := vpp[0]                       // assumes single digit major
 		minor := ""
 		trivial := ""
@@ -169,10 +172,10 @@ func zeroPadVersionNumbers(v *[]string) {
 			trivial = vpp[2]
 		}
 		if len(vp) > 1 {
-			version := fmt.Sprintf("%s.%s.%s+%s", major, minor, trivial, vp[1]) //"v1.03.01+rke2r3"
+			version := fmt.Sprintf("%s.%s.%s+%s", major, minor, trivial, vp[1]) // "v1.03.01+rke2r3"
 			zv = append(zv, version)
 		} else {
-			version := fmt.Sprintf("%s.%s.%s", major, minor, trivial) //"v1.03.01"
+			version := fmt.Sprintf("%s.%s.%s", major, minor, trivial) // "v1.03.01"
 			zv = append(zv, version)
 		}
 	}
@@ -197,21 +200,21 @@ func zeroPadVersionNumbers(v *[]string) {
 func sortVersions(v *[]string) { // assumes versions are 0 padded already
 	slices.SortFunc(*v, func(a, b string) int {
 		return cmp.Compare(b, a)
-		//[
-		//  v1.30.01+rke2r3,
-		//  v1.30.01+rke2r2,
-		//  v1.30.01+rke2r1,
-		//  v1.30.00+rke2r1,
-		//  v1.29.05+rke2r2,
-		//  v1.29.05+rke2r1,
-		//  v1.29.04+rke2r1,
-		//  v1.28.17+rke2r1,
-		//  v1.28.16+rke2r1,
-		//  v1.28.15+rke2r1,
-		//  v1.28.14+rke2r1,
-		//  v1.27.20+rke2r1,
-		//  v1.04.01+rke2r3,
-		//]
+		// [
+		//   v1.30.01+rke2r3,
+		//   v1.30.01+rke2r2,
+		//   v1.30.01+rke2r1,
+		//   v1.30.00+rke2r1,
+		//   v1.29.05+rke2r2,
+		//   v1.29.05+rke2r1,
+		//   v1.29.04+rke2r1,
+		//   v1.28.17+rke2r1,
+		//   v1.28.16+rke2r1,
+		//   v1.28.15+rke2r1,
+		//   v1.28.14+rke2r1,
+		//   v1.27.20+rke2r1,
+		//   v1.04.01+rke2r3,
+		// ]
 	})
 }
 func filterDuplicatePatches(v *[]string) { // assumes versions are sorted already
@@ -221,25 +224,25 @@ func filterDuplicatePatches(v *[]string) { // assumes versions are sorted alread
 	for i := 1; i < len(versions); i++ {
 		c := versions[i]                // this is all testing if c should be added
 		p := versions[i-1]              // p should be greater because the index is smaller
-		cp := strings.Split(c[1:], "+") //["1.30.01","rke2r2"] (c eliminated) // ["1.30.01", "rke2r1"]
-		pp := strings.Split(p[1:], "+") //["1.30.01","rke2r3"]                // ["1.30.00", "rke2r1"]
+		cp := strings.Split(c[1:], "+") // ["1.30.01","rke2r2"] (c eliminated) // ["1.30.01", "rke2r1"]
+		pp := strings.Split(p[1:], "+") // ["1.30.01","rke2r3"]                // ["1.30.00", "rke2r1"]
 		if cp[0] != pp[0] {             // if c doesn't share the same version as p
-			cpp := strings.Split(cp[0], ".") //["1","30","00"]
-			ppp := strings.Split(pp[0], ".") //["1","30","01"]
+			cpp := strings.Split(cp[0], ".") // ["1","30","00"]
+			ppp := strings.Split(pp[0], ".") // ["1","30","01"]
 			if cpp[2] != ppp[2] {            // if c doesn't share the same patch as p add it
 				fv = append(fv, c)
-				//[
-				//  v1.30.01+rke2r3,
-				//  v1.30.00+rke2r1,
-				//  v1.29.05+rke2r2,
-				//  v1.29.04+rke2r1,
-				//  v1.28.17+rke2r1,
-				//  v1.28.16+rke2r1,
-				//  v1.28.15+rke2r1,
-				//  v1.28.14+rke2r1,
-				//  v1.27.20+rke2r1,
-				//  v1.04.01+rke2r3,
-				//]
+				// [
+				//   v1.30.01+rke2r3,
+				//   v1.30.00+rke2r1,
+				//   v1.29.05+rke2r2,
+				//   v1.29.04+rke2r1,
+				//   v1.28.17+rke2r1,
+				//   v1.28.16+rke2r1,
+				//   v1.28.15+rke2r1,
+				//   v1.28.14+rke2r1,
+				//   v1.27.20+rke2r1,
+				//   v1.04.01+rke2r3,
+				// ]
 			}
 		}
 	}
@@ -287,8 +290,8 @@ func removeZeroPadding(v *[]string) {
 	var zv []string
 	versions := *v
 	for i := 0; i < len(versions); i++ {
-		vp := strings.Split(versions[i], "+") //["v1.03.01","rke2r3"] OR ["v2.05.04"] if no "+"
-		vpp := strings.Split(vp[0], ".")      //["v1","03","01]
+		vp := strings.Split(versions[i], "+") // ["v1.03.01","rke2r3"] OR ["v2.05.04"] if no "+"
+		vpp := strings.Split(vp[0], ".")      // ["v1","03","01]
 		major := vpp[0]                       // assumes single digit major
 		minor := vpp[1]
 		trivial := vpp[2]
@@ -299,82 +302,84 @@ func removeZeroPadding(v *[]string) {
 			trivial = trivial[1:]
 		}
 		if len(vp) > 1 {
-			version := fmt.Sprintf("%s.%s.%s+%s", major, minor, trivial, vp[1]) //"v1.3.1+rke2r3"
+			version := fmt.Sprintf("%s.%s.%s+%s", major, minor, trivial, vp[1]) // "v1.3.1+rke2r3"
 			zv = append(zv, version)
 		} else {
-			version := fmt.Sprintf("%s.%s.%s", major, minor, trivial) //"v1.3.1"
+			version := fmt.Sprintf("%s.%s.%s", major, minor, trivial) // "v1.3.1"
 			zv = append(zv, version)
 		}
 	}
 	*v = zv
-	//[
-	//  v1.30.0+rke2r1,
-	//  v1.29.4+rke2r1,
-	//  v1.28.16+rke2r1,
-	//  v1.27.20+rke2r1,
-	//  v1.4.1+rke2r3,
-	//]
+	// [
+	//   v1.30.0+rke2r1,
+	//   v1.29.4+rke2r1,
+	//   v1.28.16+rke2r1,
+	//   v1.27.20+rke2r1,
+	//   v1.4.1+rke2r3,
+	// ]
 }
 
+// CreateKeypair generates a new EC2 key pair for testing and tags it appropriately.
 func CreateKeypair(t *testing.T, region string, owner string, id string) (*aws.Ec2Keypair, error) {
 	t.Log("Creating keypair...")
 	// Create an EC2 KeyPair that we can use for SSH access
 	keyPairName := id
-	keyPair := aws.CreateAndImportEC2KeyPair(t, region, keyPairName)
+	keyPair := aws.CreateAndImportEC2KeyPairContext(t, t.Context(), region, keyPairName)
 
 	// tag the key pair so we can find in the access module
-	client, err := aws.NewEc2ClientE(t, region)
+	client, err := aws.NewEc2ClientContextE(t, t.Context(), region)
 	if err != nil {
 		return nil, err
 	}
 
 	k := "key-name"
-	keyNameFilter := ec2.Filter{
+	keyNameFilter := ec2types.Filter{
 		Name:   &k,
-		Values: []*string{&keyPairName},
+		Values: []string{keyPairName},
 	}
 	input := &ec2.DescribeKeyPairsInput{
-		Filters: []*ec2.Filter{&keyNameFilter},
+		Filters: []ec2types.Filter{keyNameFilter},
 	}
-	result, err := client.DescribeKeyPairs(input)
+	result, err := client.DescribeKeyPairs(t.Context(), input)
 	if err != nil {
 		return nil, err
 	}
 
-	err = aws.AddTagsToResourceE(t, region, *result.KeyPairs[0].KeyPairId, map[string]string{"Name": keyPairName, "Owner": owner})
+	err = aws.AddTagsToResourceContextE(t, t.Context(), region, *result.KeyPairs[0].KeyPairId, map[string]string{"Name": keyPairName, "Owner": owner})
 	if err != nil {
 		return nil, err
 	}
 
 	// Verify that the name and owner tags were placed properly
 	k = "tag:Name"
-	keyNameFilter = ec2.Filter{
+	keyNameFilter = ec2types.Filter{
 		Name:   &k,
-		Values: []*string{&keyPairName},
+		Values: []string{keyPairName},
 	}
 	input = &ec2.DescribeKeyPairsInput{
-		Filters: []*ec2.Filter{&keyNameFilter},
+		Filters: []ec2types.Filter{keyNameFilter},
 	}
-	_, err = client.DescribeKeyPairs(input)
+	_, err = client.DescribeKeyPairs(t.Context(), input)
 	if err != nil {
 		return nil, err
 	}
 
 	k = "tag:Owner"
-	keyNameFilter = ec2.Filter{
+	keyNameFilter = ec2types.Filter{
 		Name:   &k,
-		Values: []*string{&owner},
+		Values: []string{owner},
 	}
 	input = &ec2.DescribeKeyPairsInput{
-		Filters: []*ec2.Filter{&keyNameFilter},
+		Filters: []ec2types.Filter{keyNameFilter},
 	}
-	_, err = client.DescribeKeyPairs(input)
+	_, err = client.DescribeKeyPairs(t.Context(), input)
 	if err != nil {
 		return nil, err
 	}
 	return keyPair, nil
 }
 
+// GetRetryableTerraformErrors returns a map of Terraform errors that should be retried.
 func GetRetryableTerraformErrors() map[string]string {
 	retryableTerraformErrors := map[string]string{
 		// The reason is unknown, but eventually these succeed after a few retries.
@@ -390,15 +395,17 @@ func GetRetryableTerraformErrors() map[string]string {
 	return retryableTerraformErrors
 }
 
+// SetAcmeServer sets the ACME server URL environment variable if not already set.
 func SetAcmeServer(t *testing.T) string {
 	acmeserver := os.Getenv("ACME_SERVER_URL")
 	if acmeserver == "" {
-		os.Setenv("ACME_SERVER_URL", "https://acme-staging-v02.api.letsencrypt.org/directory") //nolint usetesting
+		t.Setenv("ACME_SERVER_URL", "https://acme-staging-v02.api.letsencrypt.org/directory")
 		acmeserver = "https://acme-staging-v02.api.letsencrypt.org/directory"
 	}
 	return acmeserver
 }
 
+// GetRegion retrieves the AWS region from environment variables, defaulting to us-west-2.
 func GetRegion() string {
 	region := os.Getenv("AWS_REGION")
 	if region == "" {
@@ -410,6 +417,7 @@ func GetRegion() string {
 	return region
 }
 
+// GetAwsAccessKey retrieves the AWS access key from the environment.
 func GetAwsAccessKey() string {
 	key := os.Getenv("AWS_ACCESS_KEY_ID")
 	if key == "" {
@@ -418,6 +426,7 @@ func GetAwsAccessKey() string {
 	return key
 }
 
+// GetAwsSecretKey retrieves the AWS secret key from the environment.
 func GetAwsSecretKey() string {
 	secret := os.Getenv("AWS_SECRET_ACCESS_KEY")
 	if secret == "" {
@@ -426,34 +435,50 @@ func GetAwsSecretKey() string {
 	return secret
 }
 
+// GetAwsSessionToken retrieves the AWS session token from the environment.
 func GetAwsSessionToken() string {
 	return os.Getenv("AWS_SESSION_TOKEN")
 }
 
-func GetId() string {
+// GetID generates a unique identifier for test resources.
+func GetID() string {
 	id := os.Getenv("IDENTIFIER")
 	if id == "" {
-		id = random.UniqueId()
+		id = random.UniqueID()
 	}
-	id += "-" + random.UniqueId()
+	id += "-" + random.UniqueID()
 	return id
 }
 
+// GetRepoRoot returns the absolute path to the repository root directory.
+func GetRepoRoot(t *testing.T) string {
+	cmd := shell.Command{
+		Command: "bash",
+		Args:    []string{"../scripts/get_repo_root.sh"},
+	}
+	out, err := shell.RunCommandContextAndGetOutputE(t, t.Context(), &cmd)
+	if err != nil {
+		t.Fatalf("Error getting git root directory: %v", err)
+	}
+	return strings.TrimSpace(out)
+}
+
+// CreateTestDirectories sets up the necessary directory structure for tests.
 func CreateTestDirectories(t *testing.T, id string) error {
-	gwd := g.GetRepoRoot(t)
+	gwd := GetRepoRoot(t)
 	fwd, err := filepath.Abs(gwd)
 	if err != nil {
 		return err
 	}
 	paths := []string{
-		filepath.Join(fwd, "test/tests/data"),
-		filepath.Join(fwd, "test/tests/data", id),
-		filepath.Join(fwd, "test/tests/data", id, "backend"),
-		filepath.Join(fwd, "test/tests/data", id, "data"),
-		filepath.Join(fwd, "test/tests/data", id, "plugins"),
+		filepath.Join(fwd, "test/data"),
+		filepath.Join(fwd, "test/data", id),
+		filepath.Join(fwd, "test/data", id, "backend"),
+		filepath.Join(fwd, "test/data", id, "data"),
+		filepath.Join(fwd, "test/data", id, "plugins"),
 	}
 	for _, path := range paths {
-		err = os.Mkdir(path, 0755)
+		err = os.Mkdir(path, 0750)
 		if err != nil && !os.IsExist(err) {
 			return err
 		}
@@ -461,55 +486,167 @@ func CreateTestDirectories(t *testing.T, id string) error {
 	return nil
 }
 
-func Teardown(t *testing.T, dataDir string, exampleDir string, options []*terraform.Options, keyPair *aws.Ec2Keypair, agent *ssh.SshAgent) {
+// Fixture holds the state and configuration for a Terraform test run.
+type Fixture struct {
+	ID              string
+	Region          string
+	Owner           string
+	AcmeServerURL   string
+	RepoRoot        string
+	ExampleDir      string
+	TestDir         string
+	PluginsDir      string
+	KeyPair         *aws.Ec2Keypair
+	SSHAgent        *ssh.SSHAgent
+	Rke2Version     string
+	RancherVersion  string
+	TeardownOptions []*terraform.Options
+}
+
+// NewFixture initializes a new test Fixture with the necessary dependencies and state.
+func NewFixture(t *testing.T, directory string) *Fixture {
+	id := GetID()
+	region := GetRegion()
+	owner := "terraform-ci@suse.com"
+	acmeServerURL := SetAcmeServer(t)
+
+	repoRoot, err := filepath.Abs(GetRepoRoot(t))
+	if err != nil {
+		t.Fatalf("Error getting git root directory: %v", err)
+	}
+
+	exampleDir := filepath.Join(repoRoot, "examples", directory)
+	testDir := filepath.Join(repoRoot, "test", "data", id)
+	pluginsDir := filepath.Join(testDir, "plugins")
+
+	err = CreateTestDirectories(t, id)
+	if err != nil {
+		_ = os.RemoveAll(testDir)
+		t.Fatalf("Error creating test data directories: %s", err)
+	}
+
+	globalCache := os.Getenv("TF_PLUGIN_CACHE_DIR")
+	if globalCache != "" {
+		t.Logf("Seeding plugin cache from %s to %s", globalCache, pluginsDir)
+		copyCmd := shell.Command{
+			Command: "bash",
+			Args:    []string{"-c", fmt.Sprintf("cp -a %s/. %s/ || true", globalCache, pluginsDir)},
+		}
+		_, err = shell.RunCommandContextAndGetOutputE(t, t.Context(), &copyCmd)
+		if err != nil {
+			t.Logf("Failed to seed plugin cache: %v", err)
+		}
+	}
+
+	keyPair, err := CreateKeypair(t, region, owner, id)
+	if err != nil {
+		_ = os.RemoveAll(testDir)
+		t.Fatalf("Error creating test key pair: %s", err)
+	}
+
+	keyPairObj := keyPair.KeyPair
+	privateKey := keyPairObj.PrivateKey
+
+	err = os.WriteFile(filepath.Join(testDir, "id_rsa"), []byte(privateKey), 0600)
+	if err != nil {
+		_ = aws.DeleteEC2KeyPairContextE(t, t.Context(), keyPair)
+		_ = os.RemoveAll(testDir)
+		t.Fatalf("Error creating test key pair: %s", err)
+	}
+
+	sshAgent := ssh.SSHAgentWithKeyPair(t, t.Context(), keyPairObj)
+	t.Logf("Key %s created and added to agent", keyPair.Name)
+
+	_, _, rke2Version, err := GetRke2Releases()
+	if err != nil {
+		_ = aws.DeleteEC2KeyPairContextE(t, t.Context(), keyPair)
+		sshAgent.Stop()
+		_ = os.RemoveAll(testDir)
+		t.Fatalf("Error getting Rke2 release version: %s", err)
+	}
+
+	rancherVersion := os.Getenv("RANCHER_VERSION")
+	if rancherVersion == "" {
+		_, rancherVersion, _, err = GetRancherReleases()
+	}
+	if err != nil {
+		_ = aws.DeleteEC2KeyPairContextE(t, t.Context(), keyPair)
+		sshAgent.Stop()
+		_ = os.RemoveAll(testDir)
+		t.Fatalf("Error getting Rancher release version: %s", err)
+	}
+
+	return &Fixture{
+		ID:              id,
+		Region:          region,
+		Owner:           owner,
+		AcmeServerURL:   acmeServerURL,
+		RepoRoot:        repoRoot,
+		ExampleDir:      exampleDir,
+		TestDir:         testDir,
+		PluginsDir:      pluginsDir,
+		KeyPair:         keyPair,
+		SSHAgent:        sshAgent,
+		Rke2Version:     rke2Version,
+		RancherVersion:  rancherVersion,
+		TeardownOptions: []*terraform.Options{},
+	}
+}
+
+// Teardown cleans up the test fixture, destroying infrastructure and removing local files.
+func (f *Fixture) Teardown(t *testing.T) {
 	directoryExists := true
-	_, err := os.Stat(dataDir)
+	_, err := os.Stat(f.TestDir)
 	if err != nil {
 		if os.IsNotExist(err) {
 			directoryExists = false
 		}
 	}
 	if directoryExists {
-		for _, option := range options {
+		for _, option := range f.TeardownOptions {
 			t.Logf("Tearing down %v", option.TerraformDir)
 			jsonOptions, err := json.Marshal(option)
 			if err != nil {
 				t.Logf("Failed to marshal options for destroy log: %v", err)
 			}
 			fmt.Println(string(jsonOptions))
-			_, err = terraform.InitE(t, option)
+			_, err = terraform.InitContextE(t, t.Context(), option)
 			if err != nil {
 				t.Logf("Failed to init for destroy: %v", err)
 			}
-			_, err = terraform.DestroyE(t, option)
+			_, err = terraform.DestroyContextE(t, t.Context(), option)
 			if err != nil {
 				t.Logf("Failed to destroy: %v", err)
 			}
 		}
-		err = os.RemoveAll(dataDir)
+		err = os.RemoveAll(f.TestDir)
 		if err != nil {
 			t.Logf("Failed to delete test data directory: %v", err)
 		}
 	}
-	agent.Stop()
-	err = aws.DeleteEC2KeyPairE(t, keyPair)
+	f.SSHAgent.Stop()
+	err = aws.DeleteEC2KeyPairContextE(t, t.Context(), f.KeyPair)
 	if err != nil {
 		t.Logf("Failed to destroy key pair: %v", err)
 	}
-	err = os.Remove(exampleDir + "/.terraform.lock.hcl")
+	err = os.Remove(filepath.Join(f.ExampleDir, ".terraform.lock.hcl"))
 	if err != nil {
 		t.Logf("Failed to remove lock file: %v", err)
 	}
 }
 
+// GetErrorLogs retrieves error logs from the cluster.
 func GetErrorLogs(t *testing.T, kubeconfigPath string) {
-	repoRoot, err := filepath.Abs(g.GetRepoRoot(t))
+	repoRoot, err := filepath.Abs(GetRepoRoot(t))
 	if err != nil {
 		t.Logf("Error getting git root directory: %v", err)
+		return
 	}
+	//nolint:gosec // Trusted script path for test fixtures
 	script, err := os.ReadFile(repoRoot + "/test/scripts/getLogs.sh")
 	if err != nil {
 		t.Logf("Error reading script: %v", err)
+		return
 	}
 	errorLogsScript := shell.Command{
 		Command: "bash",
@@ -518,23 +655,23 @@ func GetErrorLogs(t *testing.T, kubeconfigPath string) {
 			"KUBECONFIG": kubeconfigPath,
 		},
 	}
-	out, err := shell.RunCommandAndGetOutputE(t, errorLogsScript)
+	out, err := shell.RunCommandContextAndGetOutputE(t, t.Context(), &errorLogsScript)
 	if err != nil {
 		t.Logf("Error running script: %s", err)
 	}
 	t.Logf("Log script output: %s", out)
 }
 
+// CheckReady executes a script to verify if nodes are ready.
 func CheckReady(t *testing.T, kubeconfigPath string) {
-	repoRoot, err := filepath.Abs(g.GetRepoRoot(t))
+	repoRoot, err := filepath.Abs(GetRepoRoot(t))
 	if err != nil {
-		t.Logf("Error getting git root directory: %v", err)
-		t.Fail()
+		t.Fatalf("Error getting git root directory: %v", err)
 	}
+	//nolint:gosec // Trusted script path for test fixtures
 	script, err := os.ReadFile(repoRoot + "/test/scripts/readyNodes.sh")
 	if err != nil {
-		t.Logf("Error reading script: %v", err)
-		t.Fail()
+		t.Fatalf("Error reading script: %v", err)
 	}
 	readyScript := shell.Command{
 		Command: "bash",
@@ -543,24 +680,23 @@ func CheckReady(t *testing.T, kubeconfigPath string) {
 			"KUBECONFIG": kubeconfigPath,
 		},
 	}
-	out, err := shell.RunCommandAndGetOutputE(t, readyScript)
+	out, err := shell.RunCommandContextAndGetOutputE(t, t.Context(), &readyScript)
 	if err != nil {
-		t.Logf("Error running script: %s", err)
-		t.Fail()
+		t.Fatalf("Error running script: %s", err)
 	}
 	t.Logf("Ready script output: %s", out)
 }
 
+// CheckRunning executes a script to verify if pods are running.
 func CheckRunning(t *testing.T, kubeconfigPath string) {
-	repoRoot, err := filepath.Abs(g.GetRepoRoot(t))
+	repoRoot, err := filepath.Abs(GetRepoRoot(t))
 	if err != nil {
-		t.Logf("Error getting git root directory: %v", err)
-		t.Fail()
+		t.Fatalf("Error getting git root directory: %v", err)
 	}
+	//nolint:gosec // Trusted script path for test fixtures
 	script, err := os.ReadFile(repoRoot + "/test/scripts/runningPods.sh")
 	if err != nil {
-		t.Logf("Error reading script: %v", err)
-		t.Fail()
+		t.Fatalf("Error reading script: %v", err)
 	}
 	readyScript := shell.Command{
 		Command: "bash",
@@ -569,16 +705,16 @@ func CheckRunning(t *testing.T, kubeconfigPath string) {
 			"KUBECONFIG": kubeconfigPath,
 		},
 	}
-	out, err := shell.RunCommandAndGetOutputE(t, readyScript)
+	out, err := shell.RunCommandContextAndGetOutputE(t, t.Context(), &readyScript)
 	if err != nil {
-		t.Logf("Error running script: %s", err)
-		t.Fail()
+		t.Fatalf("Error running script: %s", err)
 	}
 	t.Logf("Ready script output: %s", out)
 }
 
+// CreateObjectStorageBackend provisions an S3 backend for Terraform state storage.
 func CreateObjectStorageBackend(t *testing.T, testDir string, id string, owner string, region string) (*terraform.Options, error) {
-	repoRoot, err := filepath.Abs(g.GetRepoRoot(t))
+	repoRoot, err := filepath.Abs(GetRepoRoot(t))
 	if err != nil {
 		t.Fatalf("Error getting git root directory: %v", err)
 	}
@@ -587,7 +723,7 @@ func CreateObjectStorageBackend(t *testing.T, testDir string, id string, owner s
 	terraformOptions := terraform.WithDefaultRetryableErrors(t, &terraform.Options{
 		TerraformDir: exampleDir,
 		// Variables to pass to our Terraform code using -var options
-		Vars: map[string]interface{}{
+		Vars: map[string]any{
 			"identifier": id,
 			"owner":      owner,
 		},
@@ -595,12 +731,12 @@ func CreateObjectStorageBackend(t *testing.T, testDir string, id string, owner s
 		EnvVars: map[string]string{
 			"AWS_DEFAULT_REGION":  region,
 			"AWS_REGION":          region,
-			"TF_DATA_DIR":         testDir + "/backend",
+			"TF_DATA_DIR":         filepath.Join(testDir, "backend"),
 			"TF_IN_AUTOMATION":    "1",
-			"TF_CLI_ARGS_plan":    "-state=" + testDir + "/backend/tfstate",
-			"TF_CLI_ARGS_apply":   "-state=" + testDir + "/backend/tfstate",
-			"TF_CLI_ARGS_destroy": "-state=" + testDir + "/backend/tfstate",
-			"TF_CLI_ARGS_output":  "-state=" + testDir + "/backend/tfstate",
+			"TF_CLI_ARGS_plan":    "-state=" + filepath.Join(testDir, "backend", "tfstate"),
+			"TF_CLI_ARGS_apply":   "-state=" + filepath.Join(testDir, "backend", "tfstate"),
+			"TF_CLI_ARGS_destroy": "-state=" + filepath.Join(testDir, "backend", "tfstate"),
+			"TF_CLI_ARGS_output":  "-state=" + filepath.Join(testDir, "backend", "tfstate"),
 		},
 		RetryableTerraformErrors: GetRetryableTerraformErrors(),
 		Reconfigure:              true,
@@ -608,6 +744,6 @@ func CreateObjectStorageBackend(t *testing.T, testDir string, id string, owner s
 		Upgrade:                  true,
 	})
 
-	_, err = terraform.InitAndApplyE(t, terraformOptions)
+	_, err = terraform.InitAndApplyContextE(t, t.Context(), terraformOptions)
 	return terraformOptions, err
 }

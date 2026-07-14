@@ -1,6 +1,6 @@
 # Test Suite
 
-**Date Completed:** Pending
+**Executed Date:** Pending
 **Purpose:** Update the testsuite to be a single multi-package module in the `./test` directory. Update Go to the latest version and update all dependencies to their latest version. Provide a CI workflow to maintain this in the future.
 
 ---
@@ -9,6 +9,12 @@ The `./test` directory should be a stand-alone Go module named `test`.
 The `./test` module should have a package for each test.
 The test structure should be as DRY as possible. If possible, extract the creation of fixtures into its own package. Test packages should validate a specific fixture or validate a specific test on multiple fixtures.
 The `./test` module should establish a terraform plugin cache for each test. This cache should be seeded from the global cache established in the `run_tests.sh` script.
+
+Refactor `run_tests.sh` into a structured, function-based script:
+* Introduce advanced flags (`-f`, `-g`, `-w`, `-d`, `-n`, `--build-only`, `--lint-only`).
+* Implement a robust `trap`-based cleanup function to guarantee teardown on exits or interruptions.
+* Add `prime_plugin_cache` to globally seed Terraform providers.
+* Incorporate `actionlint`, `shellcheck`, and `eslint` alongside Go linters.
 
 We want to automatically update as much as possible in a GitHub workflow that generates a PR.
 If we find updates that the workflow can't resolve, it should error.
@@ -39,9 +45,11 @@ The aws-sdk-go to aws-sdk-go-v2 migration requires significant rework. We will u
   * `aws.NewEc2ClientE(t, region)` to `aws.NewEc2ClientContextE(t, t.Context(), region)`
   * `aws.AddTagsToResource(t, ` to `aws.AddTagsToResourceContext(t, t.Context(), `
   * `aws.AddTagsToResourceE(t, ` to `aws.AddTagsToResourceContextE(t, t.Context(), `
+  * `client.DescribeKeyPairs(input)` to `client.DescribeKeyPairs(t.Context(), input)`
   * `ssh.SshAgentWithKeyPair(t, keyPair.KeyPair)` to `ssh.SSHAgentWithKeyPair(t, t.Context(), keyPair.KeyPair)`
   * `ssh.CheckSshCommand(t, host` to `ssh.CheckSSHCommandContext(t, t.Context(), &host`
   * `ssh.SshAgent` to `ssh.SSHAgent`
+  * `shell.RunCommandAndGetOutputE(t, ` to `shell.RunCommandContextAndGetOutputE(t, t.Context(), `
 
 The git package is scheduled for removal in Terratest v2.
 Each helper wraps a single git command (for example, git rev-parse or git describe).
