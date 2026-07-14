@@ -1,5 +1,5 @@
 #!/bin/bash
 set -e
 
-cd test/tests
+cd test
 go test -c
