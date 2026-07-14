@@ -51,7 +51,7 @@ jobs:
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
-            const script = await import('${{ github.workspace }}/.github/workflows/scripts/release-pr-comment.js');
+            const script = await import(`${process.env.GITHUB_WORKSPACE}/.github/workflows/scripts/release-pr-comment.js`);
             await script.default({ github, context, core, process });
 
   test:
@@ -166,5 +166,5 @@ jobs:
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
-            const script = await import('${{ github.workspace }}/.github/workflows/scripts/report-success.js');
+            const script = await import(`${process.env.GITHUB_WORKSPACE}/.github/workflows/scripts/report-success.js`);
             await script.default({ github, context, core, process });
