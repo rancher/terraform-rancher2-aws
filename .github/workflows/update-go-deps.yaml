@@ -5,25 +5,34 @@ on:
     - cron: '0 0 * * 1' # Run weekly on Mondays at 00:00
   workflow_dispatch: # Allow manual triggering
 
+permissions: {}
+
 jobs:
   update-deps:
+    name: 'Update Deps'
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/rancher/ci-image/nix:20260603-18
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        id: checkout
+        # https://github.com/actions/checkout/releases
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Run Update Script
-        run: |
-          chmod +x ./update-go-deps.sh
-          ./update-go-deps.sh
+        id: run-update-script
+        run: bash .github/workflows/scripts/nix-run.sh "bash .github/workflows/scripts/update-go-deps.sh"
 
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v6
+        id: create-pull-request
+        # https://github.com/actions/github-script/releases
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
-          commit-message: "chore(deps): update go dependencies in test module"
-          title: "chore(deps): update go dependencies in test module"
-          body: "Automated PR to update Go dependencies in the `test` module."
-          branch: "auto-update-go-deps"
-          delete-branch: true
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            const script = await import(`${process.env.GITHUB_WORKSPACE}/.github/workflows/scripts/create-update-deps-pr.js`);
+            await script.default({ github, context, core, process });
