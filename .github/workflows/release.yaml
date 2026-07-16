@@ -19,8 +19,6 @@ jobs:
   release:
     name: 'Release'
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/rancher/ci-image/nix:20260603-18
     timeout-minutes: 30
     permissions:
       contents: write
@@ -32,9 +30,6 @@ jobs:
         id: checkout
         # https://github.com/actions/checkout/releases
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          token: ${{secrets.GITHUB_TOKEN}}
-          fetch-depth: 0
       - name: Release Please
         id: release-please
         # https://github.com/googleapis/release-please-action/releases
