@@ -18,6 +18,9 @@ export SSL_CERT_FILE="${NIX_SSL_CERT_FILE:-}"
 export CURL_CA_BUNDLE="${NIX_SSL_CERT_FILE:-}"
 
 {
+  echo "#!/usr/bin/env bash"
+  echo "set -euo pipefail"
+  echo ""
   echo "git config --global --add safe.directory \"$PWD\""
   printf "%s\n" "$*"
 } > .nix-script.sh

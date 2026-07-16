@@ -4,4 +4,5 @@ containerize
 kubeconfig
 nutanix
 pathing
+shellcheck
 variablize
