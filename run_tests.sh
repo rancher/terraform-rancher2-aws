@@ -367,6 +367,37 @@ check_environment() {
   else
     echo "ZONE: Set"
   fi
+
+  if [ -z "$IDENTIFIER" ]; then
+    echo "WARNING: IDENTIFIER is not set"
+  else
+    echo "IDENTIFIER: Set ($IDENTIFIER)"
+  fi
+
+  if [ -z "$AWS_REGION" ]; then
+    echo "WARNING: AWS_REGION is not set"
+  else
+    echo "AWS_REGION: Set ($AWS_REGION)"
+  fi
+
+  if [ -z "$AWS_ACCESS_KEY_ID" ]; then
+    echo "WARNING: AWS_ACCESS_KEY_ID is not set"
+  else
+    echo "AWS_ACCESS_KEY_ID: Set"
+  fi
+
+  if [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+    echo "WARNING: AWS_SECRET_ACCESS_KEY is not set"
+  else
+    echo "AWS_SECRET_ACCESS_KEY: Set"
+  fi
+
+  if [ -z "$AWS_SESSION_TOKEN" ]; then
+    echo "WARNING: AWS_SESSION_TOKEN is not set"
+  else
+    echo "AWS_SESSION_TOKEN: Set"
+  fi
+
   echo "========================="
   echo ""
 }

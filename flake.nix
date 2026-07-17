@@ -102,7 +102,6 @@
           age
           awscli2
           bashInteractive
-          colima
           cspell
           curl
           dig
@@ -137,6 +136,8 @@
           which
           xz
           yq-go
+        ] ++ lib.optionals stdenv.isDarwin [
+          colima
         ]);
 
         devShellPackage = pkgs.symlinkJoin {
