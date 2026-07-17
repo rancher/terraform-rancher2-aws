@@ -108,7 +108,7 @@
           docker-client
           docker-compose
           eslint
-	        gemini-cli
+          gemini-cli
           gh
           git
           gitleaks
