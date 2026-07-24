@@ -1,5 +1,26 @@
 # Changelog
 
+## [3.1.5](https://github.com/rancher/terraform-rancher2-aws/compare/v3.1.4...v3.1.5) (2026-07-24)
+
+
+### Bug Fixes
+
+* add agentic framework ([#169](https://github.com/rancher/terraform-rancher2-aws/issues/169)) ([f6f8024](https://github.com/rancher/terraform-rancher2-aws/commit/f6f8024e361ed7be74f2d23903cd8427a8d2435f))
+* add workflow container and add or update plans and instructions ([#170](https://github.com/rancher/terraform-rancher2-aws/issues/170)) ([b0b7730](https://github.com/rancher/terraform-rancher2-aws/commit/b0b7730eb42bef5bebf78a7b0dbe24fc62905412))
+* bump actions/checkout from 6.0.2 to 6.0.3 ([#163](https://github.com/rancher/terraform-rancher2-aws/issues/163)) ([6f0cbc7](https://github.com/rancher/terraform-rancher2-aws/commit/6f0cbc7643e17ccf93bfef6b37e1cac768135553))
+* bump actions/checkout from 6.0.3 to 7.0.0 ([#166](https://github.com/rancher/terraform-rancher2-aws/issues/166)) ([c7626e0](https://github.com/rancher/terraform-rancher2-aws/commit/c7626e0e20ccd75df3bff30179295d75f8c4e453))
+* bump aws-actions/configure-aws-credentials from 6.1.1 to 6.2.0 ([#164](https://github.com/rancher/terraform-rancher2-aws/issues/164)) ([939d6eb](https://github.com/rancher/terraform-rancher2-aws/commit/939d6eb9532a47d6b7b3f0ba394001bf8e9f55bc))
+* bump aws-actions/configure-aws-credentials from 6.2.0 to 6.2.1 ([#167](https://github.com/rancher/terraform-rancher2-aws/issues/167)) ([7c529a1](https://github.com/rancher/terraform-rancher2-aws/commit/7c529a19c5f4b5436ef4cee6d64c01f0523b202b))
+* bump aws-actions/configure-aws-credentials from 6.2.1 to 6.2.2 ([#173](https://github.com/rancher/terraform-rancher2-aws/issues/173)) ([7b5c454](https://github.com/rancher/terraform-rancher2-aws/commit/7b5c454b1c24acfb07e6191fd84458a3c7ce6980))
+* bump fossas/fossa-action from 1.9.0 to 2.0.0 ([#168](https://github.com/rancher/terraform-rancher2-aws/issues/168)) ([f55f9d0](https://github.com/rancher/terraform-rancher2-aws/commit/f55f9d03c9cc02b63a317f86f317bfe6f8ae0d7c))
+* increase test timeout to 4 hours ([#178](https://github.com/rancher/terraform-rancher2-aws/issues/178)) ([dd09ab5](https://github.com/rancher/terraform-rancher2-aws/commit/dd09ab59b8ab81ad962860b93516611726d775c5))
+* only install colima in darwin systems ([#179](https://github.com/rancher/terraform-rancher2-aws/issues/179)) ([59dfdec](https://github.com/rancher/terraform-rancher2-aws/commit/59dfdec02d2ca6bfa0ede0792ec6f31c1dbc55f4))
+* refactor test suite ([#174](https://github.com/rancher/terraform-rancher2-aws/issues/174)) ([07a67ec](https://github.com/rancher/terraform-rancher2-aws/commit/07a67ec2adac6e5960fc1d920bf6be4c2e8f8391))
+* remove release please from container ([#177](https://github.com/rancher/terraform-rancher2-aws/issues/177)) ([a9416c2](https://github.com/rancher/terraform-rancher2-aws/commit/a9416c2a449bd7a035fcf1a67d9b6bbc1aefc313))
+* rework the workflows to new standards ([#172](https://github.com/rancher/terraform-rancher2-aws/issues/172)) ([339b737](https://github.com/rancher/terraform-rancher2-aws/commit/339b737e7a05038357c3b4642f94a96252fbc974))
+* this fixes a shellcheck error in a temporary script ([#176](https://github.com/rancher/terraform-rancher2-aws/issues/176)) ([5f6c403](https://github.com/rancher/terraform-rancher2-aws/commit/5f6c4030e9eae706dfa9fc6580fcfae90fe1e13b))
+* use proper import path for release scripts in container ([#175](https://github.com/rancher/terraform-rancher2-aws/issues/175)) ([57c7cd8](https://github.com/rancher/terraform-rancher2-aws/commit/57c7cd8b448b31203eee4ce2b86e828829c88644))
+
 ## [3.1.4](https://github.com/rancher/terraform-rancher2-aws/compare/v3.1.3...v3.1.4) (2026-05-28)
 
 
