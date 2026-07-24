@@ -18,3 +18,10 @@ updates:
       day: "sunday" # this way it is ready for review on Monday
     commit-message:
       prefix: "fix"
+  - package-ecosystem: "terraform"
+    directory: "/modules/cluster/node_template" # pull in changes to the rke2 module
+    schedule:
+      interval: "weekly"
+      day: "sunday" # this way it is ready for review on Monday
+    commit-message:
+      prefix: "fix"
