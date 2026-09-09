@@ -34,7 +34,10 @@ else
 fi
 
 # shellcheck disable=SC2154
-cd "${deploy_path}" || { echo "Failed to change directory to ${deploy_path}"; exit 1; }
+cd "${deploy_path}" || {
+  echo "Failed to change directory to ${deploy_path}"
+  exit 1
+}
 
 if [ -f ./envrc ]; then
   # shellcheck disable=SC1091

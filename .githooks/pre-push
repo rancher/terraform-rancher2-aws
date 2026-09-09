@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+#
+# Native Git Hook: pre-push
+# Description: Strictly validates commit and push approvals for AI agents.
+#              Bypasses validation for human developers (detected via process-tree walking).
+#
+
+set -euo pipefail
+
+show_help() {
+  cat <<EOF
+Usage: pre-push [options]
+
+Git pre-push hook to validate cryptographic push approvals for AI agents.
+Bypasses validation for human developers.
+
+Options:
+  -h, --help    Show help message and exit.
+EOF
+}
+
+detect_agent() {
+  local pid=$$
+  while [[ "$pid" -gt 1 ]]; do
+    local cmd
+    cmd=$(ps -p "$pid" -o command= 2>/dev/null || true)
+    if echo "$cmd" | grep -qE "(gemini-cli|node.*\.gemini|node.*\.claude|review_agent|subagent)"; then
+      return 0 # Is agent
+    fi
+    # Get parent PID
+    pid=$(ps -p "$pid" -o ppid= 2>/dev/null | tr -d ' ' || true)
+    [[ -z "$pid" ]] && break
+  done
+  return 1 # Is human
+}
+
+verify_push_gate() {
+  # Determine target directories
+  local home_dir="${HOME:-$(getent passwd "$USER" | cut -d: -f6)}"
+  if [[ -z "$home_dir" ]]; then
+    echo "❌ Git Push Blocked: Unable to determine HOME directory." >&2
+    exit 1
+  fi
+
+  local repo_name
+  repo_name=$(basename "$(git rev-parse --show-toplevel 2>/dev/null || pwd)")
+  local target_dir="${home_dir}/.gemini/tmp/${repo_name}"
+
+  local user_approval="${target_dir}/user-approval.json"
+  local user_sig="${user_approval}.sig"
+
+  # Check if user/commit approval exists and verify its signature
+  if [[ ! -f "$user_approval" ]] || [[ ! -f "$user_sig" ]]; then
+    echo "❌ Git Push Blocked: Missing developer cryptographic commit/push approval or signature file (Gate 3)." >&2
+    echo "AI agents must obtain developer commit-push approval to push code." >&2
+    exit 1
+  fi
+
+  local ssh_key_pub="${home_dir}/.gemini/ssh-key.pub"
+  if [[ ! -f "$ssh_key_pub" ]]; then
+    echo "❌ Git Push Blocked: SSH public key not found at ~/.gemini/ssh-key.pub." >&2
+    echo "AI agents must have a valid SSH public key configured for cryptographic signature verification." >&2
+    exit 1
+  fi
+
+  local allowed_signers
+  allowed_signers=$(mktemp)
+  local key_content
+  key_content=$(cat "$ssh_key_pub")
+  echo "gemini $key_content" >"$allowed_signers"
+
+  if ! ssh-keygen -Y verify -f "$allowed_signers" -I gemini -n gemini -s "$user_sig" <"$user_approval" >/dev/null 2>&1; then
+    echo "❌ Git Push Blocked: Developer commit/push signature verification failed (Gate 3)." >&2
+    echo "The signature is invalid." >&2
+    rm -f "$allowed_signers"
+    exit 1
+  fi
+  rm -f "$allowed_signers"
+
+  echo "✅ Secure Pipeline: AI agent push authorization verified successfully!"
+}
+
+main() {
+  # Parse options
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -h | --help)
+        show_help
+        exit 0
+        ;;
+      -*)
+        echo "Unknown option: $1" >&2
+        show_help
+        exit 1
+        ;;
+      *)
+        # Positional arguments safely accepted
+        shift
+        ;;
+    esac
+  done
+
+  if detect_agent; then
+    echo "🔒 Secure Pipeline: AI Agent detected in process tree. Verifying push credentials..."
+    verify_push_gate
+  else
+    # Human bypass
+    exit 0
+  fi
+}
+
+main "$@"

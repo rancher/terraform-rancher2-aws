@@ -29,8 +29,9 @@ Each role is considered critical to scaling your cluster:
 # Scaling
 
 As the number of total nodes increases, you should scale your `database` nodes accordingly.
-  - monitor disk pressure
-As the number of requests to kubernetes increases you should scale your `API` nodes.
-  - monitor network traffic, both ingress from outside of your cluster and between nodes
-As the amount of user workloads increases you should increase the `worker` nodes.
-  - monitor CPU and RAM usage of your workers
+
+- monitor disk pressure
+  As the number of requests to kubernetes increases you should scale your `API` nodes.
+- monitor network traffic, both ingress from outside of your cluster and between nodes
+  As the amount of user workloads increases you should increase the `worker` nodes.
+- monitor CPU and RAM usage of your workers

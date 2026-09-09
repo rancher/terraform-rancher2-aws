@@ -16,8 +16,37 @@ env:
 permissions: {}
 
 jobs:
+  enforce-fork-contribution:
+    name: 'Enforce Fork Contributions'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Contribution Origin
+        env:
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          BASE_REPO: ${{ github.repository }}
+          HEAD_REF: ${{ github.head_ref }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          # Block anyone other than github-actions[bot] from using the release-please branch name
+          if [[ "$HEAD_REF" == "release-please--branches--main" && "$ACTOR" != "github-actions[bot]" ]]; then
+            echo "Error: Spoofing release-please branch is blocked. Only the system bot is allowed to use this branch." >&2
+            exit 1
+          fi
+
+          # Block direct pushes to main from same-repository (except for release-please or dependabot PRs pushed by dependabot itself)
+          if [[ "$HEAD_REPO" == "$BASE_REPO" && "$HEAD_REF" != "release-please--branches--main" ]]; then
+            if [[ "$HEAD_REF" =~ ^dependabot/ && "$ACTOR" != "dependabot[bot]" ]]; then
+              echo "Error: Only the Dependabot service is allowed to push to dependabot/ branches." >&2
+              exit 1
+            elif [[ ! "$HEAD_REF" =~ ^dependabot/ && "$ACTOR" != "dependabot[bot]" ]]; then
+              echo "Error: Contributions are required to come from forks. Directly pushing branches to the upstream repository is blocked." >&2
+              exit 1
+            fi
+          fi
+
   terraform:
     name: 'Terraform'
+    needs: enforce-fork-contribution
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/rancher/ci-image/nix:20260603-18
@@ -25,18 +54,19 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Checkout
-        id: checkout
+      - name: Checkout Repository
+        id: checkout-repository
         # https://github.com/actions/checkout/releases
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - name: lint terraform
+      - name: Lint Terraform
         id: lint-terraform
-        run: bash .github/workflows/scripts/nix-run.sh "bash .github/workflows/scripts/lint-terraform.sh"
+        run: .github/workflows/scripts/nix-run.sh bash .github/workflows/scripts/lint.sh terraform
 
   actionlint:
     name: 'Lint Workflows'
+    needs: enforce-fork-contribution
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/rancher/ci-image/nix:20260603-18
@@ -44,18 +74,148 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Checkout
-        id: checkout
+      - name: Checkout Repository
+        id: checkout-repository
         # https://github.com/actions/checkout/releases
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - name: action lint
+      - name: Action Lint
         id: action-lint
-        run: bash .github/workflows/scripts/nix-run.sh "bash .github/workflows/scripts/action-lint.sh"
+        run: .github/workflows/scripts/nix-run.sh bash .github/workflows/scripts/lint.sh actionlint
+
+  validate-action-versions:
+    name: 'Validate Action SHAs'
+    needs: enforce-fork-contribution
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/rancher/ci-image/nix:20260603-18
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Repository
+        id: checkout-repository
+        # https://github.com/actions/checkout/releases
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Verify Latest Action SHAs
+        id: verify-shas
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [[ ! "$BASE_REF" =~ ^[a-zA-Z0-9_./-]+$ ]]; then
+            echo "Error: Unsafe characters detected in BASE_REF: $BASE_REF" >&2
+            exit 1
+          fi
+          echo "==> Checking for workflow modifications..."
+          if ! git diff --name-only "origin/$BASE_REF" HEAD | grep -q "^.github/workflows/"; then
+            echo "No changes to .github/workflows/ detected. Skipping validation."
+            exit 0
+          fi
+          echo "==> Auditing GitHub Actions workflow SHAs..."
+          .github/workflows/scripts/nix-run.sh bash .github/workflows/scripts/update-action-versions.sh --validate
+          echo "🟢 Success: All GitHub Action workflow SHAs are fully updated and pinned to their latest releases!"
+
+  validate-module-versions:
+    name: 'Validate Module Versions'
+    needs: enforce-fork-contribution
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/rancher/ci-image/nix:20260603-18
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Repository
+        id: checkout-repository
+        # https://github.com/actions/checkout/releases
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Verify Latest Module Versions
+        id: verify-modules
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [[ ! "$BASE_REF" =~ ^[a-zA-Z0-9_./-]+$ ]]; then
+            echo "Error: Unsafe characters detected in BASE_REF: $BASE_REF" >&2
+            exit 1
+          fi
+          echo "==> Checking for example modifications..."
+          if ! git diff --name-only "origin/$BASE_REF" HEAD | grep -q "^examples/"; then
+            echo "No changes to examples/ detected. Skipping validation."
+            exit 0
+          fi
+          echo "==> Auditing Terraform module versions..."
+          .github/workflows/scripts/nix-run.sh bash .github/workflows/scripts/update-modules.sh --validate
+          echo "🟢 Success: All module versions are fully updated to their latest releases!"
+
+  eslint:
+    name: 'Lint Scripts'
+    needs: enforce-fork-contribution
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/rancher/ci-image/nix:20260603-18
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Repository
+        id: checkout-repository
+        # https://github.com/actions/checkout/releases
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: ESLint Check
+        id: eslint-check
+        run: .github/workflows/scripts/nix-run.sh bash .github/workflows/scripts/lint.sh eslint
+
+  script-tests:
+    name: 'Workflow Script Unit Tests'
+    needs: enforce-fork-contribution
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/rancher/ci-image/nix:20260603-18
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Repository
+        id: checkout-repository
+        # https://github.com/actions/checkout/releases
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Run Script Tests
+        id: run-script-tests
+        run: .github/workflows/scripts/nix-run.sh bash .github/workflows/scripts/test.sh workflow-scripts
+
+  agent-script-tests:
+    name: 'Agent Script Unit Tests'
+    needs: enforce-fork-contribution
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/rancher/ci-image/nix:20260603-18
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Repository
+        id: checkout-repository
+        # https://github.com/actions/checkout/releases
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Run Agent Script Tests
+        id: run-agent-script-tests
+        run: .github/workflows/scripts/nix-run.sh bash .github/workflows/scripts/test.sh agent-scripts
 
   shellcheck:
     name: 'Shellcheck'
+    needs: enforce-fork-contribution
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/rancher/ci-image/nix:20260603-18
@@ -63,18 +223,19 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Checkout
-        id: checkout
+      - name: Checkout Repository
+        id: checkout-repository
         # https://github.com/actions/checkout/releases
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - name: shell check
+      - name: Shell Check
         id: shell-check
-        run: bash .github/workflows/scripts/nix-run.sh "bash .github/workflows/scripts/shell-check.sh"
+        run: .github/workflows/scripts/nix-run.sh bash .github/workflows/scripts/lint.sh shellcheck
 
   validate-commit-message:
     name: 'Validate Commit Message'
+    needs: enforce-fork-contribution
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/rancher/ci-image/nix:20260603-18
@@ -83,19 +244,25 @@ jobs:
       contents: read
       pull-requests: read
     steps:
-      - name: Checkout
-        id: checkout
+      - name: Checkout Repository
+        id: checkout-repository
         # https://github.com/actions/checkout/releases
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Check commit message
-        id: check-commit-message
+      - name: Validate Commits
+        id: validate-commits
+        # https://github.com/actions/github-script/releases
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           PR_NUMBER: ${{ github.event.number }}
-        run: |
-          bash .github/workflows/scripts/nix-run.sh "bash .github/workflows/scripts/check-commit-message.sh $PR_NUMBER"
+        with:
+          script: |
+            const scriptPath = `${process.env.GITHUB_WORKSPACE}/.github/workflows/scripts/validate-commit-message.js`;
+            const { default: script } = await import(scriptPath);
+            await script({github, context, core, process});
 
   gitleaks:
     name: 'Scan for Secrets'
+    needs: enforce-fork-contribution
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/rancher/ci-image/nix:20260603-18
@@ -103,19 +270,20 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Checkout
-        id: checkout
+      - name: Checkout Repository
+        id: checkout-repository
         # https://github.com/actions/checkout/releases
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - name: Check for secrets
         id: check-for-secrets
-        run: bash .github/workflows/scripts/nix-run.sh "bash .github/workflows/scripts/gitleaks-scan.sh"
+        run: .github/workflows/scripts/nix-run.sh bash .github/workflows/scripts/lint.sh gitleaks
         continue-on-error: true
 
   test-compile-check:
-    name: 'Compile Check Tests'
+    name: 'Test Compile Check'
+    needs: enforce-fork-contribution
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/rancher/ci-image/nix:20260603-18
@@ -123,18 +291,19 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Checkout
-        id: checkout
+      - name: Checkout Repository
+        id: checkout-repository
         # https://github.com/actions/checkout/releases
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - name: compile-check
+      - name: Compile Check
         id: compile-check
-        run: bash .github/workflows/scripts/nix-run.sh "bash .github/workflows/scripts/test-compile-check.sh"
+        run: .github/workflows/scripts/nix-run.sh bash .github/workflows/scripts/test.sh compile
 
   lint-tests:
     name: 'Lint Tests'
+    needs: enforce-fork-contribution
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/rancher/ci-image/nix:20260603-18
@@ -142,12 +311,52 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Checkout
-        id: checkout
+      - name: Checkout Repository
+        id: checkout-repository
         # https://github.com/actions/checkout/releases
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - name: lint-tests
-        id: lint-tests
-        run: bash .github/workflows/scripts/nix-run.sh "bash .github/workflows/scripts/lint-tests.sh"
+      - name: Compile Check
+        id: compile-check
+        run: .github/workflows/scripts/nix-run.sh bash .github/workflows/scripts/lint.sh tests
+
+  unit-tests:
+    name: 'Unit Tests'
+    needs: enforce-fork-contribution
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/rancher/ci-image/nix:20260603-18
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Repository
+        id: checkout-repository
+        # https://github.com/actions/checkout/releases
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Run Unit Tests
+        id: run-unit-tests
+        run: .github/workflows/scripts/nix-run.sh bash .github/workflows/scripts/test.sh unit
+
+  acceptance-tests:
+    name: 'Acceptance Tests (No Relay)'
+    needs: enforce-fork-contribution
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/rancher/ci-image/nix:20260603-18
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Repository
+        id: checkout-repository
+        # https://github.com/actions/checkout/releases
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Run Acceptance Tests
+        id: run-acc-tests
+        run: .github/workflows/scripts/nix-run.sh bash .github/workflows/scripts/test.sh acc

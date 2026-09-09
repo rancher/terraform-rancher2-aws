@@ -13,11 +13,11 @@ if [ "$HTTP_CODE" -eq 200 ]; then
 else
   # Token is invalid or expired. Login with the admin password to get a new one.
   JSON_PAYLOAD=$(jq -n --arg username "admin" --arg password "$ADMIN_PASSWORD" --arg responseType "json" '{"username": $username, "password": $password, "responseType": $responseType}')
-  
+
   LOGIN_RESPONSE=$(curl -s -k -X POST -H 'Content-Type: application/json' -d "$JSON_PAYLOAD" "$API_URL/v3-public/localProviders/local?action=login")
-  
+
   NEW_TOKEN=$(echo "$LOGIN_RESPONSE" | jq -r '.token // empty')
-  
+
   if [ -z "$NEW_TOKEN" ]; then
     echo "Failed to retrieve new token from login endpoint. Response: $LOGIN_RESPONSE" >&2
     exit 1

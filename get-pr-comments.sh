@@ -36,5 +36,5 @@ JSON_PAYLOAD=$(jq -n \
 
 curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
   -X POST -d "$JSON_PAYLOAD" \
-  "https://api.github.com/graphql" | \
-  jq -r '.data.repository.pullRequest.reviewThreads.nodes[]? | select(.isResolved == false) | .comments.nodes[]? | "File: \(.path)\nLine: \(.line)\nDiff:\n\(.diffHunk)\n\nComment:\n\(.body)\n\n========================================\n"'
+  "https://api.github.com/graphql" \
+  | jq -r '.data.repository.pullRequest.reviewThreads.nodes[]? | select(.isResolved == false) | .comments.nodes[]? | "File: \(.path)\nLine: \(.line)\nDiff:\n\(.diffHunk)\n\nComment:\n\(.body)\n\n========================================\n"'

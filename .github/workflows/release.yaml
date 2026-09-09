@@ -3,7 +3,7 @@ name: release
 on:
   push:
     branches:
-    - main
+      - main
 
 env:
   AWS_REGION: us-west-2
@@ -88,7 +88,7 @@ jobs:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
           ZONE: ${{secrets.ZONE}}
           IDENTIFIER: ${{github.run_id}}
-        run: bash .github/workflows/scripts/nix-run.sh "bash .github/workflows/scripts/run-tests.sh"
+        run: bash .github/workflows/scripts/nix-run.sh "bash .github/workflows/scripts/test.sh acc"
 
   cleanup:
     name: 'Cleanup'

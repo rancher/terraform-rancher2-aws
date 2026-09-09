@@ -42,14 +42,14 @@ notReady() {
 readyWait() {
   TIMEOUT=3 # 3 minutes
   TIMEOUT_MINUTES=$((TIMEOUT * 60))
-  INTERVAL=30 # 30 seconds
+  INTERVAL=30                         # 30 seconds
   MAX=$((TIMEOUT_MINUTES / INTERVAL)) # defaults to 6
   ATTEMPTS=0
 
   while notReady; do
     if [ "$ATTEMPTS" -lt "$MAX" ]; then
       ATTEMPTS=$((ATTEMPTS + 1))
-      sleep "$INTERVAL";
+      sleep "$INTERVAL"
     else
       return 1
     fi
@@ -62,7 +62,7 @@ SUCCESSES_NEEDED=3 # require three successes to make sure everything is settled
 
 while readyWait && [ "$SUCCESSES" -lt "$SUCCESSES_NEEDED" ]; do
   SUCCESSES=$((SUCCESSES + 1))
-  echo "succeeeded $SUCCESSES times..."
+  echo "succeeded $SUCCESSES times..."
   sleep 30
 done
 

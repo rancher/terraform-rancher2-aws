@@ -1,0 +1,151 @@
+#!/usr/bin/env bash
+#
+# Native Git Hook: pre-commit
+# Description: Strictly validates planning, testing, and review signatures for AI agents.
+#              Bypasses validation for human developers (detected via process-tree walking).
+#
+
+set -euo pipefail
+
+show_help() {
+  cat <<EOF
+Usage: pre-commit [options]
+
+Git pre-commit hook to validate cryptographic gate approvals for AI agents.
+Bypasses validation for human developers.
+
+Options:
+  -h, --help    Show this help message and exit.
+EOF
+}
+
+detect_agent() {
+  local pid=$$
+  while [[ "$pid" -gt 1 ]]; do
+    local cmd
+    cmd=$(ps -p "$pid" -o command= 2>/dev/null || true)
+    if echo "$cmd" | grep -qE "(gemini-cli|node.*\.gemini|node.*\.claude|review_agent|subagent)"; then
+      return 0 # Is agent
+    fi
+    # Get parent PID
+    pid=$(ps -p "$pid" -o ppid= 2>/dev/null | tr -d ' ' || true)
+    [[ -z "$pid" ]] && break
+  done
+  return 1 # Is human
+}
+
+verify_gates() {
+  # Determine target directories
+  local home_dir="${HOME:-$(getent passwd "$USER" | cut -d: -f6)}"
+  if [[ -z "$home_dir" ]]; then
+    echo "❌ Git Commit Blocked: Unable to determine HOME directory." >&2
+    exit 1
+  fi
+
+  local repo_name
+  repo_name=$(basename "$(git rev-parse --show-toplevel 2>/dev/null || pwd)")
+  local target_dir="${home_dir}/.gemini/tmp/${repo_name}"
+
+  local plan_approval="${target_dir}/plan-approval.json"
+  local plan_sig="${plan_approval}.sig"
+  local review_approval="${target_dir}/review-approval.json"
+
+  # Check if plan approval exists and verify its signature
+  if [[ ! -f "$plan_approval" ]] || [[ ! -f "$plan_sig" ]]; then
+    echo "❌ Git Commit Blocked: Missing plan cryptographic approval or signature file (Gate 1)." >&2
+    echo "AI agents must obtain developer plan approval before committing code." >&2
+    exit 1
+  fi
+
+  local ssh_key_pub="${home_dir}/.gemini/ssh-key.pub"
+  if [[ ! -f "$ssh_key_pub" ]]; then
+    echo "❌ Git Commit Blocked: SSH public key not found at ~/.gemini/ssh-key.pub." >&2
+    echo "AI agents must have a valid SSH public key configured for cryptographic signature verification." >&2
+    exit 1
+  fi
+
+  local allowed_signers
+  allowed_signers=$(mktemp)
+  local key_content
+  key_content=$(cat "$ssh_key_pub")
+  echo "gemini $key_content" >"$allowed_signers"
+
+  if ! ssh-keygen -Y verify -f "$allowed_signers" -I gemini -n gemini -s "$plan_sig" <"$plan_approval" >/dev/null 2>&1; then
+    echo "❌ Git Commit Blocked: Plan cryptographic signature verification failed (Gate 1)." >&2
+    echo "The plan signature is invalid or did not pass Touch ID authentication." >&2
+    rm -f "$allowed_signers"
+    exit 1
+  fi
+  rm -f "$allowed_signers"
+
+  # Check if review approval exists (Gate 2)
+  if [[ ! -f "$review_approval" ]]; then
+    echo "❌ Git Commit Blocked: Missing review cryptographic approval (Gate 2)." >&2
+    echo "AI agents must successfully pass local tests and code review to obtain review approval before committing." >&2
+    exit 1
+  fi
+
+  # Verify signature integrity against the staged/unstaged diff (since main on feature branches)
+  local current_branch
+  current_branch=$(git branch --show-current 2>/dev/null || echo "")
+
+  local active_diff
+  if [[ "$current_branch" != "main" && -n "$current_branch" ]]; then
+    active_diff=$(git diff main)
+  else
+    active_diff=$(git diff HEAD)
+  fi
+
+  local active_diff_hash
+  if command -v sha256sum >/dev/null 2>&1; then
+    active_diff_hash=$(echo -n "$active_diff" | sha256sum | cut -d' ' -f1)
+  elif command -v shasum >/dev/null 2>&1; then
+    active_diff_hash=$(echo -n "$active_diff" | shasum -a 256 | cut -d' ' -f1)
+  else
+    export ACTIVE_DIFF="$active_diff"
+    active_diff_hash=$(node -e "console.log(require('crypto').createHash('sha256').update(process.env.ACTIVE_DIFF).digest('hex'))")
+  fi
+
+  # Read diff_hash from review-approval.json safely via argv
+  local review_diff_hash
+  review_diff_hash=$(node -e "console.log(require(process.argv[1]).diff_hash)" "$review_approval")
+
+  if [[ "$active_diff_hash" != "$review_diff_hash" ]]; then
+    echo "❌ Git Commit Blocked: Staged changes do not match the reviewed code signature." >&2
+    echo "The workspace was modified after review. Re-run reviews to obtain a valid review signature." >&2
+    exit 1
+  fi
+
+  echo "✅ Secure Pipeline: All AI agent cryptographic gate signatures verified successfully!"
+}
+
+main() {
+  # Parse options
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -h | --help)
+        show_help
+        exit 0
+        ;;
+      -*)
+        echo "Unknown option: $1" >&2
+        show_help
+        exit 1
+        ;;
+      *)
+        # Positional arguments safely accepted
+        shift
+        ;;
+    esac
+  done
+
+  if detect_agent; then
+    echo "🔒 Secure Pipeline: AI Agent detected in process tree. Verifying gate approvals..."
+    verify_gates
+  else
+    # Human bypass
+    exit 0
+  fi
+}
+
+main "$@"
