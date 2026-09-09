@@ -30,7 +30,7 @@ if [ "cis-rhel-8" = "${image}" ]; then
   systemctl disable nftables
 
   install -d /etc/NetworkManager/conf.d
-  cat > /etc/NetworkManager/conf.d/rke2-canal.conf << EOT
+  cat >/etc/NetworkManager/conf.d/rke2-canal.conf <<EOT
 [keyfile]
 unmanaged-devices=interface-name:flannel*;interface-name:cali*;interface-name:tunl*;interface-name:vxlan.calico;interface-name:vxlan-v6.calico;interface-name:wireguard.cali;interface-name:wg-v6.cali
 EOT
@@ -49,20 +49,19 @@ EOT
   else
     # Add cgroup v2 kernel parameter to GRUB configuration
     if grep -q "systemd.unified_cgroup_hierarchy=1" /etc/default/grub; then
-        echo "cgroup v2 parameter already present in GRUB. Skipping."
+      echo "cgroup v2 parameter already present in GRUB. Skipping."
     else
-        sed -i 's/GRUB_CMDLINE_LINUX="\(.*\)"/GRUB_CMDLINE_LINUX="\1 systemd.unified_cgroup_hierarchy=1"/g' /etc/default/grub
-        echo "Added systemd.unified_cgroup_hierarchy=1 to GRUB_CMDLINE_LINUX"
+      sed -i 's/GRUB_CMDLINE_LINUX="\(.*\)"/GRUB_CMDLINE_LINUX="\1 systemd.unified_cgroup_hierarchy=1"/g' /etc/default/grub
+      echo "Added systemd.unified_cgroup_hierarchy=1 to GRUB_CMDLINE_LINUX"
     fi
   fi
 
-
   # Disable IPv6 in CIS images
   if grep -q "ipv6.disable=1" /etc/default/grub; then
-      echo "IPv6 disable parameter already present. Skipping."
+    echo "IPv6 disable parameter already present. Skipping."
   else
-      sed -i 's/GRUB_CMDLINE_LINUX="\(.*\)"/GRUB_CMDLINE_LINUX="\1 ipv6.disable=1"/g' /etc/default/grub
-      echo "Added ipv6.disable=1 to GRUB_CMDLINE_LINUX"
+    sed -i 's/GRUB_CMDLINE_LINUX="\(.*\)"/GRUB_CMDLINE_LINUX="\1 ipv6.disable=1"/g' /etc/default/grub
+    echo "Added ipv6.disable=1 to GRUB_CMDLINE_LINUX"
   fi
 
   # Update GRUB configuration
@@ -89,7 +88,7 @@ if [ "ipv6" = "${ip_family}" ]; then
     DATA="[connection]\ntype=ethernet\n[ipv4]\nmethod=disabled\n[ipv6]\naddresses=$IPV6/64\ngateway=$IPV6_GW\nmethod=manual\ndns=2001:4860:4860::8888\nnever-default=false"
 
     rm -f /etc/sysconfig/network-scripts/ifcfg-eth0
-    echo -e "$DATA" > "/etc/NetworkManager/system-connections/$DEVICE.nmconnection"
+    echo -e "$DATA" >"/etc/NetworkManager/system-connections/$DEVICE.nmconnection"
     chmod 0600 "/etc/NetworkManager/system-connections/$DEVICE.nmconnection"
 
     nmcli connection reload
@@ -108,15 +107,15 @@ if [ "rpm" = "${install_method}" ]; then
   if [ "rhel-9" = "${image}" ] || [ "rocky-9" = "${image}" ]; then
     # adding Rocky 9 repos because they are RHEL 9 compatible and support ipv6 native
     DATA="[RockyLinux-AppStream]\nname=Rocky Linux - AppStream\nbaseurl=https://dl.rockylinux.org/pub/rocky/9/AppStream/x86_64/os/\nenabled=1\nmetadata_expire=7d\ngpgcheck=1\ngpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-rocky\nsslverify=1\nsslcacert=/etc/pki/tls/certs/ca-bundle.crt"
-    echo -e "$DATA" > /etc/yum.repos.d/Rocky-AppStream.repo
+    echo -e "$DATA" >/etc/yum.repos.d/Rocky-AppStream.repo
     DATA="[RockyLinux-BaseOS]\nname=Rocky Linux - BaseOS\nbaseurl=https://dl.rockylinux.org/pub/rocky/9/BaseOS/x86_64/os\nenabled=1\nmetadata_expire=7d\ngpgcheck=1\ngpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-rocky\nsslverify=1\nsslcacert=/etc/pki/tls/certs/ca-bundle.crt"
-    echo -e "$DATA" > /etc/yum.repos.d/Rocky-BaseOS.repo
+    echo -e "$DATA" >/etc/yum.repos.d/Rocky-BaseOS.repo
     curl -s https://dl.rockylinux.org/pub/rocky/RPM-GPG-KEY-Rocky-9 -o /etc/pki/rpm-gpg/RPM-GPG-KEY-rocky
     rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-rocky
     dnf config-manager --set-enabled RockyLinux-AppStream
     dnf config-manager --set-enabled RockyLinux-BaseOS
     rm -rf "/usr/lib/$PYTHON_VERSION/site-packages/dnf-plugins/amazon-id.py" # we are manually adding users, no need to use amazon-id which has problems with ipv6
-    rm -rf /etc/yum.repos.d/redhat-* # redhat repos only support ipv4
+    rm -rf /etc/yum.repos.d/redhat-*                                         # redhat repos only support ipv4
     rm -rf /etc/dnf/plugins/amazon-id.conf
     dnf clean all
     dnf makecache
@@ -127,15 +126,15 @@ if [ "rpm" = "${install_method}" ]; then
   if [ "rhel-8" = "${image}" ]; then
     # adding Rocky 8 repos because they are RHEL 8 compatible and support ipv6 native
     DATA="[RockyLinux-AppStream]\nname=Rocky Linux - AppStream\nbaseurl=https://dl.rockylinux.org/pub/rocky/8/AppStream/x86_64/os/\nenabled=1\nmetadata_expire=7d\ngpgcheck=1\ngpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-rocky\nsslverify=1\nsslcacert=/etc/pki/tls/certs/ca-bundle.crt"
-    echo -e "$DATA" > /etc/yum.repos.d/Rocky-AppStream.repo
+    echo -e "$DATA" >/etc/yum.repos.d/Rocky-AppStream.repo
     DATA="[RockyLinux-BaseOS]\nname=Rocky Linux - BaseOS\nbaseurl=https://dl.rockylinux.org/pub/rocky/8/BaseOS/x86_64/os\nenabled=1\nmetadata_expire=7d\ngpgcheck=1\ngpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-rocky\nsslverify=1\nsslcacert=/etc/pki/tls/certs/ca-bundle.crt"
-    echo -e "$DATA" > /etc/yum.repos.d/Rocky-BaseOS.repo
+    echo -e "$DATA" >/etc/yum.repos.d/Rocky-BaseOS.repo
     curl -s https://dl.rockylinux.org/pub/rocky/RPM-GPG-KEY-Rocky-8 -o /etc/pki/rpm-gpg/RPM-GPG-KEY-rocky
     rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-rocky
     dnf config-manager --set-enabled RockyLinux-AppStream
     dnf config-manager --set-enabled RockyLinux-BaseOS
     rm -rf "/usr/lib/$PYTHON_VERSION/site-packages/dnf-plugins/amazon-id.py" # we are manually adding users, no need to use amazon-id which has problems with ipv6
-    rm -rf /etc/yum.repos.d/redhat-* # redhat repos only support ipv4
+    rm -rf /etc/yum.repos.d/redhat-*                                         # redhat repos only support ipv4
     rm -rf /etc/dnf/plugins/amazon-id.conf
     dnf clean all
     dnf makecache
@@ -158,6 +157,9 @@ if [ "$REBOOT" = "true" ]; then
   # reboot in 2 seconds and exit this script
   # this allows us to reboot without Terraform receiving errors
   # WARNING: there is a race condition here, the reboot must happen before Terraform reconnects for the next script
-  ( sleep 2 ; reboot ) &
+  (
+    sleep 2
+    reboot
+  ) &
   exit 0
 fi

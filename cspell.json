@@ -1,17 +1,32 @@
 {
-    // Enable your dictionary by adding it to the list of `dictionaries`
-    "dictionaries": ["custom-words"],
-
-    // Tell CSpell about your dictionary
-    "dictionaryDefinitions": [
-        {
-            // The name of the dictionary is used to look it up.
-            "name": "custom-words",
-            // Path to the custom word file. Relative to this `cspell.json` file.
-            "path": "custom_words.txt",
-            // Some editor extensions will use `addWords` for adding words to your
-            // personal dictionary.
-            "addWords": true
-        }
-    ]
+  "$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json",
+  "version": "0.2",
+  "dictionaries": ["custom-words"],
+  "dictionaryDefinitions": [
+    {
+      "name": "custom-words",
+      "path": "custom_words.txt",
+      "addWords": true
+    }
+  ],
+  "ignorePaths": [
+    "**/.git/**",
+    "**/.terraform/**",
+    "**/bin/**",
+    "go.mod",
+    "go.sum",
+    "flake.lock",
+    "test/**",
+    "tools/**",
+    "examples/**",
+    "docs/**",
+    "CHANGELOG.md",
+    "**/go.mod",
+    "**/go.sum",
+    "modules/**",
+    "*.tf",
+    "*.sh",
+    "*.sh.tpl",
+    "cleanup.sh"
+  ]
 }

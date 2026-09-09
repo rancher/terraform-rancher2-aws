@@ -20,7 +20,7 @@ if [ "$ACTIVE" = "active" ]; then
   echo "Found NetworkManager, adding config for canal..."
   touch /etc/NetworkManager/conf.d/rke2-canal.conf
   DATA="[keyfile]\nunmanaged-devices=interface-name:cali*;interface-name:flannel*"
-  echo "$DATA" > /etc/NetworkManager/conf.d/rke2-canal.conf
+  echo "$DATA" >/etc/NetworkManager/conf.d/rke2-canal.conf
   systemctl reload NetworkManager
 fi
 # shellcheck disable=SC2154
@@ -33,7 +33,7 @@ if [ "ipv6" = "${ip_family}" ]; then
     DATA="[connection]\ntype=ethernet\n[ipv4]\nmethod=disabled\n[ipv6]\naddresses=$IPV6/64\ngateway=$IPV6_GW\nmethod=manual\ndns=2001:4860:4860::8888\nnever-default=false"
 
     rm -f "/etc/sysconfig/network-scripts/ifcfg-$DEVICE"
-    echo -e "$DATA" > "/etc/NetworkManager/system-connections/$DEVICE.nmconnection"
+    echo -e "$DATA" >"/etc/NetworkManager/system-connections/$DEVICE.nmconnection"
     chmod 0600 "/etc/NetworkManager/system-connections/$DEVICE.nmconnection"
 
     nmcli connection reload
@@ -49,21 +49,20 @@ if [ "ipv6" = "${ip_family}" ]; then
 
     # shellcheck disable=SC2027
     DATA="STARTMODE='auto'\nBOOTPROTO='static'\nIPADDR="$IPV6"\nPREFIXLEN='64'\nDHCLIENT6_MODE='info'"
-    echo -e "$DATA" > "/etc/sysconfig/network/ifcfg-$DEVICE"
+    echo -e "$DATA" >"/etc/sysconfig/network/ifcfg-$DEVICE"
 
     [ ! -f /etc/sysconfig/network/routes ] && touch /etc/sysconfig/network/routes
-    echo "default $IPV6_GW - -" >> /etc/sysconfig/network/routes
+    echo "default $IPV6_GW - -" >>/etc/sysconfig/network/routes
 
     CONFIG_FILE="/etc/sysconfig/network/config"
     IPV6_DNS1="2001:4860:4860::8888"
     IPV6_DNS2="2606:4700:4700::1111"
 
-
     sed -i "s|^NETCONFIG_DNS_STATIC_SERVERS=.*|NETCONFIG_DNS_STATIC_SERVERS=\"$IPV6_DNS1 $IPV6_DNS2\"|" "$CONFIG_FILE"
     sed -i "s|^NETWORKMANAGER_DISABLE_IPV6=.*|NETWORKMANAGER_DISABLE_IPV6=\"no\"|" "$CONFIG_FILE"
 
-    grep -q "^NETCONFIG_DNS_STATIC_SERVERS=" "$CONFIG_FILE" || echo "NETCONFIG_DNS_STATIC_SERVERS=\"$IPV6_DNS1 $IPV6_DNS2\"" >> "$CONFIG_FILE"
-    grep -q "^NETWORKMANAGER_DISABLE_IPV6=" "$CONFIG_FILE" || echo "NETWORKMANAGER_DISABLE_IPV6=\"no\"" >> "$CONFIG_FILE"
+    grep -q "^NETCONFIG_DNS_STATIC_SERVERS=" "$CONFIG_FILE" || echo "NETCONFIG_DNS_STATIC_SERVERS=\"$IPV6_DNS1 $IPV6_DNS2\"" >>"$CONFIG_FILE"
+    grep -q "^NETWORKMANAGER_DISABLE_IPV6=" "$CONFIG_FILE" || echo "NETWORKMANAGER_DISABLE_IPV6=\"no\"" >>"$CONFIG_FILE"
 
     netconfig update -f
 

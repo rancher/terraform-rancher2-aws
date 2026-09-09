@@ -23,7 +23,7 @@
             "url" = "https://github.com/genevieve/leftovers/releases/download/${leftovers-version.selected}/leftovers-${leftovers-version.selected}-linux-amd64";
             "sha" = "sha256-D2OPjLlV5xR3f+dVHu0ld6bQajD5Rv9GLCMCk9hXlu8=";
           };
-          # linux container running on darwin, actual arm linux isnt in the artifacts
+          # linux container running on darwin, actual arm linux isn't in the artifacts
           "aarch64-linux" = {
             "url" = "https://github.com/genevieve/leftovers/releases/download/${leftovers-version.selected}/leftovers-${leftovers-version.selected}-darwin-arm64";
             "sha" = "sha256-Tw7G538RYZrwIauN7kI68u6aKS4d/0Efh+dirL/kzoM=";
@@ -89,6 +89,18 @@
           exec /usr/bin/sw_vers "$@"
         '';
 
+        initNodeEnv = pkgs.writeShellScriptBin "init-node-env" ''
+          echo "Setting up Node environment..."
+          if [ ! -f package.json ]; then
+            npm init -y
+          fi
+          if ls eslint.config.* 1> /dev/null 2>&1; then
+            echo "ESLint config already exists, skipping."
+          else
+            npm init @eslint/config@latest
+          fi
+        '';
+
         unfreePkgs = import nixpkgs {
           inherit system;
           config = {
@@ -103,6 +115,7 @@
           # downloaded packages here
           leftovers
           terraform
+          initNodeEnv
         ] ++ ([
           # unfree packages from the nix repository
           claude-code
@@ -135,11 +148,14 @@
           kubectl
           kubernetes-helm
           less
+          markdownlint-cli
           nodejs_26
           openssh
           openssl
+          prettier
           ripgrep
           shellcheck
+          shfmt
           tflint
           tfsec
           time
@@ -154,7 +170,9 @@
           # mac only packages
           macVscode
           swVers
+          pkgs.pinentry_mac
           pkgs.colima
+          pkgs.age-plugin-se
         ] else []);
 
         devShellPackage = pkgs.symlinkJoin {
@@ -175,9 +193,6 @@
           devShells.default = pkgs.mkShell {
             buildInputs = [ devShellPackage ];
             shellHook = ''
-              export PS1="nix:# ";
-              install -d ~/.docker/cli-plugins/ || true;
-              ln -sfn $(which docker-compose) ~/.docker/cli-plugins/docker-compose || true;
             '';
           };
         }

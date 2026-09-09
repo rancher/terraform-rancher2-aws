@@ -25,7 +25,7 @@ jobs:
 
       - name: Run Update Script
         id: run-update-script
-        run: bash .github/workflows/scripts/nix-run.sh "bash .github/workflows/scripts/update-go-deps.sh"
+        run: bash .github/workflows/scripts/nix-run.sh "bash ./update-go-deps.sh"
 
       - name: Create Pull Request
         id: create-pull-request

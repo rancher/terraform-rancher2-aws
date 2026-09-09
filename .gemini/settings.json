@@ -1,4 +1,10 @@
 {
+  "ui": {
+    "compactToolOutputs": false
+  },
+  "tools": {
+    "allowed": ["run_shell_command"]
+  },
   "hooks": {
     "SessionStart": [
       {
@@ -7,23 +13,54 @@
           {
             "name": "load-agents-and-workflow-context",
             "type": "command",
-            "command": "bash .agent/hooks/startup-context.sh",
+            "command": "node .gemini/hooks/01-startup-context.js",
             "timeout": 10000,
-            "description": "Loads and injects AGENTS.md and development-process.md as startup context for the session"
+            "description": "Loads and injects mandates and development-process.md as startup context for the session"
           }
         ]
       }
     ],
     "BeforeTool": [
       {
+        "matcher": "ask_user",
+        "hooks": [
+          {
+            "name": "plan-phase-before-ask-user",
+            "type": "command",
+            "command": "node .gemini/hooks/02-plan-phase.js --before-ask-proof",
+            "timeout": 5000,
+            "description": "Enforces plan format validation before asking for plan approval"
+          },
+          {
+            "name": "commit-phase-before-ask-user",
+            "type": "command",
+            "command": "node .gemini/hooks/04-commit-phase.js --before-ask",
+            "timeout": 5000,
+            "description": "Enforces sequential pipeline progression before asking for developer commit approval"
+          }
+        ]
+      },
+      {
+        "matcher": "exit_plan_mode",
+        "hooks": [
+          {
+            "name": "plan-phase-before-exit-plan-mode",
+            "type": "command",
+            "command": "node .gemini/hooks/02-plan-phase.js --verify-exit",
+            "timeout": 5000,
+            "description": "Enforces that a valid plan-approval.json signature exists before exiting plan mode"
+          }
+        ]
+      },
+      {
         "matcher": "run_shell_command",
         "hooks": [
           {
-            "name": "block-rancher-git",
+            "name": "block-restricted-commands",
             "type": "command",
-            "command": "node .agent/hooks/block-rancher-git.js",
+            "command": "node .gemini/hooks/block-restricted-commands.js",
             "timeout": 5000,
-            "description": "Prevents running git remote operations against rancher-owned remotes"
+            "description": "Prevents running direct git commit, push, and rancher remote operations"
           }
         ]
       },
@@ -31,11 +68,18 @@
         "matcher": "write_file",
         "hooks": [
           {
-            "name": "enforce-planning-before-write",
+            "name": "plan-phase-before-write",
             "type": "command",
-            "command": "node .agent/hooks/enforce-planning.js",
+            "command": "node .gemini/hooks/02-plan-phase.js",
             "timeout": 5000,
-            "description": "Enforces that a plan/checklist must be created or modified before writing files"
+            "description": "Blocks file writes if Plan Mode is required but not entered"
+          },
+          {
+            "name": "commit-phase-before-write",
+            "type": "command",
+            "command": "node .gemini/hooks/04-commit-phase.js",
+            "timeout": 5000,
+            "description": "Blocks file writes when changes are pending commit approval"
           }
         ]
       },
@@ -43,14 +87,143 @@
         "matcher": "replace",
         "hooks": [
           {
-            "name": "enforce-planning-before-replace",
+            "name": "plan-phase-before-replace",
             "type": "command",
-            "command": "node .agent/hooks/enforce-planning.js",
+            "command": "node .gemini/hooks/02-plan-phase.js",
             "timeout": 5000,
-            "description": "Enforces that a plan/checklist must be created or modified before replacing text in files"
+            "description": "Blocks text replacements if Plan Mode is required but not entered"
+          },
+          {
+            "name": "commit-phase-before-replace",
+            "type": "command",
+            "command": "node .gemini/hooks/04-commit-phase.js",
+            "timeout": 5000,
+            "description": "Blocks text replacements when changes are pending commit approval"
+          }
+        ]
+      }
+    ],
+    "AfterTool": [
+      {
+        "matcher": "enter_plan_mode",
+        "hooks": [
+          {
+            "name": "plan-phase-after-enter-plan-mode",
+            "type": "command",
+            "command": "node .gemini/hooks/02-plan-phase.js --enter-proof",
+            "timeout": 5000,
+            "description": "Prepares the session workspace when Plan Mode is successfully entered"
+          }
+        ]
+      },
+      {
+        "matcher": "exit_plan_mode",
+        "hooks": [
+          {
+            "name": "plan-phase-after-exit-plan-mode",
+            "type": "command",
+            "command": "node .gemini/hooks/02-plan-phase.js --clear-plan-mode",
+            "timeout": 5000,
+            "description": "Cleans up workspace planning flags on successful Plan Mode exit"
+          }
+        ]
+      },
+      {
+        "matcher": "ask_user",
+        "hooks": [
+          {
+            "name": "plan-phase-after-ask-user",
+            "type": "command",
+            "command": "node .gemini/hooks/02-plan-phase.js --ask-proof",
+            "timeout": 60000,
+            "description": "Generates cryptographic planning signatures upon user approval"
+          },
+          {
+            "name": "commit-phase-after-ask-user",
+            "type": "command",
+            "command": "node .gemini/hooks/04-commit-phase.js --after-ask",
+            "timeout": 60000,
+            "description": "Generates cryptographic commit signatures upon user approval"
           }
         ]
       }
     ]
+  },
+  "hooksConfig": {
+    "disabled": [],
+    "enabled": true
+  },
+  "modelConfigs": {
+    "modelChains": {
+      "pro-review-chain": [
+        {
+          "model": "gemini-3.1-pro-preview",
+          "maxAttempts": 3
+        },
+        {
+          "model": "gemini-2.5-pro",
+          "isLastResort": true,
+          "maxAttempts": 3
+        },
+        {
+          "model": "gemini-3.5-flash",
+          "isLastResort": true,
+          "maxAttempts": 3
+        },
+        {
+          "model": "gemini-3.1-flash-lite",
+          "isLastResort": true,
+          "maxAttempts": 5
+        }
+      ],
+      "flash-review-chain": [
+        {
+          "model": "gemini-3.5-flash",
+          "maxAttempts": 3
+        },
+        {
+          "model": "gemini-3.1-flash-lite",
+          "isLastResort": true,
+          "maxAttempts": 5
+        }
+      ]
+    },
+    "overrides": [
+      {
+        "match": {
+          "overrideScope": "lead_architect"
+        },
+        "modelConfig": {
+          "model": "pro-review-chain"
+        }
+      },
+      {
+        "match": {
+          "overrideScope": "heads_down_coder"
+        },
+        "modelConfig": {
+          "model": "flash-review-chain"
+        }
+      },
+      {
+        "match": {
+          "overrideScope": "data_scientist"
+        },
+        "modelConfig": {
+          "model": "flash-review-chain"
+        }
+      },
+      {
+        "match": {
+          "overrideScope": "project_manager"
+        },
+        "modelConfig": {
+          "model": "pro-review-chain"
+        }
+      }
+    ]
+  },
+  "skills": {
+    "disabled": ["code-review-commons"]
   }
 }

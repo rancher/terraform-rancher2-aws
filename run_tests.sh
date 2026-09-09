@@ -79,10 +79,13 @@ parse_options() {
         case "${OPTARG}" in
           build-only) build_only=true ;;
           lint-only) lint_only=true ;;
-          *) echo "Invalid option: --${OPTARG}" >&2; exit 1 ;;
+          *)
+            echo "Invalid option: --${OPTARG}" >&2
+            exit 1
+            ;;
         esac
         ;;
-      \?) cat <<EOT >&2 && exit 1
+      \?) cat <<EOT >&2 && exit 1 ;;
 Invalid option: -$OPTARG
 
 Usage: $0 [OPTIONS]
@@ -239,9 +242,9 @@ find_test_dir() {
 }
 
 setup_test_processor() {
-  echo "" > "/tmp/${IDENTIFIER}_test.log"
+  echo "" >"/tmp/${IDENTIFIER}_test.log"
 
-  cat <<'EOF' > "/tmp/${IDENTIFIER}_test-processor"
+  cat <<'EOF' >"/tmp/${IDENTIFIER}_test-processor"
 echo "Passed: "
 export PASS="$(jq -r '. | select(.Action == "pass") | select(.Test != null).Test' "/tmp/${IDENTIFIER}_test.log")"
 echo "$PASS" | tr ' ' '\n'
@@ -309,7 +312,7 @@ run_tests() {
   # Build rerun flag
   local rerun_flag=""
   if [ "$rerun" = true ] && [ -f "/tmp/${IDENTIFIER}_failed_tests.txt" ]; then
-    rerun_flag="-run=$(tr '\n' '|' < "/tmp/${IDENTIFIER}_failed_tests.txt" | sed 's/|$//')"
+    rerun_flag="-run=$(tr '\n' '|' <"/tmp/${IDENTIFIER}_failed_tests.txt" | sed 's/|$//')"
     echo "Rerunning failed tests: $rerun_flag"
   fi
 
@@ -430,7 +433,7 @@ pre_test_validation() {
         exit 1
       fi
     fi
-  done <<< "$(find . -path './data' -prune -o -type f -name '*.go' -exec dirname {} \; | sort -u)"
+  done <<<"$(find . -path './data' -prune -o -type f -name '*.go' -exec dirname {} \; | sort -u)"
   echo "✓ Compile checks passed"
 
   echo "Running go lint..."
@@ -544,7 +547,7 @@ prime_plugin_cache() {
 
     needs_mirror=false
 
-    (terraform get > /dev/null 2>&1 || true)
+    (terraform get >/dev/null 2>&1 || true)
     providers=$(terraform providers | grep provider | awk -F'provider' '{print $2}' | awk -F'[' '{print $2}' | awk -F']' '{print $1}' | sort | uniq || true)
 
     for p in $providers; do
@@ -560,12 +563,12 @@ prime_plugin_cache() {
 
     if $needs_mirror; then
       echo "  running 'terraform providers mirror $GLOBAL_TF_PLUGIN_CACHE' in $dir..."
-      (terraform providers mirror "$GLOBAL_TF_PLUGIN_CACHE" > /dev/null 2>&1 || true)
+      (terraform providers mirror "$GLOBAL_TF_PLUGIN_CACHE" >/dev/null 2>&1 || true)
     fi
     rm -rf .terraform
 
     popd || exit
-  done <<< "$(find "$REPO_ROOT/examples" -name 'main.tf' -not -path '*/.terraform/*' -exec dirname {} \; | sort -u)"
+  done <<<"$(find "$REPO_ROOT/examples" -name 'main.tf' -not -path '*/.terraform/*' -exec dirname {} \; | sort -u)"
   unset TF_PLUGIN_CACHE_DIR
 }
 
@@ -575,19 +578,19 @@ validate_examples() {
   export TF_PLUGIN_CACHE_DIR="$GLOBAL_TF_PLUGIN_CACHE"
 
   while IFS= read -r dir; do
-    pushd "$dir" > /dev/null || exit 1
+    pushd "$dir" >/dev/null || exit 1
     echo "  validating example in $dir..."
 
-    (terraform init -backend=false > /dev/null 2>&1 || true)
+    (terraform init -backend=false >/dev/null 2>&1 || true)
     if ! terraform validate; then
       echo "ERROR: Terraform validation failed in $dir"
-      popd > /dev/null || exit 1
+      popd >/dev/null || exit 1
       exit 1
     fi
     rm -rf .terraform
     rm -f .terraform.lock.hcl
-    popd > /dev/null || exit 1
-  done <<< "$(find "$REPO_ROOT/examples" -name 'main.tf' -not -path '*/.terraform/*' -exec dirname {} \; | sort -u)"
+    popd >/dev/null || exit 1
+  done <<<"$(find "$REPO_ROOT/examples" -name 'main.tf' -not -path '*/.terraform/*' -exec dirname {} \; | sort -u)"
   echo "✓ All examples validated successfully"
   echo ""
 }

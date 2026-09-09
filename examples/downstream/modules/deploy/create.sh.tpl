@@ -52,8 +52,8 @@ if [ ! -d "${plugin_cache}" ]; then
   install -d "${plugin_cache}"
 fi
 if [ -n "$TF_PLUGIN_CACHE_DIR" ]; then
-    # shellcheck disable=SC2154
-    cp -a "$TF_PLUGIN_CACHE_DIR/." "${plugin_cache}/" 2>/dev/null || true
+  # shellcheck disable=SC2154
+  cp -a "$TF_PLUGIN_CACHE_DIR/." "${plugin_cache}/" 2>/dev/null || true
 fi
 # shellcheck disable=SC2154
 export TF_PLUGIN_CACHE_DIR="${plugin_cache}"
@@ -142,12 +142,12 @@ if [ $final_exit_code -ne 0 ]; then echo "Failure, exit code $final_exit_code.";
 if [ $final_exit_code -eq 0 ]; then
   echo "Success!"
   # shellcheck disable=SC2154
-  terraform output -json -state="tfstate" > "outputs.json"
+  terraform output -json -state="tfstate" >"outputs.json"
   if [ -f "outputs.json" ]; then
     echo "outputs successfully created"
   else
     echo "outputs failed to be created"
-    echo "{}" > "outputs.json"
+    echo "{}" >"outputs.json"
     final_exit_code=1
   fi
 else

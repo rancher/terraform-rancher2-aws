@@ -1,0 +1,28 @@
+{
+  "files": [
+    { "local": ".gemini", "remote": ".gemini" },
+    { "local": "docs/development", "remote": "docs/development" },
+    { "local": "agent-scripts", "remote": "agent-scripts" },
+    { "local": ".aiexclude", "remote": ".aiexclude" },
+    { "local": ".markdownlint.yaml", "remote": ".markdownlint.yaml" },
+    { "local": ".prettierrc", "remote": ".prettierrc" },
+    { "local": "package.json", "remote": "package.json" },
+    { "local": "cspell.json", "remote": "cspell.json" },
+    { "local": "custom_words.txt", "remote": "custom_words.txt" },
+    { "local": "eslint.config.mjs", "remote": "eslint.config.mjs" },
+    { "local": "flake.nix", "remote": "flake.nix" },
+    { "local": ".github/workflows/pull_request.yaml", "remote": ".github/workflows/pull_request.yaml" },
+    { "local": ".github/workflows/scripts/lint.sh", "remote": ".github/workflows/scripts/lint.sh" },
+    { "local": ".github/workflows/scripts/test.sh", "remote": ".github/workflows/scripts/test.sh" },
+    { "local": ".github/workflows/scripts/nix-run.sh", "remote": ".github/workflows/scripts/nix-run.sh" },
+    {
+      "local": ".github/workflows/scripts/update-action-versions.sh",
+      "remote": ".github/workflows/scripts/update-action-versions.sh"
+    },
+    { "local": ".github/workflows/scripts/update-modules.sh", "remote": ".github/workflows/scripts/update-modules.sh" },
+    {
+      "local": ".github/workflows/scripts/validate-commit-message.js",
+      "remote": ".github/workflows/scripts/validate-commit-message.js"
+    }
+  ]
+}

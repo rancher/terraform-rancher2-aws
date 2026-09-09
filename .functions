@@ -1,15 +1,15 @@
 #!/bin/env bash
 # get current branch in git repo
 git_status() {
-    BRANCH="$(git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/\1/')"
-    if [ ! "${BRANCH}" = "" ]; then
-      STAT="$(parse_git_dirty)"
-      if printf "%s" "$STAT" | grep -q -e '!' -e '?' -e '+' -e '>' -e 'x' -e '*'; then
-        printf "%s[%s %s]%s" "$(red)" "$BRANCH" "$STAT" "$(ce)"
-      else
-        printf "%s[%s%s]%s" "$(green)" "$BRANCH" "$STAT" "$(ce)"
-      fi
+  BRANCH="$(git branch 2>/dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/\1/')"
+  if [ ! "${BRANCH}" = "" ]; then
+    STAT="$(parse_git_dirty)"
+    if printf "%s" "$STAT" | grep -q -e '!' -e '?' -e '+' -e '>' -e 'x' -e '*'; then
+      printf "%s[%s %s]%s" "$(red)" "$BRANCH" "$STAT" "$(ce)"
+    else
+      printf "%s[%s%s]%s" "$(green)" "$BRANCH" "$STAT" "$(ce)"
     fi
+  fi
 }
 get_repo_basename() {
   basename "$(git rev-parse --show-toplevel)"
@@ -17,26 +17,47 @@ get_repo_basename() {
 
 get_repo_owner() {
   REPO="$(basename "$(git rev-parse --show-toplevel)")"
-  OWNER="$(basename "$(git rev-parse --show-toplevel | sed  s/"$REPO"//g)")"
+  OWNER="$(basename "$(git rev-parse --show-toplevel | sed s/"$REPO"//g)")"
   printf "%s" "$OWNER"
 }
 
 # get current status of git repo
 parse_git_dirty() {
-    status="$(git status 2>&1 | tee)"
-    if [ "0" = "$(printf "%s" "${status}" 2> /dev/null | grep "Your branch is up to date with 'origin/main'" >/dev/null 2>&1; printf "%s" $?)" ]; then printf "%s" ""; fi # clean
-    if [ "0" = "$(printf "%s" "${status}" 2> /dev/null | grep "modified:" >/dev/null 2>&1; printf "%s" $?)" ]; then printf "%s" "!"; fi # dirty
-    if [ "0" = "$(printf "%s" "${status}" 2> /dev/null | grep "Untracked files" >/dev/null 2>&1; printf "%s" $?)" ]; then printf "%s" "?"; fi # untracked
-    if [ "0" = "$(printf "%s" "${status}" 2> /dev/null | grep "new file:" >/dev/null 2>&1; printf "%s" $?)" ]; then printf "%s" "+"; fi # new files
-    if [ "0" = "$(printf "%s" "${status}" 2> /dev/null | grep "renamed:" >/dev/null 2>&1; printf "%s" $?)" ]; then printf "%s" ">"; fi # renamed files
-    if [ "0" = "$(printf "%s" "${status}" 2> /dev/null | grep "deleted:" >/dev/null 2>&1; printf "%s" $?)" ]; then printf "%s" "x"; fi # deleted files
-    if [ "0" = "$(printf "%s" "${status}" 2> /dev/null | grep "Your branch is ahead of" >/dev/null 2>&1; printf "%s" $?)" ]; then printf "%s" "*"; fi # ahead of
+  status="$(git status 2>&1 | tee)"
+  if [ "0" = "$(
+    printf "%s" "${status}" 2>/dev/null | grep "Your branch is up to date with 'origin/main'" >/dev/null 2>&1
+    printf "%s" $?
+  )" ]; then printf "%s" ""; fi # clean
+  if [ "0" = "$(
+    printf "%s" "${status}" 2>/dev/null | grep "modified:" >/dev/null 2>&1
+    printf "%s" $?
+  )" ]; then printf "%s" "!"; fi # dirty
+  if [ "0" = "$(
+    printf "%s" "${status}" 2>/dev/null | grep "Untracked files" >/dev/null 2>&1
+    printf "%s" $?
+  )" ]; then printf "%s" "?"; fi # untracked
+  if [ "0" = "$(
+    printf "%s" "${status}" 2>/dev/null | grep "new file:" >/dev/null 2>&1
+    printf "%s" $?
+  )" ]; then printf "%s" "+"; fi # new files
+  if [ "0" = "$(
+    printf "%s" "${status}" 2>/dev/null | grep "renamed:" >/dev/null 2>&1
+    printf "%s" $?
+  )" ]; then printf "%s" ">"; fi # renamed files
+  if [ "0" = "$(
+    printf "%s" "${status}" 2>/dev/null | grep "deleted:" >/dev/null 2>&1
+    printf "%s" $?
+  )" ]; then printf "%s" "x"; fi # deleted files
+  if [ "0" = "$(
+    printf "%s" "${status}" 2>/dev/null | grep "Your branch is ahead of" >/dev/null 2>&1
+    printf "%s" $?
+  )" ]; then printf "%s" "*"; fi # ahead of
 }
 
 encrypt_secrets() {
-  workspace="$(git rev-parse --show-toplevel)";
-  dir="$(pwd)";
-  cd "$workspace" || return;
+  workspace="$(git rev-parse --show-toplevel)"
+  dir="$(pwd)"
+  cd "$workspace" || return
   while read -r file; do
     if [ -f "$file" ]; then
       if [ -f "$file.backup" ]; then
@@ -47,13 +68,13 @@ encrypt_secrets() {
       age -e -R "$workspace"/age_recipients.txt -o "$file.age" "$file"
     fi
   done <secret_file_list.txt
-  cd "$dir" || return;
+  cd "$dir" || return
 }
 
 decrypt_secrets() {
-  workspace="$(git rev-parse --show-toplevel)";
-  dir="$(pwd)";
-  cd "$workspace" || return;
+  workspace="$(git rev-parse --show-toplevel)"
+  dir="$(pwd)"
+  cd "$workspace" || return
   while read -r file; do
     if [ -f "$file.age" ]; then
       printf "decrypting %s\n" "$file"
@@ -61,16 +82,19 @@ decrypt_secrets() {
       printf "%s" "$AGE_SECRET_KEY" | age -d -i - -o "$file" "$file.age"
     fi
   done <secret_file_list.txt
-  cd "$dir" || return;
+  cd "$dir" || return
 }
 
 encrypt_file() {
-  workspace="$(git rev-parse --show-toplevel)";
-  dir="$(pwd)";
-  printf "%s" "enter file to encrypt:";
+  workspace="$(git rev-parse --show-toplevel)"
+  dir="$(pwd)"
+  printf "%s" "enter file to encrypt:"
   while read -r file; do
-    if [ ! -f "$file" ]; then printf "%s" 'file not found'; exit 1; fi
-    printf "encrypting %s as %s.age" "$file" "$file";
+    if [ ! -f "$file" ]; then
+      printf "%s" 'file not found'
+      exit 1
+    fi
+    printf "encrypting %s as %s.age" "$file" "$file"
     if [ -f "$file.backup.age" ]; then
       if [ -f "$file.age" ]; then
         printf "found %s.backup.age, so saving %s.age as %s.backup.age" "$file" "$file" "$file"
@@ -79,26 +103,32 @@ encrypt_file() {
       fi
     fi
     rm -f "$file.age"
-    age -e -R "$workspace"/age_recipients.txt -o "$file.age" "$file";
-    break;
+    age -e -R "$workspace"/age_recipients.txt -o "$file.age" "$file"
+    break
   done <"${1:-/dev/stdin}"
 }
 
 # this clears out secrets and temp files that are only saved locally
 clear_local() {
   echo "Removing secret files..."
-  workspace="$(git rev-parse --show-toplevel)";
+  workspace="$(git rev-parse --show-toplevel)"
   dir="$(pwd)"
   cd "$workspace" || exit
   while read -r file; do
     if [ -f "$file" ]; then
-      rm -rf "$file";
+      rm -rf "$file"
     fi
   done <secret_file_list.txt
   cd "$dir" || exit
   echo "removing tf cache..."
-  while read -r file; do echo "removing $file..."; rm -rf "$file"; done <<<"$(find . -type d -name '.terraform')"
-  while read -r file; do echo "removing $file..."; rm -rf "$file"; done <<<"$(find . -type f -name '.terraform.lock.hcl')"
+  while read -r file; do
+    echo "removing $file..."
+    rm -rf "$file"
+  done <<<"$(find . -type d -name '.terraform')"
+  while read -r file; do
+    echo "removing $file..."
+    rm -rf "$file"
+  done <<<"$(find . -type f -name '.terraform.lock.hcl')"
 }
 
 # Function to recursively find shell script files
@@ -120,14 +150,14 @@ find_shell_scripts() {
 }
 
 shell_check() {
-  workspace="$(git rev-parse --show-toplevel)";
-  dir="$(pwd)";
-  cd "$workspace" || return;
+  workspace="$(git rev-parse --show-toplevel)"
+  dir="$(pwd)"
+  cd "$workspace" || return
   while read -r file; do
     echo "checking $file..."
     shellcheck -x "$file"
-  done <<<"$(grep -Rl -e '^#!' | grep -v '.terraform'| grep -v '.git')"
-  cd "$dir" || return;
+  done <<<"$(grep -Rl -e '^#!' | grep -v '.terraform' | grep -v '.git')"
+  cd "$dir" || return
 }
 
 # ps1 color functions
@@ -136,7 +166,7 @@ ps1_color_open() {
   red=$1
   green=$2
   blue=$3
-  printf '\e[0;38;2;%s;%s;%sm' "$red" "$green" "$blue";
+  printf '\e[0;38;2;%s;%s;%sm' "$red" "$green" "$blue"
 }
 
 green() {
@@ -166,23 +196,23 @@ ce() {
 reset_state() {
   # WARNING! This will delete all saved state and encrypt the state files back for saving
   echo "Removing state..."
-  workspace="$(git rev-parse --show-toplevel)";
+  workspace="$(git rev-parse --show-toplevel)"
   dir="$(pwd)"
-  cd "$workspace" || return;
+  cd "$workspace" || return
   for lc in project prototypes servers; do
-    cd "$workspace/$lc" || return;
-    echo '{"version": 4,"serial": 3,"outputs": {},"resources": [],"check_results": null}' > terraform.tfstate
+    cd "$workspace/$lc" || return
+    echo '{"version": 4,"serial": 3,"outputs": {},"resources": [],"check_results": null}' >terraform.tfstate
     rm -f terraform.tfstate.age
     age -e -R "$workspace/age_recipients.txt" -o terraform.tfstate.age terraform.tfstate
   done
-  cd "$dir" || return;
+  cd "$dir" || return
 }
 
-ts(){
+ts() {
   stty cols 450
 }
 
-set_terminal_size(){
+set_terminal_size() {
   row="$1"
   col="$2"
   if [ "$row" == "" ]; then row=70; fi
@@ -193,9 +223,12 @@ set_terminal_size(){
 
 set_repo_name() {
   new_name="$1"
-  if [ -z "$new_name" ]; then echo "set new name as $1"; exit 1; fi
-  for file in $(git grep \"matttrach-demo\" | awk -F':' '{print $1}'| uniq | tr '\n' ' '); do
-    sed -i 's/matttrach-demo/generic-demo/g' "$file";
+  if [ -z "$new_name" ]; then
+    echo "set new name as $1"
+    exit 1
+  fi
+  for file in $(git grep \"matttrach-demo\" | awk -F':' '{print $1}' | uniq | tr '\n' ' '); do
+    sed -i 's/matttrach-demo/generic-demo/g' "$file"
   done
 }
 
@@ -210,9 +243,9 @@ get_leftovers() {
     if [ -n "$reg" ] && [ "$region" != "$reg" ]; then continue; fi
     echo "leftovers in $region:"
     if [ -n "$id" ]; then
-      leftovers -d --iaas=aws --aws-region="$region" --filter="$id";
+      leftovers -d --iaas=aws --aws-region="$region" --filter="$id"
     else
-      leftovers -d --iaas=aws --aws-region="$region" --filter="Owner:terraform";
+      leftovers -d --iaas=aws --aws-region="$region" --filter="Owner:terraform"
     fi
   done
 }

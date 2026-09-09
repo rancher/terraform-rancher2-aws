@@ -1,0 +1,7 @@
+default: true
+MD013: false # Line length
+MD033: false # Inline HTML
+MD024:
+  siblings_only: true # Allow duplicate headings under different parent headings (needed for CHANGELOG.md)
+MD025: false # Allow multiple top-level headings in technical documentation
+MD041: false # Disable first line top-level heading requirement for templates and snippets
