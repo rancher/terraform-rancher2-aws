@@ -68,9 +68,6 @@ your-project/
 │   │   ├── heads_down_coder.md # Critical code quality worker
 │   │   └── data_scientist.md   # Objective report aggregator
 │   │
-│   ├── skills/                 # Team-shared automation capabilities (tools)
-│   │   └── commit-push.js      # Custom command to safely sign and push commits
-│   │
 │   └── commands/               # Workspace-specific custom slash commands
 │       └── changelog.toml      # Registered locally as `/changelog`
 ```

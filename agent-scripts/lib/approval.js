@@ -454,15 +454,13 @@ export async function handleCommitApproval(targetDir, signingKeyFile, promptText
   try {
     await generateAndSignApproval(targetDir, 'user-approval.json', signingKeyFile, envelope);
 
-    console.log(
-      JSON.stringify({
-        decision: 'allow',
-        systemMessage: '✅ Gate 3 Approved: Developer Commit cryptographically signed!',
-      }),
-    );
-
     const commitMessage = await extractCommitMessage(targetDir, promptText);
-    await runAutomatedCommitAndPush(targetDir, commitMessage);
+    const prUrl = await runAutomatedCommitAndPush(targetDir, commitMessage);
+    return {
+      status: 'approved',
+      prUrl,
+      systemMessage: `✅ Gate 3 Approved: Developer Commit cryptographically signed!\n🎉 PR successfully created: ${prUrl}`,
+    };
   } catch (err) {
     console.log(
       `::error::Cryptographic Pipeline Error: Failed to execute Secure Enclave commit decryption: ${err.message || err}`,

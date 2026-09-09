@@ -39,7 +39,7 @@ Commands:
 
 async function main() {
   const command = process.argv[2];
-  const targetDir = resolveTargetDir();
+  const targetDir = await resolveTargetDir();
 
   try {
     if (!command || command === 'help' || command === '-h' || command === '--help') {

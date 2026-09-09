@@ -130,6 +130,14 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('::error::Fatal Commit Phase Hook Error:', err.stack || err.message);
-  process.exit(1);
+  const errMsg = `Fatal Commit Phase Hook Error: ${err.stack || err.message}`;
+  console.error('::error::' + errMsg);
+  process.stdout.write(
+    JSON.stringify({
+      decision: 'deny',
+      reason: errMsg,
+      systemMessage: `🔒 Hook Crash: ${errMsg}`,
+    }) + '\n',
+  );
+  process.exit(0);
 });

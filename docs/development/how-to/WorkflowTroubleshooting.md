@@ -21,19 +21,19 @@ During the Plan Phase, perform log retrieval and audits to diagnose the failure 
 1. Identify failed runs by querying the repository:
 
    ```bash
-   agent-scripts/pull-ci-logs.sh --list-failed
+   node agent-scripts/tools/ci.js list-failed
    ```
 
 2. List individual job failures for the specific run ID (e.g., `123456789`):
 
    ```bash
-   agent-scripts/pull-ci-logs.sh --list-jobs 123456789
+   node agent-scripts/tools/ci.js list-jobs 123456789
    ```
 
 3. Download the specific job logs (e.g., `987654321`) to isolate the failure:
 
    ```bash
-   agent-scripts/pull-ci-logs.sh --job 987654321
+   node agent-scripts/tools/ci.js download-logs 123456789 987654321
    ```
 
 ### Step 2: Perform Script and Configuration Audits

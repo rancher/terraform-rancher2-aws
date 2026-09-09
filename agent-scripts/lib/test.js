@@ -39,7 +39,7 @@ async function executeFileAsyncHelper(filePath, args = [], options = {}) {
 
 export async function runLint() {
   const filePath = path.resolve(process.cwd(), '.github/workflows/scripts/lint.sh');
-  return executeFileAsyncHelper(filePath, ['all']);
+  return executeFileAsyncHelper(filePath, ['all', '--fix']);
 }
 
 export async function runProductTests() {

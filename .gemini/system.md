@@ -31,7 +31,7 @@ You MUST plan your work before executing any changes.
 - **Nomenclature & Specifications:** All repository modifications must be documented as Conceptual Explanations (`docs/development/explanation/`) or technical/procedural specifications under `docs/development/reference/` or `docs/development/how-to/`.
 - **Format & Process:** Consult `docs/development/reference/Documentation.md` for specific planning formatting, and strictly follow the procedural phases in `docs/development/how-to/DevelopmentProcess.md`.
 - **Mandatory Workflow Matching:** On your **very first turn** of any task, analyze the user's request and check for a matching workflow in `docs/development/how-to/` or `docs/development/reference/`. You must explicitly state which workflow you are executing. Do not run mutating development commands until the correct workflow has been initialized.
-  - **Pipeline / Actions Failures** -> Execute `docs/development/how-to/WorkflowTroubleshooting.md` and use the log-retrieval skill `.gemini/skills/pull-ci-logs.sh` to download logs.
+  - **Pipeline / Actions Failures** -> Execute `docs/development/how-to/WorkflowTroubleshooting.md` and use the log-retrieval script `agent-scripts/tools/ci.js` to download logs.
   - **Standard Bug Fixes / Features** -> Execute `docs/development/how-to/DevelopmentProcess.md`. You must write an empirical reproduction before modifying code.
 
 ---

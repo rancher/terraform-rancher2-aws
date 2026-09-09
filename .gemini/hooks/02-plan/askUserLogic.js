@@ -1,7 +1,7 @@
 import os from 'os';
 import path from 'path';
-import { findLatestActivePlan, validatePlanContent } from '../../../agent-scripts/tools/plan.js';
 import { handlePlanApproval } from '../../../agent-scripts/tools/approval.js';
+import { findLatestActivePlan, validatePlanContent } from '../../../agent-scripts/tools/plan.js';
 import {
   allow,
   deny,
@@ -30,14 +30,12 @@ export async function beforeAskUserPlan(inputData, targetDir) {
   if (intent === 'plan approval' && !(await inPlanPhase(targetDir))) {
     const phaseRes = await getPhase(targetDir);
     const currentPhase = phaseRes && phaseRes.success ? phaseRes.data : 'unknown';
-    const statePath = path.join(targetDir, 'phase-state.json');
     deny(
       'Gate 1 (Planning Gate) Phase Validation',
       `You are attempting to request plan approval, but the workspace is currently in the "${currentPhase}" phase.`,
       "To request plan approval, the workspace must be in the 'plan' phase.\n" +
-        `If you need to re-verify or change your plan, you must reset the phase state file at ${statePath} to:\n` +
-        '{\n  "currentPhase": "plan"\n}\n' +
-        'Once you reset the phase-state file, re-run the `ask_user` tool with intent = "plan approval".',
+      "If you need to re-verify or change your plan, just enter_plan_mode \n" + 
+      "and the afterTool hooks will change the phase and reset the approvals for you.",
     );
   }
 
@@ -50,7 +48,8 @@ export async function beforeAskUserPlan(inputData, targetDir) {
     deny(
       'Gate 1 (Planning Gate) Intent Validation',
       `The TOML payload contains a 'plan' field, but the intent is set to "${tomlData.intent}".`,
-      'To request planning approval, you must set intent = "plan approval" in your TOML payload.',
+      "To request planning approval, you must set intent = \"plan approval\" in your TOML payload.\n" +
+      'For further information please see docs/development/reference/AskUserComponent.md',
     );
   }
 
@@ -63,27 +62,31 @@ export async function beforeAskUserPlan(inputData, targetDir) {
     deny(
       'Gate 1 (Planning Gate) Schema Validation',
       "For plan approval intent, the string 'plan' field containing the markdown plan is required.",
-      'Include the \'plan\' field in your TOML, populated with the complete markdown plan content. Use triple-quotes (""") for the multiline plan string.',
+      "Include the \'plan\' field in your TOML, populated with the complete markdown plan content. Use triple-quotes (\"\"\") for the multiline plan string.\n" +
+      'For further information please see docs/development/reference/AskUserComponent.md',
     );
   }
 
   // Verify the plan is valid before allowing ask_user to prompt the user
-  const activePlan = findLatestActivePlan(targetDir);
+  const activePlan = await findLatestActivePlan(targetDir);
   if (!activePlan) {
     deny(
       'Gate 1 (Planning Gate) Pipeline Verification',
       'Active plan file not found in session directory!',
-      'Please write your plan file as a markdown document under plans/ first before calling `ask_user` with the intent to validate.',
+      "Please write your plan file as a markdown document under plans/ first before calling `ask_user` with the intent to validate.\n" +
+      'For further information please see docs/development/reference/AskUserComponent.md',
     );
   }
 
-  const validation = validatePlanContent(activePlan);
+  const validation = await validatePlanContent(activePlan);
   if (!validation.valid) {
     const errorsList = validation.errors.map((err) => `  - ${err}`).join('\n');
     deny(
       'Gate 1 (Planning Gate) Schema Validation',
       'The proposed plan has invalid structure and violates repository standards:\n' + errorsList,
-      `You must rewrite the plan file at:\n   ${activePlan}\nto satisfy all repository requirements (include markdown checklist - [ ], comprehensive tests, quality gates, agentic framework maintenance, and documentation updates) before you can ask the user for approval.`,
+      "You must rewrite the plan file at:\n   ${activePlan}\nto satisfy all repository requirements before you can ask the user for approval. \n" +
+      "Include markdown checklist - [ ], comprehensive tests, quality gates, agentic framework maintenance, and documentation updates.  \n" +
+      'For further information please see docs/development/reference/AskUserComponent.md',
     );
   }
 
@@ -107,7 +110,7 @@ export async function afterAskUserPlan(inputData, targetDir) {
     deny(
       'Gate 1 (Planning Gate) Phase Validation',
       `You are attempting to approve the plan, but the workspace is currently in the "${currentPhase}" phase.`,
-      "To approve the plan, the workspace must be in the 'plan' phase. Reset phase-state.json to 'plan' first.",
+      "To approve the plan, the workspace must be in the 'plan' phase. Enter plan mode and the after tool hooks will take care of setting the phase and resetting approvals.\n",
     );
   }
 
@@ -144,7 +147,13 @@ export async function afterAskUserPlan(inputData, targetDir) {
   const homeDir = os.homedir();
   const sshPubKeyFile = path.resolve(homeDir, '.gemini/ssh-key.pub');
   const planContent = tomlData.plan;
-  const result = handlePlanApproval(targetDir, sshPubKeyFile, planContent);
+  const result = await handlePlanApproval(targetDir, sshPubKeyFile, planContent);
 
-  allow(hookName, tool_name, tool_input, '', '\n\n' + result.systemMessage + ' You may now call exit_plan_mode.');
+  allow(
+    hookName,
+    tool_name,
+    tool_input,
+    '',
+    '\n\n' + (result ? result.systemMessage : '') + ' You may now call exit_plan_mode.',
+  );
 }

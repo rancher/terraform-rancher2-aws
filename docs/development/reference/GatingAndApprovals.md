@@ -192,7 +192,7 @@ The core enforcer and automation layers are decoupled into the following dedicat
 
 ### The Problem
 
-When approving Gate 3 (Commit Gate) in the chat via `ask_user`, the enforcer hook executes `commit-push.js` inside an automated, non-interactive node child subprocess. Because this subprocess has no terminal TTY, attempts to prompt the developer for biometric/hardware GPG or SSH authorization (e.g. Touch ID or GPG passphrases) will fail silently, causing `git commit -S -s` to fail.
+When approving Gate 3 (Commit Gate) in the chat via `ask_user`, the enforcer hook executes the commit-push tool wrapper inside an automated, non-interactive node child subprocess. Because this subprocess has no terminal TTY, attempts to prompt the developer for biometric/hardware GPG or SSH authorization (e.g. Touch ID or GPG passphrases) will fail silently, causing `git commit -S -s` to fail.
 
 Upon failure, the enforcer hook's safety trap triggers an immediate rollback—deleting all signatures (`plan-approval.json`, `review-approval.json`) to guarantee zero-trust workspace security.
 

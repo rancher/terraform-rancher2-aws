@@ -24,10 +24,10 @@ Developer Command [git commit] or [git push]
         [Unconditional Rejection]
                     │
                     ▼
-  [Redirect to agent-scripts/commit-push.js]
+  [Redirect to ask_user (intent = "commit approval")]
 ```
 
-- **Direct Git Block Hook (`block-restricted-commands.js`)**: Configured on the `run_shell_command` matcher in `.gemini/settings.json`. It intercepts all shell commands. If a developer or agent tries to execute `git commit` or `git push` directly, the hook unconditionally rejects the command and redirects them to use the secure `agent-scripts/commit-push.js` script.
+- **Direct Git Block Hook (`block-restricted-commands.js`)**: Configured on the `run_shell_command` matcher in `.gemini/settings.json`. It intercepts all shell commands. If a developer or agent tries to execute `git commit` or `git push` directly, the hook unconditionally rejects the command and redirects them to use the Commit Gate (calling `ask_user` with `intent = "commit approval"`).
 - **Upstream Push Block**: It additionally parses remote destinations. Any attempt to push directly to the upstream "rancher" organization repositories is instantly blocked. Push operations can only target the developer's authorized personal fork.
 
 ### 2. Live Planning Enforcement Hook (`02-plan-phase.js`)

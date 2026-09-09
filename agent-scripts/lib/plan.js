@@ -143,7 +143,7 @@ export async function validatePlan(targetDir) {
  */
 export async function checkActivePlan(cwd) {
   try {
-    const targetDir = resolveTargetDir(cwd);
+    const targetDir = await resolveTargetDir(cwd);
     if (!fileExistsSafe(targetDir)) {
       return false;
     }

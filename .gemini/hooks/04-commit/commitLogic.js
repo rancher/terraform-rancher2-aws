@@ -201,7 +201,9 @@ export async function afterAskUserCommit(inputData, targetDir) {
 
   if (!isApproved) {
     if (isCommitAsk) {
-      await revokeReviewState(targetDir);
+      console.error(
+        '🔒 Hook Info: Commit approval declined, but Gate 2 (Review) remains intact as the workspace was not modified.',
+      );
     }
     allow(hookName, tool_name);
   }
@@ -264,7 +266,8 @@ export async function afterAskUserCommit(inputData, targetDir) {
     const homeDir = os.homedir();
     const sshPubKeyFile = path.resolve(homeDir, '.gemini/ssh-key.pub');
     const promptText = tomlData['commit-message'] || '';
-    await handleCommitApproval(targetDir, sshPubKeyFile, promptText);
+    const result = await handleCommitApproval(targetDir, sshPubKeyFile, promptText);
+    allow(hookName, tool_name, tool_input, '', '\n\n' + (result ? result.systemMessage : ''));
   }
 
   allow(hookName, tool_name);

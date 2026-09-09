@@ -1,4 +1,4 @@
-import { verifyPlanGate } from '../../../agent-scripts/tools/approval.js';
+import { verifyPlanGate, healApprovalState } from '../../../agent-scripts/tools/approval.js';
 import { setLock, setPhase } from '../../../agent-scripts/tools/state.js';
 import { allow, deny } from '../shared.js';
 
@@ -6,6 +6,7 @@ export async function clearPrePlanFlag(targetDir) {
   const hookName = 'clearPrePlanFlag';
   await setPhase(targetDir, 'plan');
   await setLock(targetDir, false);
+  await healApprovalState(targetDir, 'all');
 
   allow(
     hookName,
