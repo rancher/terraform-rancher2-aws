@@ -176,7 +176,7 @@ module "rancher" {
 
 module "rke2_image" {
   source              = "rancher/server/aws"
-  version             = "v1.4.0"
+  version             = "v2.0.4"
   server_use_strategy = "skip"
   image_use_strategy  = "find"
   image_type          = local.os

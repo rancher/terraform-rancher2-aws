@@ -62,7 +62,7 @@ list_current_actions() {
       # Match lines declaring action usages, e.g. "uses: actions/checkout@v4"
       /[[:space:]]+uses:[[:space:]]+/ {
         str = $0
-        sub(/^[[:space:]]*uses:[[:space:]]*/, "", str)
+        sub(/^[[:space:]]*-?[[:space:]]*uses:[[:space:]]*/, "", str)
         comment = ""
         
         # Check if there is a trailing version comment (e.g. # v4.2.2)
@@ -171,17 +171,17 @@ update_workflow_releases() {
           # Read the immediately following line (the action declaration)
           getline
           
-          # Check if the next line is the expected "- uses: owner/repo@<sha>" format
-          if ($0 ~ "^[[:space:]]*- uses: " repo "@") {
-            # Find where "- uses: " starts to preserve the original indentation
-            idx = index($0, "- uses: ")
+          # Check if the next line is the expected "uses: owner/repo@<sha>" format (with or without a leading dash)
+          if ($0 ~ "^[[:space:]]*-?[[:space:]]*uses: " repo "@") {
+            # Find where "uses: " starts to preserve the original indentation
+            idx = index($0, "uses: ")
             indent = substr($0, 1, idx - 1)
             
             # Print the line updated with the new commit SHA and trailing tag comment
             # e.g., "      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2"
-            print indent "- uses: " repo "@" new_sha " # " new_tag
+            print indent "uses: " repo "@" new_sha " # " new_tag
           } else {
-            # If the next line is not a "- uses:" line, print it unchanged
+            # If the next line is not a "uses:" line, print it unchanged
             print $0
           }
           next

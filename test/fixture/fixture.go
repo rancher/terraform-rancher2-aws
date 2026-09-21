@@ -39,7 +39,7 @@ func GetRancherReleases(ctx context.Context) (string, string, string, error) {
 	zeroPadVersionNumbers(&versions)
 	sortVersions(&versions)
 	filterDuplicatePatches(&versions)
-	getStablePatches(&versions)
+	getLatestPatches(&versions)
 	removeZeroPadding(&versions)
 	latest := versions[0]
 	stable := latest
@@ -67,7 +67,7 @@ func GetRke2Releases(ctx context.Context) (string, string, string, error) {
 	zeroPadVersionNumbers(&versions)
 	sortVersions(&versions)
 	filterDuplicatePatches(&versions)
-	getStablePatches(&versions)
+	getLatestPatches(&versions)
 	removeZeroPadding(&versions)
 	latest := versions[0]
 	stable := latest
@@ -249,7 +249,7 @@ func filterDuplicatePatches(v *[]string) { // assumes versions are sorted alread
 	*v = fv
 }
 
-func getStablePatches(v *[]string) { // assumes versions are sorted already
+func getLatestPatches(v *[]string) { // assumes versions are sorted already
 	var fv []string
 	versions := *v
 	if len(versions) == 0 {
@@ -271,19 +271,15 @@ func getStablePatches(v *[]string) { // assumes versions are sorted already
 		// }
 	}
 
-	// For each group, get the second latest if available, otherwise the latest.
+	// For each group, get the latest patch.
 	for _, group := range groupedVersions {
-		if len(group) > 1 {
-			fv = append(fv, group[1]) // second latest
-		} else if len(group) == 1 {
-			fv = append(fv, group[0]) // latest (as fallback)
-		}
+		fv = append(fv, group[0]) // latest
 	}
 	*v = fv
 	// The order is not guaranteed from a map, so we need to sort again.
 	sortVersions(v)
 	// Expected output:
-	// [v1.30.00+rke2r1, v1.29.04+rke2r1, v1.28.16+rke2r1, v1.27.20+rke2r1, v1.04.01+rke2r3]
+	// [v1.30.01+rke2r3, v1.29.05+rke2r2, v1.28.17+rke2r1, v1.27.20+rke2r1, v1.04.01+rke2r3]
 }
 
 func removeZeroPadding(v *[]string) {
@@ -460,7 +456,7 @@ func NewFixture(t *testing.T, directory string) *Fixture {
 
 	rancherVersion := os.Getenv("RANCHER_VERSION")
 	if rancherVersion == "" {
-		_, rancherVersion, _, err = GetRancherReleases(t.Context())
+		rancherVersion, _, _, err = GetRancherReleases(t.Context())
 	}
 	if err != nil {
 		_ = aws.DeleteEC2KeyPairContextE(t, t.Context(), keyPair)
