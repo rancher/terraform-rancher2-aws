@@ -112,6 +112,7 @@
           cspell
           curl
           eslint
+          gh
           git
           gitleaks
           go
@@ -154,7 +155,6 @@
           docker-client
           docker-compose
           google-cloud-sdk
-          gh
           gnupg
         ]);
 
