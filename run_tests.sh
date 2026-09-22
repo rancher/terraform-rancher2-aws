@@ -117,13 +117,13 @@ EOT
 validate_options() {
   # Validate mutually exclusive options
   local exclusive_count=0
-  [ -n "$cleanup_id" ] && ((exclusive_count++))
-  [ -n "$specific_test" ] && ((exclusive_count++))
-  [ -n "$specific_package" ] && ((exclusive_count++))
-  [ -n "$specific_fixture" ] && ((exclusive_count++))
-  [ -n "$fixture_group" ] && ((exclusive_count++))
-  [ "$build_only" = true ] && ((exclusive_count++))
-  [ "$lint_only" = true ] && ((exclusive_count++))
+  [ -n "$cleanup_id" ] && exclusive_count=$((exclusive_count + 1))
+  [ -n "$specific_test" ] && exclusive_count=$((exclusive_count + 1))
+  [ -n "$specific_package" ] && exclusive_count=$((exclusive_count + 1))
+  [ -n "$specific_fixture" ] && exclusive_count=$((exclusive_count + 1))
+  [ -n "$fixture_group" ] && exclusive_count=$((exclusive_count + 1))
+  [ "$build_only" = true ] && exclusive_count=$((exclusive_count + 1))
+  [ "$lint_only" = true ] && exclusive_count=$((exclusive_count + 1))
 
   if [ $exclusive_count -gt 1 ]; then
     echo "Error: Only one of -c, -t, -p, -f, -g, --build-only, or --lint-only can be used at a time." >&2
