@@ -14,6 +14,7 @@ dirty_mode=false
 speed_mode="6"
 build_only=false
 lint_only=false
+skip_lint=false
 
 # Track whether cleanup has run
 cleanup_has_run=false
@@ -79,6 +80,7 @@ parse_options() {
         case "${OPTARG}" in
           build-only) build_only=true ;;
           lint-only) lint_only=true ;;
+          skip-lint) skip_lint=true ;;
           *) echo "Invalid option: --${OPTARG}" >&2; exit 1 ;;
         esac
         ;;
@@ -100,6 +102,7 @@ Options:
   -n SPEED        Set the number of consecutive tests and test packages (speed)
   --build-only    Build up the global plugin cache and validate examples, then exit
   --lint-only     Run the lint action and then exit
+  --skip-lint     Skip pre-test validation and linting
 
 Notes:
   - Only one of -c, -t, -p, -f, -g, --build-only, or --lint-only can be used at a time
@@ -179,6 +182,10 @@ display_configuration() {
 
   if [ "$lint_only" = true ]; then
     echo "Lint-only mode: Enabled"
+  fi
+
+  if [ "$skip_lint" = true ]; then
+    echo "Skip lint mode: Enabled"
   fi
 
   echo "=========================="
@@ -316,7 +323,7 @@ run_tests() {
   # Build specific test flag
   local specific_test_flag=""
   if [ -n "$specific_test" ] && [ "$rerun" != true ]; then
-    specific_test_flag="-run=$specific_test"
+    specific_test_flag="-run=^${specific_test}$"
     echo "Running specific test: $specific_test"
   fi
 
@@ -637,7 +644,9 @@ main() {
     exit 0
   fi
 
-  pre_test_validation
+  if [ "$skip_lint" = false ]; then
+    pre_test_validation
+  fi
   execute_tests
   display_summary
 }

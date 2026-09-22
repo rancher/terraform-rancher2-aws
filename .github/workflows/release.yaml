@@ -12,6 +12,18 @@ env:
   ACME_SERVER_URL: https://acme-v02.api.letsencrypt.org/directory
   AWS_MAX_ATTEMPTS: 100
   AWS_RETRY_MODE: adaptive
+  MAX_PARALLEL_TESTS: 3
+  # These are organized in groups equal to the max parallel to spread out the average AWS API load
+  TESTS: >-
+    [
+      "TestDevBasic",
+      "TestThreeBasic",
+      "TestDownstreamBasic",
+      "TestOneBasic",
+      "TestDownstreamSplitrole",
+      "TestThreeState",
+      "TestProdBasic"
+    ]
 
 permissions: {}
 
@@ -25,7 +37,17 @@ jobs:
       pull-requests: write
     outputs:
       release_pr: ${{ steps.release-please.outputs.pr }}
+      tests: ${{ steps.tests.outputs.tests }}
+      max-parallel-tests: ${{ steps.max-parallel-tests.outputs.max }}
     steps:
+      - name: Set test matrix
+        id: tests
+        run: |
+          matrix=$(echo "$TESTS" | jq -c 'to_entries | map({test: .value, id: "t\(.key)"})')
+          echo "tests=${matrix}" >> "$GITHUB_OUTPUT"
+      - name: Set Max Parallel Tests
+        id: max-parallel-tests
+        run: echo "max=${MAX_PARALLEL_TESTS}" >> "$GITHUB_OUTPUT"
       - name: Checkout
         id: checkout
         # https://github.com/actions/checkout/releases
@@ -49,12 +71,41 @@ jobs:
             const script = await import(`${process.env.GITHUB_WORKSPACE}/.github/workflows/scripts/release-pr-comment.js`);
             await script.default({ github, context, core, process });
 
-  test:
-    name: 'Test'
+  lint:
+    name: 'Lint'
     needs:
       - release
     if: needs.release.outputs.release_pr
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/rancher/ci-image/nix:20260603-18
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        id: checkout
+        # https://github.com/actions/checkout/releases
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          token: ${{secrets.GITHUB_TOKEN}}
+          fetch-depth: 0
+      - name: Run Linters
+        id: run-linters
+        run: bash .github/workflows/scripts/nix-run.sh "./run_tests.sh --lint-only"
+
+  test:
+    name: 'Test - ${{ matrix.test }}'
+    needs:
+      - release
+      - lint
+    if: needs.release.outputs.release_pr
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ fromJson(needs.release.outputs.max-parallel-tests) }}
+      matrix:
+        include: ${{ fromJson(needs.release.outputs.tests) }}
     container:
       image: ghcr.io/rancher/ci-image/nix:20260603-18
     timeout-minutes: 480 # 8 hours
@@ -75,7 +126,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           role-to-assume: ${{env.AWS_ROLE}}
-          role-session-name: ${{github.run_id}}
+          role-session-name: ${{github.run_id}}-${{ matrix.id }}
           aws-region: ${{env.AWS_REGION}}
           role-duration-seconds: 28800 # 8 hours
           output-credentials: true
@@ -87,15 +138,20 @@ jobs:
           AWS_SESSION_TOKEN: ${{ steps.aws-creds.outputs.aws-session-token }}
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
           ZONE: ${{secrets.ZONE}}
-          IDENTIFIER: ${{github.run_id}}
-        run: bash .github/workflows/scripts/nix-run.sh "bash .github/workflows/scripts/run-tests.sh"
+          IDENTIFIER: ${{github.run_id}}-${{ matrix.id }}
+        run: bash .github/workflows/scripts/nix-run.sh "bash .github/workflows/scripts/run-tests.sh -t ${{ matrix.test }}"
 
   cleanup:
-    name: 'Cleanup'
+    name: 'Cleanup - ${{ matrix.test }}'
     needs:
       - release
       - test
-    if: always() && needs.release.outputs.release_pr
+    if: always() && needs.release.outputs.release_pr && needs.test.result != 'skipped'
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ fromJson(needs.release.outputs.max-parallel-tests) }}
+      matrix:
+        include: ${{ fromJson(needs.release.outputs.tests) }}
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/rancher/ci-image/nix:20260603-18
@@ -117,7 +173,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           role-to-assume: ${{env.AWS_ROLE}}
-          role-session-name: ${{github.run_id}}-cleanup
+          role-session-name: ${{github.run_id}}-${{ matrix.id }}-cleanup
           aws-region: ${{env.AWS_REGION}}
           role-duration-seconds: 3600 # 1 hour
           output-credentials: true
@@ -127,7 +183,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ steps.aws-creds.outputs.aws-access-key-id }}
           AWS_SECRET_ACCESS_KEY: ${{ steps.aws-creds.outputs.aws-secret-access-key }}
           AWS_SESSION_TOKEN: ${{ steps.aws-creds.outputs.aws-session-token }}
-          IDENTIFIER: ${{github.run_id}}
+          IDENTIFIER: ${{github.run_id}}-${{ matrix.id }}
         run: bash .github/workflows/scripts/nix-run.sh "bash .github/workflows/scripts/cleanup-tests.sh"
 
   report:
