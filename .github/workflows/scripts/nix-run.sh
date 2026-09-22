@@ -37,7 +37,7 @@ while [ "$p" != "/" ] && [ -n "$p" ]; do
   p="$(dirname "$p")"
 done
 
-sudo -E -u suse /home/suse/.nix-profile/bin/nix develop \
+sudo -E -u suse /home/suse/.nix-profile/bin/nix develop .#ci \
   --ignore-environment \
   --extra-experimental-features nix-command \
   --extra-experimental-features flakes \

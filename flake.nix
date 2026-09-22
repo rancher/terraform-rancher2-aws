@@ -99,63 +99,67 @@
         claude-code = unfreePkgs.claude-code;
         github-copilot-cli = unfreePkgs.github-copilot-cli;
 
-        devPackages = [
-          # downloaded packages here
+        commonPackages = [
           leftovers
           terraform
-        ] ++ ([
-          # unfree packages from the nix repository
-          claude-code
           github-copilot-cli
-        ]) ++ (with pkgs; [
+        ] ++ (with pkgs; [
           # free packages from the nix repository
           actionlint
           age
           awscli2
           bashInteractive
-          claude-code
           cspell
           curl
-          dig
-          docker-client
-          docker-compose
           eslint
-          gemini-cli
           gh
           git
           gitleaks
-          gnupg
           go
           golangci-lint
-          google-cloud-sdk
           goreleaser
           gotestfmt
           gotestsum
           jq
           kubectl
           kubernetes-helm
-          less
-          nodejs_26
+          nodejs_24
           openssh
           openssl
           ripgrep
           shellcheck
+          sudo
           tflint
           tfsec
           time
           tree
           trivy
           updatecli
-          vim
           which
           xz
           yq-go
-        ]) ++ ( if pkgs.stdenv.isDarwin then [
+        ]) ++ ( if pkgs.stdenv.hostPlatform.isDarwin then [
           # mac only packages
           macVscode
           swVers
           pkgs.colima
         ] else []);
+
+        workstationPackages = [
+          claude-code
+        ] ++ (with pkgs; [
+          gemini-cli-bin
+          less
+          vim
+          dig
+          docker-client
+          docker-compose
+          google-cloud-sdk
+          gnupg
+        ]);
+
+        devPackages = commonPackages ++ workstationPackages;
+        ciPackages = commonPackages;
 
         devShellPackage = pkgs.symlinkJoin {
           name = "dev-shell-package";
@@ -168,9 +172,24 @@
             })
           ];
         };
+
+        ciShellPackage = pkgs.symlinkJoin {
+          name = "ci-shell-package";
+          paths = [
+            (pkgs.buildEnv {
+              name = "ci-shell-env";
+              paths = ciPackages;
+            })
+          ];
+        };
         in
         {
           packages.default = devShellPackage;
+          packages.ci = ciShellPackage;
+
+          devShells.ci = pkgs.mkShell {
+            buildInputs = [ ciShellPackage ];
+          };
 
           devShells.default = pkgs.mkShell {
             buildInputs = [ devShellPackage ];
