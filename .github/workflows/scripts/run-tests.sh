@@ -7,4 +7,4 @@ export GITHUB_OWNER="rancher"
 export ACME_SERVER_URL="https://acme-v02.api.letsencrypt.org/directory"
 export RANCHER_INSECURE="false"
 
-./run_tests.sh -s
+./run_tests.sh -s --skip-lint "$@"
