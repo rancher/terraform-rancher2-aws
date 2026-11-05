@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.1.6](https://github.com/rancher/terraform-rancher2-aws/compare/v3.1.5...v3.1.6) (2026-11-05)
+
+
+### Bug Fixes
+
+* bump rancher-eio/read-vault-secrets from dfae8acd43a9e170fca5f90168da22f814fe4e9a to 4c8f4e741954651c502bb7739c46ae1bad26b44d ([#201](https://github.com/rancher/terraform-rancher2-aws/issues/201)) ([cfa818f](https://github.com/rancher/terraform-rancher2-aws/commit/cfa818f179ca4159a15a59cf6d65c534a4bc1956))
+
 ## [3.1.5](https://github.com/rancher/terraform-rancher2-aws/compare/v3.1.4...v3.1.5) (2026-09-22)
 
 
