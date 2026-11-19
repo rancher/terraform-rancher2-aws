@@ -210,17 +210,35 @@ resource "terraform_data" "wait_for_certificate_secret" {
     command = <<-EOT
       EXITCODE=1
       ATTEMPTS=0
-      MAX=60
+      MAX=120
       while [ $EXITCODE -gt 0 ] && [ $ATTEMPTS -lt $MAX ]; do
         CRT_DATA=$(kubectl get secret tls-rancher-ingress -n cattle-system -o jsonpath='{.data.tls\.crt}' 2>/dev/null || true)
 
         if [ -n "$CRT_DATA" ]; then
           EXITCODE=0
         else
-          sleep 10
+          if [ $((ATTEMPTS % 2)) -eq 0 ]; then
+            echo "Waiting for secret tls-rancher-ingress in cattle-system (attempt $ATTEMPTS/$MAX)..."
+          fi
+          sleep 30
           ATTEMPTS=$((ATTEMPTS+1))
         fi
       done
+      if [ $EXITCODE -gt 0 ]; then
+        echo "ERROR: Timed out waiting for secret 'tls-rancher-ingress' in namespace 'cattle-system'."
+        echo "--- cert-manager Certificates ---"
+        timeout 60 kubectl get certificate -A || true
+        echo "--- cert-manager CertificateRequests ---"
+        timeout 60 kubectl get certificaterequest -A || true
+        echo "--- cert-manager Orders ---"
+        timeout 60 kubectl get order -A || true
+        echo "--- cert-manager Challenges ---"
+        timeout 60 kubectl get challenge -A || true
+        echo "--- Describe Orders (cattle-system) ---"
+        timeout 60 kubectl describe order -n cattle-system || true
+        echo "--- Describe Challenges (cattle-system) ---"
+        timeout 60 kubectl describe challenge -n cattle-system || true
+      fi
       exit $EXITCODE
     EOT
   }

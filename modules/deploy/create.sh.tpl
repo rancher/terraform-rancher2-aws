@@ -92,27 +92,48 @@ while [ $final_exit_code -gt 0 ] && [ $overall_attempt -lt "$max_attempts" ]; do
   destroy_exit_code=0
 
   while [ $apply_exit_code -gt 0 ] && [ $apply_attempt -lt "$max_attempts" ]; do
+    echo "===> [Cycle $((overall_attempt + 1))/$max_attempts | Apply $((apply_attempt + 1))/$max_attempts] Starting terraform apply..."
     # shellcheck disable=SC2154
     timeout -k 1m "${timeout}" terraform apply -parallelism=4 -var-file="inputs.tfvars" -no-color -auto-approve -state="tfstate"
     apply_exit_code=$?
 
     if [ $apply_exit_code -eq 124 ]; then echo "Apply timed out after ${timeout}"; fi
+    if [ $apply_exit_code -gt 0 ]; then
+      echo "Apply attempt $((apply_attempt + 1)) failed with exit code $apply_exit_code."
+      if [ $((apply_attempt + 1)) -lt "$max_attempts" ]; then
+        echo "Waiting ${interval} seconds before next apply attempt..."
+        sleep "${interval}"
+      fi
+    fi
     apply_attempt=$((apply_attempt + 1))
   done
 
-  # Don't destroy if the overall final attempt fails
+  # Don't destroy if the overall final attempt fails or skip_destroy is set
   if [ $apply_exit_code -gt 0 ] && [ "$overall_attempt" -ne "$((max_attempts - 1))" ]; then
-    destroy_attempt=0
-    destroy_exit_code=1
+    # shellcheck disable=SC2154
+    if [ -z "${skip_destroy}" ]; then
+      destroy_attempt=0
+      destroy_exit_code=1
 
-    while [ $destroy_exit_code -gt 0 ] && [ $destroy_attempt -lt "$max_attempts" ]; do
-      # shellcheck disable=SC2154
-      timeout -k 1m "${timeout}" terraform destroy -parallelism=4 -var-file="inputs.tfvars" -no-color -auto-approve -state="tfstate"
-      destroy_exit_code=$?
+      while [ $destroy_exit_code -gt 0 ] && [ $destroy_attempt -lt "$max_attempts" ]; do
+        echo "===> [Cycle $((overall_attempt + 1))/$max_attempts | Destroy $((destroy_attempt + 1))/$max_attempts] Starting terraform destroy..."
+        # shellcheck disable=SC2154
+        timeout -k 1m "${timeout}" terraform destroy -parallelism=4 -var-file="inputs.tfvars" -no-color -auto-approve -state="tfstate"
+        destroy_exit_code=$?
 
-      if [ $destroy_exit_code -eq 124 ]; then echo "Destroy timed out after ${timeout}"; fi
-      destroy_attempt=$((destroy_attempt + 1))
-    done
+        if [ $destroy_exit_code -eq 124 ]; then echo "Destroy timed out after ${timeout}"; fi
+        if [ $destroy_exit_code -gt 0 ]; then
+          echo "Destroy attempt $((destroy_attempt + 1)) failed with exit code $destroy_exit_code."
+          if [ $((destroy_attempt + 1)) -lt "$max_attempts" ]; then
+            echo "Waiting ${interval} seconds before next destroy attempt..."
+            sleep "${interval}"
+          fi
+        fi
+        destroy_attempt=$((destroy_attempt + 1))
+      done
+    else
+      echo "skip_destroy is set, skipping destroy between retry cycles..."
+    fi
   fi
 
   if [ $apply_exit_code -gt 0 ]; then

@@ -37,3 +37,10 @@ static_files.txt
 *.bak
 node_modules
 !*.md
+plans/
+plans/**
+.gemini/tmp/
+.gemini/tmp/**
+.gemini/.env*
+.gemini/.gemini/
+report.json
