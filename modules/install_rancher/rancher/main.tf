@@ -210,7 +210,7 @@ resource "terraform_data" "wait_for_certificate_secret" {
     command = <<-EOT
       EXITCODE=1
       ATTEMPTS=0
-      MAX=120
+      MAX=60
       while [ $EXITCODE -gt 0 ] && [ $ATTEMPTS -lt $MAX ]; do
         CRT_DATA=$(kubectl get secret tls-rancher-ingress -n cattle-system -o jsonpath='{.data.tls\.crt}' 2>/dev/null || true)
 

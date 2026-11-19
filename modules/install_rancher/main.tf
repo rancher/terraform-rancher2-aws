@@ -39,7 +39,7 @@ module "deploy_rancher" {
   }
   attempts     = 3
   interval     = 60
-  timeout      = "75m"
+  timeout      = "45m"
   skip_destroy = true # this is a one way operation, uninstall not supported
   # if any of these change, redeploy/update
   deploy_trigger = md5(join("-", [
