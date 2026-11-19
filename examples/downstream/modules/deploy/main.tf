@@ -280,6 +280,7 @@ resource "file_local" "generate_create" {
     attempts     = local.attempts
     timeout      = local.timeout
     interval     = local.interval
+    skip_destroy = local.skip_destroy
   })
 }
 resource "terraform_data" "create" {

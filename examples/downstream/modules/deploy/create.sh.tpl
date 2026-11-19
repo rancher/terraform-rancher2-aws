@@ -99,19 +99,24 @@ while [ $final_exit_code -gt 0 ] && [ $overall_attempt -lt "$max_attempts" ]; do
     apply_attempt=$((apply_attempt + 1))
   done
 
-  # Don't destroy if the overall final attempt fails
+  # Don't destroy if the overall final attempt fails or skip_destroy is set
   if [ $apply_exit_code -gt 0 ] && [ "$overall_attempt" -ne "$((max_attempts - 1))" ]; then
-    destroy_attempt=0
-    destroy_exit_code=1
+    # shellcheck disable=SC2154
+    if [ -z "${skip_destroy}" ]; then
+      destroy_attempt=0
+      destroy_exit_code=1
 
-    while [ $destroy_exit_code -gt 0 ] && [ $destroy_attempt -lt "$max_attempts" ]; do
-      # shellcheck disable=SC2154
-      timeout -k 1m "${timeout}" terraform destroy -var-file="inputs.tfvars" -no-color -auto-approve -state="tfstate"
-      destroy_exit_code=$?
+      while [ $destroy_exit_code -gt 0 ] && [ $destroy_attempt -lt "$max_attempts" ]; do
+        # shellcheck disable=SC2154
+        timeout -k 1m "${timeout}" terraform destroy -var-file="inputs.tfvars" -no-color -auto-approve -state="tfstate"
+        destroy_exit_code=$?
 
-      if [ $destroy_exit_code -eq 124 ]; then echo "Destroy timed out after ${timeout}"; fi
-      destroy_attempt=$((destroy_attempt + 1))
-    done
+        if [ $destroy_exit_code -eq 124 ]; then echo "Destroy timed out after ${timeout}"; fi
+        destroy_attempt=$((destroy_attempt + 1))
+      done
+    else
+      echo "skip_destroy is set, skipping destroy between retry cycles..."
+    fi
   fi
 
   if [ $apply_exit_code -gt 0 ]; then

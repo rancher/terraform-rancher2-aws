@@ -5,14 +5,14 @@ export default [
       sourceType: "module",
     },
     rules: {
-      // Per .agent/rules/github-script.instructions.md: Use core.* instead of console.*
+      // Use core.* instead of console.* in GitHub workflow scripts
       "no-console": "error",
     },
   },
   {
-    files: [".agent/hooks/**/*.js"],
+    files: [".gemini/**/*.js"],
     rules: {
-      // Local agent hooks run outside Actions environment and must use console streams to report decisions
+      // Local agent platform, orchestrator, skills, and hooks run in terminal and report via console
       "no-console": "off",
     },
   },

@@ -37,7 +37,12 @@ while [ "$p" != "/" ] && [ -n "$p" ]; do
   p="$(dirname "$p")"
 done
 
-sudo -E -u suse /home/suse/.nix-profile/bin/nix develop .#ci \
+flake_target=".#ci"
+if [ -d "${PWD}/.dev" ] && [ -f "${PWD}/.dev/flake.nix" ]; then
+  flake_target="${PWD}/.dev#ci"
+fi
+
+sudo -E -u suse /home/suse/.nix-profile/bin/nix develop "${flake_target}" \
   --ignore-environment \
   --extra-experimental-features nix-command \
   --extra-experimental-features flakes \
