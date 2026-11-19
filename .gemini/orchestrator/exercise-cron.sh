@@ -36,7 +36,8 @@ parse_args() {
 run_exercise() {
   local script_dir
   script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-  local repo_root="$(cd "${script_dir}/../.." >/dev/null 2>&1 && pwd)"
+  local repo_root
+  repo_root="$(cd "${script_dir}/../.." >/dev/null 2>&1 && pwd)"
 
   # Ensure Nix binaries are reachable in non-interactive cron environments
   export PATH="${HOME}/.nix-profile/bin:/nix/var/nix/profiles/default/bin:${PATH}"

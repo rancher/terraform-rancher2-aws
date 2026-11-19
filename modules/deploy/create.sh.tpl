@@ -101,6 +101,7 @@ while [ $final_exit_code -gt 0 ] && [ $overall_attempt -lt "$max_attempts" ]; do
     if [ $apply_exit_code -gt 0 ]; then
       echo "Apply attempt $((apply_attempt + 1)) failed with exit code $apply_exit_code."
       if [ $((apply_attempt + 1)) -lt "$max_attempts" ]; then
+        # shellcheck disable=SC2154
         echo "Waiting ${interval} seconds before next apply attempt..."
         sleep "${interval}"
       fi
@@ -125,6 +126,7 @@ while [ $final_exit_code -gt 0 ] && [ $overall_attempt -lt "$max_attempts" ]; do
         if [ $destroy_exit_code -gt 0 ]; then
           echo "Destroy attempt $((destroy_attempt + 1)) failed with exit code $destroy_exit_code."
           if [ $((destroy_attempt + 1)) -lt "$max_attempts" ]; then
+            # shellcheck disable=SC2154
             echo "Waiting ${interval} seconds before next destroy attempt..."
             sleep "${interval}"
           fi

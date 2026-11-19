@@ -32,6 +32,7 @@ Options:
   -n, --non-interactive   Load only non-interactive environment variables and credentials
   -h, --help              Show this help message and exit
 EOF
+      # shellcheck disable=SC2317
       return 0 2>/dev/null || exit 0
       ;;
     *)
