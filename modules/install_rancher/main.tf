@@ -37,7 +37,7 @@ module "deploy_rancher" {
     "runningPods.sh"        = join("/", [local.rancher_path, "runningPods.sh"])
     "runningDeployments.sh" = join("/", [local.rancher_path, "runningDeployments.sh"])
   }
-  attempts     = 3
+  attempts     = 2
   interval     = 60
   timeout      = "45m"
   skip_destroy = true # this is a one way operation, uninstall not supported

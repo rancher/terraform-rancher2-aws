@@ -131,7 +131,7 @@ exec docker run --rm \
   -e GITHUB_OWNER="${GITHUB_OWNER:-rancher}" \
   -e ZONE="${ZONE:-}" \
   -e IDENTIFIER="${IDENTIFIER:-}" \
-  -e ACME_SERVER_URL="${ACME_SERVER_URL:-https://acme-v02.api.letsencrypt.org/directory}" \
+  -e ACME_SERVER_URL="${ACME_SERVER_URL:-https://acme-staging-v02.api.letsencrypt.org/directory}" \
   -e CI="true" \
   "$CI_IMAGE" \
   bash "$REPO_ROOT/.github/workflows/scripts/nix-run.sh" "${CMD:-bash}"

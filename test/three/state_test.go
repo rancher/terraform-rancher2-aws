@@ -51,6 +51,7 @@ func TestThreeState(t *testing.T) {
 			"TF_CLI_ARGS_output":  "-no-color",
 		},
 		RetryableTerraformErrors: test.GetRetryableTerraformErrors(),
+		MaxRetries:               2,
 		NoColor:                  true,
 		SshAgent:                 f.SSHAgent,
 		Reconfigure:              true,

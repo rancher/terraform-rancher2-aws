@@ -52,6 +52,7 @@ func TestDownstreamSplitrole(t *testing.T) {
 			"TF_CLI_ARGS_output":  "-no-color -state=" + f.TestDir + "/tfstate",
 		},
 		RetryableTerraformErrors: test.GetRetryableTerraformErrors(),
+		MaxRetries:               2,
 		NoColor:                  true,
 		SshAgent:                 f.SSHAgent,
 		Upgrade:                  true,

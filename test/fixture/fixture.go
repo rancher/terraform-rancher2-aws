@@ -628,6 +628,7 @@ func CreateObjectStorageBackend(ctx context.Context, t *testing.T, testDir strin
 			"TF_CLI_ARGS_output":  "-state=" + filepath.Join(testDir, "backend", "tfstate"),
 		},
 		RetryableTerraformErrors: test.GetRetryableTerraformErrors(),
+		MaxRetries:               2,
 		Reconfigure:              true,
 		NoColor:                  true,
 		Upgrade:                  true,
