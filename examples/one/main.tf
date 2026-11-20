@@ -57,7 +57,6 @@ module "rancher" {
   # rke2
   rke2_version    = local.rke2_version
   local_file_path = local.local_file_path
-  install_method  = "tar" # this installs RKE using the tar method, but it isn't an air-gapped install, Rancher install still uses public helm chart
   cni             = "canal"
   node_configuration = {
     "rancher" = {
