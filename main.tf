@@ -18,7 +18,6 @@ locals {
     (var.local_file_path == path.root ? "${path.root}/rke2" : var.local_file_path) :
     "${path.root}/rke2"
   )
-  install_method     = var.install_method
   cni                = var.cni
   node_configuration = var.node_configuration
   # rancher
@@ -118,7 +117,6 @@ module "cluster" {
   runner_ip          = local.admin_ip
   rke2_version       = local.rke2_version
   file_path          = local.local_file_path
-  install_method     = local.install_method
   cni                = local.cni
   node_configuration = local.node_configuration
   ip_family          = local.ip_family

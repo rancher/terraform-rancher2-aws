@@ -228,7 +228,7 @@ variable "server_add_eip" {
 }
 variable "install_use_strategy" {
   type    = string
-  default = "rpm"
+  default = "tar"
 }
 variable "local_file_use_strategy" {
   type    = string

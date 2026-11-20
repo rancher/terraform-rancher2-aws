@@ -81,13 +81,6 @@ variable "local_file_path" {
   EOT
   default     = "./rke2"
 }
-variable "install_method" {
-  type        = string
-  description = <<-EOT
-    The method to use for installing rke2 on the nodes.
-    Can be either 'rpm' or 'tar'.
-  EOT
-}
 variable "cni" {
   type        = string
   description = <<-EOT

@@ -55,10 +55,6 @@ variable "file_path" {
   type        = string
   description = "The local file path to stage or retrieve files."
 }
-variable "install_method" {
-  type        = string
-  description = "The method used to install RKE2 on the nodes. Must be either 'tar' or 'rpm'."
-}
 variable "cni" {
   type        = string
   description = "Which CNI configuration file to add."

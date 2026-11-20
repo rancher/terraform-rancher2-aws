@@ -125,7 +125,6 @@ module "rancher" {
   # rke2
   rke2_version       = local.rke2_version
   local_file_path    = local.local_file_path
-  install_method     = "tar" # tar install, but not air-gapped
   cni                = "canal"
   node_configuration = local.node_configuration
   # rancher

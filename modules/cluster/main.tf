@@ -26,8 +26,8 @@ locals {
     "${path.root}/rke2"
   )
 
-  install_method       = var.install_method
-  download             = (local.install_method == "tar" ? "download" : "skip")
+  install_method       = "tar"
+  download             = "download"
   cni                  = var.cni
   cni_file             = (local.cni == "cilium" ? "${path.module}/cilium.yaml" : (local.cni == "calico" ? "${path.module}/calico.yaml" : ""))
   cni_config           = (local.cni_file != "" ? file(local.cni_file) : "")
@@ -224,29 +224,24 @@ module "deploy_initial_node" {
 )}"
     install_prep_script                 = "${base64encode((
   strcontains(each.value.os, "sles") ? templatefile("${path.module}/suse_prep.sh", {
-    install_method = local.install_method,
-    ip_family      = local.ip_family,
-    image          = each.value.os,
+    ip_family = local.ip_family,
+    image     = each.value.os,
   }) :
   strcontains(each.value.os, "rhel") ? templatefile("${path.module}/rhel_prep.sh", {
-    install_method = local.install_method,
-    ip_family      = local.ip_family,
-    image          = each.value.os,
+    ip_family = local.ip_family,
+    image     = each.value.os,
   }) :
   strcontains(each.value.os, "ubuntu") ? templatefile("${path.module}/ubuntu_prep.sh", {
-    install_method = local.install_method,
-    ip_family      = local.ip_family,
-    image          = each.value.os,
+    ip_family = local.ip_family,
+    image     = each.value.os,
   }) :
   strcontains(each.value.os, "multi-linux") ? templatefile("${path.module}/multi-linux_prep.sh", {
-    install_method = local.install_method,
-    ip_family      = local.ip_family,
-    image          = each.value.os,
+    ip_family = local.ip_family,
+    image     = each.value.os,
   }) :
   strcontains(each.value.os, "sle-micro") ? templatefile("${path.module}/sle-micro_prep.sh", {
-    install_method = local.install_method,
-    ip_family      = local.ip_family,
-    image          = each.value.os,
+    ip_family = local.ip_family,
+    image     = each.value.os,
   }) :
   ""
   ))}"
@@ -356,29 +351,24 @@ module "deploy_additional_nodes" {
 )}"
     install_prep_script      = "${base64encode((
   strcontains(each.value.os, "sles") ? templatefile("${path.module}/suse_prep.sh", {
-    install_method = local.install_method,
-    ip_family      = local.ip_family,
-    image          = each.value.os,
+    ip_family = local.ip_family,
+    image     = each.value.os,
   }) :
   strcontains(each.value.os, "rhel") ? templatefile("${path.module}/rhel_prep.sh", {
-    install_method = local.install_method,
-    ip_family      = local.ip_family,
-    image          = each.value.os,
+    ip_family = local.ip_family,
+    image     = each.value.os,
   }) :
   strcontains(each.value.os, "ubuntu") ? templatefile("${path.module}/ubuntu_prep.sh", {
-    install_method = local.install_method,
-    ip_family      = local.ip_family,
-    image          = each.value.os,
+    ip_family = local.ip_family,
+    image     = each.value.os,
   }) :
   strcontains(each.value.os, "multi-linux") ? templatefile("${path.module}/multi-linux_prep.sh", {
-    install_method = local.install_method,
-    ip_family      = local.ip_family,
-    image          = each.value.os,
+    ip_family = local.ip_family,
+    image     = each.value.os,
   }) :
   strcontains(each.value.os, "sle-micro") ? templatefile("${path.module}/sle-micro_prep.sh", {
-    install_method = local.install_method,
-    ip_family      = local.ip_family,
-    image          = each.value.os,
+    ip_family = local.ip_family,
+    image     = each.value.os,
   }) :
   ""
   ))}"

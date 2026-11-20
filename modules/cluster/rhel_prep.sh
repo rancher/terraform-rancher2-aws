@@ -100,50 +100,6 @@ if [ "ipv6" = "${ip_family}" ]; then
 fi
 
 # shellcheck disable=SC2154
-if [ "rpm" = "${install_method}" ]; then
-  # shellcheck disable=SC2010
-  PYTHON_VERSION="$(ls -l /usr/lib | grep '^d' | grep python | awk '{print $9}')"
-
-  # shellcheck disable=SC2154
-  if [ "rhel-9" = "${image}" ] || [ "rocky-9" = "${image}" ]; then
-    # adding Rocky 9 repos because they are RHEL 9 compatible and support ipv6 native
-    DATA="[RockyLinux-AppStream]\nname=Rocky Linux - AppStream\nbaseurl=https://dl.rockylinux.org/pub/rocky/9/AppStream/x86_64/os/\nenabled=1\nmetadata_expire=7d\ngpgcheck=1\ngpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-rocky\nsslverify=1\nsslcacert=/etc/pki/tls/certs/ca-bundle.crt"
-    echo -e "$DATA" > /etc/yum.repos.d/Rocky-AppStream.repo
-    DATA="[RockyLinux-BaseOS]\nname=Rocky Linux - BaseOS\nbaseurl=https://dl.rockylinux.org/pub/rocky/9/BaseOS/x86_64/os\nenabled=1\nmetadata_expire=7d\ngpgcheck=1\ngpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-rocky\nsslverify=1\nsslcacert=/etc/pki/tls/certs/ca-bundle.crt"
-    echo -e "$DATA" > /etc/yum.repos.d/Rocky-BaseOS.repo
-    curl -s https://dl.rockylinux.org/pub/rocky/RPM-GPG-KEY-Rocky-9 -o /etc/pki/rpm-gpg/RPM-GPG-KEY-rocky
-    rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-rocky
-    dnf config-manager --set-enabled RockyLinux-AppStream
-    dnf config-manager --set-enabled RockyLinux-BaseOS
-    rm -rf "/usr/lib/$PYTHON_VERSION/site-packages/dnf-plugins/amazon-id.py" # we are manually adding users, no need to use amazon-id which has problems with ipv6
-    rm -rf /etc/yum.repos.d/redhat-* # redhat repos only support ipv4
-    rm -rf /etc/dnf/plugins/amazon-id.conf
-    dnf clean all
-    dnf makecache
-    dnf repolist
-  fi
-
-  # shellcheck disable=SC2154
-  if [ "rhel-8" = "${image}" ]; then
-    # adding Rocky 8 repos because they are RHEL 8 compatible and support ipv6 native
-    DATA="[RockyLinux-AppStream]\nname=Rocky Linux - AppStream\nbaseurl=https://dl.rockylinux.org/pub/rocky/8/AppStream/x86_64/os/\nenabled=1\nmetadata_expire=7d\ngpgcheck=1\ngpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-rocky\nsslverify=1\nsslcacert=/etc/pki/tls/certs/ca-bundle.crt"
-    echo -e "$DATA" > /etc/yum.repos.d/Rocky-AppStream.repo
-    DATA="[RockyLinux-BaseOS]\nname=Rocky Linux - BaseOS\nbaseurl=https://dl.rockylinux.org/pub/rocky/8/BaseOS/x86_64/os\nenabled=1\nmetadata_expire=7d\ngpgcheck=1\ngpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-rocky\nsslverify=1\nsslcacert=/etc/pki/tls/certs/ca-bundle.crt"
-    echo -e "$DATA" > /etc/yum.repos.d/Rocky-BaseOS.repo
-    curl -s https://dl.rockylinux.org/pub/rocky/RPM-GPG-KEY-Rocky-8 -o /etc/pki/rpm-gpg/RPM-GPG-KEY-rocky
-    rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-rocky
-    dnf config-manager --set-enabled RockyLinux-AppStream
-    dnf config-manager --set-enabled RockyLinux-BaseOS
-    rm -rf "/usr/lib/$PYTHON_VERSION/site-packages/dnf-plugins/amazon-id.py" # we are manually adding users, no need to use amazon-id which has problems with ipv6
-    rm -rf /etc/yum.repos.d/redhat-* # redhat repos only support ipv4
-    rm -rf /etc/dnf/plugins/amazon-id.conf
-    dnf clean all
-    dnf makecache
-    dnf repolist
-  fi
-fi
-
-# shellcheck disable=SC2154
 if [ "rocky-9" = "${image}" ]; then
   if grep -q overlayfs /proc/filesystems; then
     echo "overlayfs supported..."
