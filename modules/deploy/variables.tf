@@ -60,7 +60,7 @@ variable "attempts" {
     Each time Terraform apply is run we check for a successful exit code,
      if the exit code !=0 then we try again, up to the value set in this argument.
   EOT
-  default     = 3
+  default     = 2
 }
 variable "interval" {
   type        = number
