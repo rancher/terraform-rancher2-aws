@@ -246,6 +246,7 @@ module "deploy_downstream" {
     "./modules/downstream/outputs.tf"              = "${path.module}/modules/downstream/outputs.tf"
     "./modules/downstream/login.sh"                = "${path.module}/modules/downstream/login.sh"
     "./modules/downstream/addKeyToAmazonConfig.sh" = "${path.module}/modules/downstream/addKeyToAmazonConfig.sh"
+    "./reconcile.sh"                               = "${path.module}/modules/downstream/reconcile.sh"
   }
   generated_files = {
     "main.tf" = file("${path.module}/downstream/main.tf.tftpl")

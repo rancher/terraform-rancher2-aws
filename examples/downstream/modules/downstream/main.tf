@@ -177,7 +177,7 @@ resource "rancher2_cluster_v2" "rke2_cluster" {
     dynamic "machine_pools" {
       for_each = local.node_info
       content {
-        name               = "${local.cluster_name}-${machine_pools.key}"
+        name               = machine_pools.key
         control_plane_role = machine_pools.value["control_plane_role"]
         etcd_role          = machine_pools.value["etcd_role"]
         worker_role        = machine_pools.value["worker_role"]

@@ -77,6 +77,11 @@ if [ -z "${skip_destroy}" ]; then
 
   # shellcheck disable=SC2154
   timeout -k 1m "${timeout}" terraform destroy -parallelism=4 -var-file="inputs.tfvars" -no-color -auto-approve -state="tfstate" || true
+
+  if [ -f "./reconcile.sh" ]; then
+    echo "Running reconcile script after destroy..."
+    sh ./reconcile.sh destroy || true
+  fi
 else
   echo "Not destroying deployed module, it will no longer be managed here."
 fi

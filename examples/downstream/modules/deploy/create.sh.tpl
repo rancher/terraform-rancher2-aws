@@ -91,11 +91,24 @@ while [ $final_exit_code -gt 0 ] && [ $overall_attempt -lt "$max_attempts" ]; do
   destroy_exit_code=0
 
   while [ $apply_exit_code -gt 0 ] && [ $apply_attempt -lt "$max_attempts" ]; do
+    echo "===> [Cycle $((overall_attempt + 1))/$max_attempts | Apply $((apply_attempt + 1))/$max_attempts] Starting terraform apply..."
     # shellcheck disable=SC2154
-    timeout -k 1m "${timeout}" terraform apply -var-file="inputs.tfvars" -no-color -auto-approve -state="tfstate"
+    timeout -k 1m "${timeout}" terraform apply -parallelism=4 -var-file="inputs.tfvars" -no-color -auto-approve -state="tfstate"
     apply_exit_code=$?
 
     if [ $apply_exit_code -eq 124 ]; then echo "Apply timed out after ${timeout}"; fi
+    if [ $apply_exit_code -gt 0 ]; then
+      echo "Apply attempt $((apply_attempt + 1)) failed with exit code $apply_exit_code."
+      if [ -f "./reconcile.sh" ]; then
+        echo "Running reconcile script..."
+        sh ./reconcile.sh apply || true
+      fi
+      if [ $((apply_attempt + 1)) -lt "$max_attempts" ]; then
+        # shellcheck disable=SC2154
+        echo "Waiting ${interval} seconds before next apply attempt..."
+        sleep "${interval}"
+      fi
+    fi
     apply_attempt=$((apply_attempt + 1))
   done
 
@@ -107,13 +120,26 @@ while [ $final_exit_code -gt 0 ] && [ $overall_attempt -lt "$max_attempts" ]; do
       destroy_exit_code=1
 
       while [ $destroy_exit_code -gt 0 ] && [ $destroy_attempt -lt "$max_attempts" ]; do
+        echo "===> [Cycle $((overall_attempt + 1))/$max_attempts | Destroy $((destroy_attempt + 1))/$max_attempts] Starting terraform destroy..."
         # shellcheck disable=SC2154
-        timeout -k 1m "${timeout}" terraform destroy -var-file="inputs.tfvars" -no-color -auto-approve -state="tfstate"
+        timeout -k 1m "${timeout}" terraform destroy -parallelism=4 -var-file="inputs.tfvars" -no-color -auto-approve -state="tfstate"
         destroy_exit_code=$?
 
         if [ $destroy_exit_code -eq 124 ]; then echo "Destroy timed out after ${timeout}"; fi
+        if [ $destroy_exit_code -gt 0 ]; then
+          echo "Destroy attempt $((destroy_attempt + 1)) failed with exit code $destroy_exit_code."
+          if [ $((destroy_attempt + 1)) -lt "$max_attempts" ]; then
+            # shellcheck disable=SC2154
+            echo "Waiting ${interval} seconds before next destroy attempt..."
+            sleep "${interval}"
+          fi
+        fi
         destroy_attempt=$((destroy_attempt + 1))
       done
+      if [ -f "./reconcile.sh" ]; then
+        echo "Running reconcile script after destroy..."
+        sh ./reconcile.sh destroy || true
+      fi
     else
       echo "skip_destroy is set, skipping destroy between retry cycles..."
     fi

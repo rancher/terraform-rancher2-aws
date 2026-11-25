@@ -100,6 +100,10 @@ while [ $final_exit_code -gt 0 ] && [ $overall_attempt -lt "$max_attempts" ]; do
     if [ $apply_exit_code -eq 124 ]; then echo "Apply timed out after ${timeout}"; fi
     if [ $apply_exit_code -gt 0 ]; then
       echo "Apply attempt $((apply_attempt + 1)) failed with exit code $apply_exit_code."
+      if [ -f "./reconcile.sh" ]; then
+        echo "Running reconcile script..."
+        sh ./reconcile.sh apply || true
+      fi
       if [ $((apply_attempt + 1)) -lt "$max_attempts" ]; then
         # shellcheck disable=SC2154
         echo "Waiting ${interval} seconds before next apply attempt..."
@@ -133,6 +137,10 @@ while [ $final_exit_code -gt 0 ] && [ $overall_attempt -lt "$max_attempts" ]; do
         fi
         destroy_attempt=$((destroy_attempt + 1))
       done
+      if [ -f "./reconcile.sh" ]; then
+        echo "Running reconcile script after destroy..."
+        sh ./reconcile.sh destroy || true
+      fi
     else
       echo "skip_destroy is set, skipping destroy between retry cycles..."
     fi

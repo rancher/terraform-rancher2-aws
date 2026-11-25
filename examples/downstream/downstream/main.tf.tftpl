@@ -47,7 +47,7 @@ provider "rancher2" {
   api_url   = local.rancher_address
   token_key = data.external.login.result.admin_token
   ca_certs  = local.tls_certificate_chain
-  timeout   = "300s"
+  timeout   = "900s"
 }
 
 data "rancher2_cluster" "local" {
