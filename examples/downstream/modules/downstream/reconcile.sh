@@ -38,7 +38,7 @@ case "$ACTION" in
         echo "Reconcile: Cluster $CLUSTER_NAME exists in Rancher but missing from state. Attempting import..."
         if ! terraform import -var-file="inputs.tfvars" -state="tfstate" module.downstream.rancher2_cluster_v2.rke2_cluster "$NAMESPACE/$CLUSTER_NAME"; then
           echo "Reconcile: Import failed, removing orphaned cluster $CLUSTER_NAME from Rancher..."
-          kubectl delete clusters.provisioning.cattle.io "$CLUSTER_NAME" -n "$NAMESPACE" --timeout=60s --wait=false || true
+          kubectl delete clusters.provisioning.cattle.io "$CLUSTER_NAME" -n "$NAMESPACE" --timeout=120s || true
         fi
       fi
     fi
